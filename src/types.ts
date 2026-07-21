@@ -106,6 +106,14 @@ export interface GeoPlace {
   score: number
   /** Preferred part of day for this kind of place */
   bestSlot?: TimeSlot
+  photoUrl?: string
+  /** Partner listing (future marketplace) */
+  partnerId?: string
+  sponsored?: boolean
+  listingKind?: 'hotel' | 'restaurant' | 'experience' | 'agency'
+  /** Sitio pospuesto desde otro día (prioridad en sugerencias) */
+  deferred?: boolean
+  reaction?: 'like' | 'dislike'
 }
 
 export interface Stop {
@@ -116,6 +124,8 @@ export interface Stop {
   lng: number
   category: PlaceCategory
   notes?: string
+  /** Notas de la pareja (reservas, tips propios) */
+  userNotes?: string
   order: number
   slot?: TimeSlot
   suggestedTime?: string // HH:mm
@@ -126,6 +136,16 @@ export interface Stop {
   transportReason?: string
   /** Parada hotel (inicio/fin del día) */
   isHotel?: boolean
+  /** Check-in en ruta */
+  visitStatus?: 'pending' | 'done' | 'skipped'
+  /** Reacción compartida de la pareja */
+  reaction?: 'like' | 'dislike'
+  photoUrl?: string
+  /** Hasta ~3 thumbs (mapa / detalle) */
+  photoUrls?: string[]
+  partnerId?: string
+  sponsored?: boolean
+  listingKind?: 'hotel' | 'restaurant' | 'experience' | 'agency'
 }
 
 export interface DayPlan {
@@ -164,6 +184,8 @@ export interface Trip {
   days: DayPlan[]
   createdAt: string
   updatedAt: string
+  /** Viaje recomendado / alojado por un partner (hotel, agencia) */
+  hostedByPartnerId?: string
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {

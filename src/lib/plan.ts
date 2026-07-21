@@ -591,10 +591,19 @@ export function buildDayPlans(
     const dayFocus: DayFocus =
       intensity === 'arrival' || intensity === 'departure' ? 'central' : defaultFocus
 
+    // Sitios “sí o sí” (tier must) se inyectan primero
+    const unusedMust = places.filter((p) => p.tier === 'must' && !used.has(p.id))
+    const mustSeed =
+      unusedMust.length && intensity !== 'departure'
+        ? unusedMust.slice(0, intensity === 'arrival' ? 1 : 2)
+        : []
+    mustSeed.forEach((p) => used.add(p.id))
+
     if (intensity === 'arrival' || intensity === 'departure') {
       const driveLike = style.mobility === 'drive'
       const radius = intensity === 'arrival' ? (driveLike ? 8 : 2.2) : driveLike ? 12 : 2.8
       dayPlaces = [
+        ...mustSeed,
         ...pickNear(sights, origin, radius, Math.ceil(budget.maxStops * 0.65), used),
         ...pickNear(foods, origin, radius, 1, used),
       ]
@@ -603,6 +612,7 @@ export function buildDayPlans(
       }
       if (dayPlaces.length < 2) {
         dayPlaces = [
+          ...mustSeed,
           ...pickNear(sights, origin, driveLike ? 25 : 5, budget.maxStops - 1, used),
           ...pickNear(foods, origin, driveLike ? 15 : 5, 1, used),
         ]
@@ -610,7 +620,7 @@ export function buildDayPlans(
     } else {
       const cluster = clusters[clusterPtr++] ?? sights
       const fromCluster = cluster.filter((p) => !used.has(p.id)).slice(0, budget.maxStops - 2)
-      dayPlaces = [...fromCluster]
+      dayPlaces = [...mustSeed, ...fromCluster]
       const cLat =
         fromCluster.reduce((s, p) => s + p.lat, 0) / Math.max(fromCluster.length, 1) || origin.lat
       const cLng =
@@ -622,7 +632,14 @@ export function buildDayPlans(
       }
     }
 
-    dayPlaces = dayPlaces.slice(0, budget.maxStops)
+    const seenIds = new Set<string>()
+    dayPlaces = dayPlaces
+      .filter((p) => {
+        if (seenIds.has(p.id)) return false
+        seenIds.add(p.id)
+        return true
+      })
+      .slice(0, budget.maxStops)
     dayPlaces.forEach((p) => used.add(p.id))
 
     const timed = assignSlotsAndTimes(
@@ -669,6 +686,240 @@ export function buildDayPlans(
   }
 
   return days
+}
+
+/** Reasigna paradas del día según el enfoque (centro / mixto / afueras). */
+export function replanDayForFocus(
+  day: DayPlan,
+  allPlaces: GeoPlace[],
+  focus: DayFocus,
+  style: RouteStyle,
+  logistics: TripLogistics,
+  cityCenter: { lat: number; lng: number },
+  reservedIds: Set<string>,
+): DayPlan {
+  const hotel = logistics.hotel
+  const hotelPoint = hotel ? { lat: hotel.lat, lng: hotel.lng } : null
+  const preferCentral = style.preferCentral !== false
+  const arrivalH = parseHour(logistics.arrivalTime || '15:00')
+  const departureH = parseHour(logistics.departureTime || '18:00')
+  const budget = stopsBudget(style.pace, day.intensity, arrivalH, departureH)
+  const origin = hotelPoint ?? cityCenter
+  const used = new Set(reservedIds)
+
+  const sightsAll = allPlaces.filter(isSight).sort((a, b) => b.score - a.score)
+  const sights = filterByFocus(sightsAll, cityCenter, focus, preferCentral)
+  const foods = filterByFocus(
+    allPlaces.filter((p) => p.category === 'food' || p.category === 'cafe'),
+    cityCenter,
+    focus,
+    preferCentral,
+  )
+  const nightlife = allPlaces.filter((p) => p.category === 'nightlife')
+  const parks = filterByFocus(
+    allPlaces.filter((p) => p.category === 'park'),
+    cityCenter,
+    focus,
+    preferCentral,
+  )
+
+  const scoredPool = (pool: GeoPlace[]) =>
+    pool
+      .filter((p) => !used.has(p.id))
+      .map((p) => {
+        const dCenter = haversineKm(cityCenter.lat, cityCenter.lng, p.lat, p.lng)
+        const dOrigin = haversineKm(origin.lat, origin.lng, p.lat, p.lng)
+        let score = p.score - dOrigin * 1.5
+        if (p.tier === 'must') score += 50
+        if (focus === 'central') score -= Math.max(0, dCenter - 2.5) * 10
+        else if (focus === 'outskirts') {
+          score += Math.min(dCenter, 30) * 4
+          if (dCenter < 5) score -= 55
+        } else {
+          score -= Math.abs(dCenter - 9) * 2
+        }
+        return { p, score }
+      })
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.p)
+
+  let dayPlaces: GeoPlace[] = []
+  const sightPick = scoredPool(sights).slice(0, Math.max(2, budget.maxStops - 2))
+  dayPlaces = [...sightPick]
+  dayPlaces.forEach((p) => used.add(p.id))
+
+  const foodRadius = focus === 'outskirts' ? 18 : style.mobility === 'drive' ? 12 : 2.8
+  const foodOrigin =
+    dayPlaces.length > 0
+      ? {
+          lat: dayPlaces.reduce((s, p) => s + p.lat, 0) / dayPlaces.length,
+          lng: dayPlaces.reduce((s, p) => s + p.lng, 0) / dayPlaces.length,
+        }
+      : origin
+  dayPlaces.push(...pickNear(foods, foodOrigin, foodRadius, 2, used))
+  if (nightlife.length && budget.endHour >= 21 && focus !== 'outskirts') {
+    dayPlaces.push(...pickNear(nightlife, foodOrigin, 4, 1, used))
+  }
+  if (dayPlaces.length < 2) {
+    dayPlaces.push(...scoredPool(sightsAll).slice(0, budget.maxStops))
+  }
+  dayPlaces = dayPlaces.slice(0, budget.maxStops)
+
+  const timed = assignSlotsAndTimes(dayPlaces, budget.startHour, budget.endHour, day.intensity)
+  let stops = timed.map((t, idx) => placeToStop(t.place, idx, t.slot, t.time))
+  stops = optimizeOrder(stops, hotelPoint)
+  stops = [...stops]
+    .sort((a, b) => (a.suggestedTime || '').localeCompare(b.suggestedTime || ''))
+    .map((s, idx) => ({ ...s, order: idx }))
+  stops = optimizeKeepingDayArc(stops, hotelPoint)
+  stops = wrapWithHotelRoundTrip(
+    stops,
+    hotel,
+    formatHour(budget.startHour),
+    formatHour(Math.max(budget.endHour, day.intensity === 'departure' ? budget.endHour : 23)),
+  )
+  stops = annotateTransport(stops, style.mobility, style, parks)
+  const rich = enrichDayStops(stops, allPlaces, day.intensity)
+  stops = rich.stops
+
+  const focusNote =
+    focus === 'central'
+      ? 'Enfoque: centro.'
+      : focus === 'mixed'
+        ? 'Enfoque: mixto centro / barrio.'
+        : 'Enfoque: afueras / excursión.'
+
+  return {
+    ...day,
+    focus,
+    stops,
+    note: [budget.note || '', focusNote, rich.dayNoteExtra].filter(Boolean).join(' ').trim(),
+    planSource: 'suggested',
+  }
+}
+
+export type ChaosMode = 'late' | 'rain' | 'shorter'
+
+/**
+ * Replan rápido ante caos: tarde (reloj adelante + menos paradas),
+ * lluvia (prioriza indoor), o día más corto.
+ */
+export function chaosReplanDay(
+  day: DayPlan,
+  mode: ChaosMode,
+  allPlaces: GeoPlace[],
+  style: RouteStyle,
+  logistics: TripLogistics,
+  cityCenter: { lat: number; lng: number },
+  reservedIds: Set<string>,
+): DayPlan {
+  const hotel = logistics.hotel
+  const hotelPoint = hotel ? { lat: hotel.lat, lng: hotel.lng } : null
+  const arrivalH = parseHour(logistics.arrivalTime || '15:00')
+  const departureH = parseHour(logistics.departureTime || '18:00')
+  const budget = stopsBudget(style.pace, day.intensity, arrivalH, departureH)
+  const used = new Set(reservedIds)
+
+  const indoor = (p: GeoPlace) =>
+    ['museum', 'food', 'cafe', 'shopping', 'market', 'show', 'hidden'].includes(p.category)
+
+  let startHour = budget.startHour
+  let maxStops = budget.maxStops
+  let noteExtra = ''
+
+  if (mode === 'late') {
+    startHour = Math.min(Math.max(startHour, 14), 18)
+    maxStops = Math.max(2, Math.ceil(maxStops * 0.55))
+    noteExtra = 'Replan: vais tarde — jornada más corta desde media tarde.'
+  } else if (mode === 'shorter') {
+    maxStops = Math.max(2, Math.ceil(maxStops * 0.6))
+    noteExtra = 'Replan: día más ligero (menos paradas).'
+  } else if (mode === 'rain') {
+    noteExtra = 'Replan: lluvia — priorizamos sitios cubiertos / comida.'
+  }
+
+  const currentVisits = day.stops.filter((s) => !s.isHotel)
+  const keepDone = currentVisits.filter((s) => s.visitStatus === 'done')
+
+  // Pool: wishlist + current places
+  const byId = new Map<string, GeoPlace>()
+  for (const p of allPlaces) byId.set(p.id, p)
+  for (const s of currentVisits) {
+    if (!byId.has(s.placeId)) {
+      byId.set(s.placeId, {
+        id: s.placeId,
+        name: s.name,
+        lat: s.lat,
+        lng: s.lng,
+        category: s.category,
+        tier: 'recommended',
+        source: 'manual',
+        score: 70,
+        deferred: false,
+      })
+    }
+  }
+  let pool = [...byId.values()].filter((p) => !used.has(p.id))
+  if (mode === 'rain') {
+    const indoors = pool.filter(indoor)
+    if (indoors.length >= 3) pool = indoors
+  }
+
+  const origin = hotelPoint ?? cityCenter
+  const scored = pool
+    .map((p) => {
+      const d = haversineKm(origin.lat, origin.lng, p.lat, p.lng)
+      let score = p.score - d * 2
+      if (p.deferred) score += 35
+      if (p.reaction === 'like') score += 20
+      if (p.reaction === 'dislike') score -= 40
+      if (mode === 'rain' && indoor(p)) score += 25
+      return { p, score }
+    })
+    .sort((a, b) => b.score - a.score)
+    .map((x) => x.p)
+
+  const need = Math.max(0, maxStops - keepDone.length)
+  const picked: GeoPlace[] = []
+  const keepIds = new Set(keepDone.map((s) => s.placeId))
+  for (const p of scored) {
+    if (keepIds.has(p.id)) continue
+    picked.push(p)
+    if (picked.length >= need) break
+  }
+
+  const placeStops = [
+    ...keepDone.map((s, i) => ({ ...s, order: i, visitStatus: 'done' as const })),
+    ...picked.map((p, i) =>
+      placeToStop(p, keepDone.length + i, p.bestSlot, undefined),
+    ),
+  ]
+
+  let stops = optimizeOrder(
+    placeStops.map((s) => ({ ...s, visitStatus: s.visitStatus ?? 'pending' })),
+    hotelPoint,
+  )
+  // Keep done stops first in time if possible — retime from startHour
+  stops = retimeStops(
+    stops.filter((s) => !s.isHotel),
+    startHour,
+  )
+  stops = wrapWithHotelRoundTrip(
+    stops,
+    hotel,
+    formatHour(startHour),
+    formatHour(Math.max(budget.endHour, 22.5)),
+  )
+  const parks = allPlaces.filter((p) => p.category === 'park')
+  stops = annotateTransport(stops, style.mobility, style, parks)
+  const rich = enrichDayStops(stops, allPlaces, day.intensity)
+
+  return {
+    ...day,
+    stops: rich.stops,
+    note: [noteExtra, rich.dayNoteExtra].filter(Boolean).join(' ').trim(),
+    planSource: 'suggested',
+  }
 }
 
 /** Optimize path while roughly keeping morning → night progression */

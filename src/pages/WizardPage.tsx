@@ -9,9 +9,11 @@ import {
   type Preferences,
 } from '../types'
 import { useAppStore } from '../store'
-import { searchDestinations, searchHotels, type PlaceSuggestion } from '../lib/geocode'
+import { searchDestinations, searchHotels, searchCityPlaces, type PlaceSuggestion } from '../lib/geocode'
 import { TripDateFields } from '../components/TripDateFields'
+import { TripMap } from '../components/TripMap'
 import { findAirportsForCity, type AirportOption } from '../lib/airports'
+import { estimateTripBudget } from '../lib/budget'
 import { isGoogleMapsUrl } from '../lib/importGmaps'
 import {
   AREA_SCALE_OPTIONS,
@@ -296,8 +298,10 @@ export function WizardPage() {
 
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([])
   const [hotelSuggestions, setHotelSuggestions] = useState<PlaceSuggestion[]>([])
+  const [mustSuggestions, setMustSuggestions] = useState<PlaceSuggestion[]>([])
   const [searchingCity, setSearchingCity] = useState(false)
   const [searchingHotel, setSearchingHotel] = useState(false)
+  const [searchingMust, setSearchingMust] = useState(false)
   const [airports, setAirports] = useState<AirportOption[]>([])
   const [loadingAirports, setLoadingAirports] = useState(false)
 
@@ -379,6 +383,22 @@ export function WizardPage() {
     }, isGoogleMapsUrl(q) ? 200 : 400)
     return () => window.clearTimeout(t)
   }, [wizard.hotelQuery, wizard.cityQuery, wizard.hotelPick, wizard.cityPick, view, patchWizard])
+
+  useEffect(() => {
+    if (view.name !== 'wizard' || view.step !== 4) return
+    const q = wizard.mustVisitQuery.trim()
+    if (q.length < 2 || !wizard.cityPick) {
+      setMustSuggestions([])
+      return
+    }
+    const t = window.setTimeout(() => {
+      setSearchingMust(true)
+      void searchCityPlaces(q, wizard.cityPick!.name || wizard.cityQuery)
+        .then(setMustSuggestions)
+        .finally(() => setSearchingMust(false))
+    }, 350)
+    return () => window.clearTimeout(t)
+  }, [wizard.mustVisitQuery, wizard.cityPick, wizard.cityQuery, view])
 
   const nights = useMemo(
     () => nightsBetween(wizard.startDate, wizard.endDate),
@@ -470,11 +490,11 @@ export function WizardPage() {
       <header className="wiz-header">
         <p className="brand small">RutaDos</p>
         <h1>Nuevo viaje</h1>
-        <p className="muted wiz-lede">Cuatro pasos. Lo podéis cambiar después.</p>
+        <p className="muted wiz-lede">Cinco pasos. Lo podéis cambiar después.</p>
       </header>
 
       <nav className="wiz-progress" aria-label="Pasos del viaje">
-        {['Destino', 'Llegada', 'Gustos', 'Cómo viajáis'].map((label, i) => (
+        {['Destino', 'Llegada', 'Gustos', 'Ritmo', 'Resumen'].map((label, i) => (
           <button
             key={label}
             type="button"
@@ -809,16 +829,49 @@ export function WizardPage() {
             )}
 
             {wizard.hotelPick && (
-              <div className="hint-box dest-confirmed">
-                <strong>Hotel confirmado:</strong> {wizard.hotelPick.name}
-                <button
-                  type="button"
-                  className="btn ghost sm"
-                  onClick={() => patchWizard({ hotelPick: null, hotelSkipped: false })}
-                >
-                  Cambiar
-                </button>
-              </div>
+              <>
+                <div className="hint-box dest-confirmed">
+                  <strong>Hotel confirmado:</strong> {wizard.hotelPick.name}
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    onClick={() => patchWizard({ hotelPick: null, hotelSkipped: false })}
+                  >
+                    Cambiar
+                  </button>
+                </div>
+                <TripMap
+                  stops={[
+                    ...(wizard.airportPick
+                      ? [
+                          {
+                            id: 'wiz-airport',
+                            placeId: 'wiz-airport',
+                            name: wizard.airportPick.name,
+                            lat: wizard.airportPick.lat,
+                            lng: wizard.airportPick.lng,
+                            category: 'local' as const,
+                            order: 0,
+                          },
+                        ]
+                      : []),
+                    {
+                      id: 'wiz-hotel',
+                      placeId: 'wiz-hotel',
+                      name: wizard.hotelPick.name,
+                      lat: wizard.hotelPick.lat,
+                      lng: wizard.hotelPick.lng,
+                      category: 'local' as const,
+                      order: wizard.airportPick ? 1 : 0,
+                      isHotel: true,
+                    },
+                  ]}
+                  height="180px"
+                  showLegs={Boolean(wizard.airportPick)}
+                  showLegend={false}
+                  defaultCenter={{ lat: wizard.hotelPick.lat, lng: wizard.hotelPick.lng }}
+                />
+              </>
             )}
 
             {wizard.hotelSkipped && !wizard.hotelPick && (
@@ -1067,17 +1120,178 @@ export function WizardPage() {
           </label>
 
           <p className="hint-box">Resumen: {preview}</p>
+
+          <div className="wiz-actions">
+            <button type="button" className="btn ghost" onClick={() => go(2)}>
+              Atrás
+            </button>
+            <button type="button" className="btn primary" onClick={() => go(4)}>
+              Ver resumen
+            </button>
+          </div>
+        </section>
+      )}
+
+      {step === 4 && (
+        <section className="wiz-stage">
+          <h2 className="wiz-title">Así queda el viaje</h2>
+          <p className="muted">Revisad y generad. Podéis volver a cualquier paso.</p>
+
+          <ul className="wiz-summary">
+            <li>
+              <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
+                <span className="wiz-summary-k">Destino</span>
+                <span className="wiz-summary-v">
+                  {wizard.cityPick?.name ?? wizard.cityQuery}
+                  {wizard.areaScale !== 'city' ? ` · ${wizard.areaScale}` : ''}
+                </span>
+                <span className="wiz-summary-edit">Editar</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
+                <span className="wiz-summary-k">Fechas</span>
+                <span className="wiz-summary-v">
+                  {wizard.startDate} → {wizard.endDate}
+                  {nights > 0 ? ` · ${nights} noche${nights === 1 ? '' : 's'}` : ''}
+                </span>
+                <span className="wiz-summary-edit">Editar</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" className="wiz-summary-row" onClick={() => go(1)}>
+                <span className="wiz-summary-k">Llegada / hotel</span>
+                <span className="wiz-summary-v">
+                  Vuelo {wizard.arrivalTime} / salida {wizard.departureTime}
+                  {wizard.airportPick ? ` · ${wizard.airportPick.name}` : ''}
+                  {wizard.hotelPick
+                    ? ` · ${wizard.hotelPick.name}`
+                    : wizard.hotelSkipped
+                      ? ' · sin hotel'
+                      : ''}
+                </span>
+                <span className="wiz-summary-edit">Editar</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" className="wiz-summary-row" onClick={() => go(2)}>
+                <span className="wiz-summary-k">Gustos</span>
+                <span className="wiz-summary-v">
+                  {activePrefs.map((k) => PREFERENCE_LABELS[k]).join(', ') || '—'}
+                </span>
+                <span className="wiz-summary-edit">Editar</span>
+              </button>
+            </li>
+            <li>
+              <button type="button" className="wiz-summary-row" onClick={() => go(3)}>
+                <span className="wiz-summary-k">Cómo viajáis</span>
+                <span className="wiz-summary-v">{preview}</span>
+                <span className="wiz-summary-edit">Editar</span>
+              </button>
+            </li>
+          </ul>
+
+          <div className="wiz-block" style={{ marginTop: '1.25rem' }}>
+            <h3 className="wiz-block-title">¿Algo que sí o sí queréis ver?</h3>
+            <p className="muted tiny">
+              Opcional. Si no conocéis la ciudad, dejadlo vacío: la app os recomienda. Si ya tenéis
+              un monumento o museo en mente, añadidlo y lo priorizamos en el plan.
+            </p>
+            {(wizard.mustVisits ?? []).length > 0 && (
+              <ul className="chips" style={{ marginBottom: '0.75rem' }}>
+                {(wizard.mustVisits ?? []).map((m) => (
+                  <li key={`${m.name}-${m.lat}`}>
+                    <button
+                      type="button"
+                      className="chip on"
+                      onClick={() =>
+                        patchWizard({
+                          mustVisits: (wizard.mustVisits ?? []).filter(
+                            (x) => !(x.name === m.name && x.lat === m.lat),
+                          ),
+                        })
+                      }
+                    >
+                      {m.name} ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <label className="field">
+              <span>Buscar sitio</span>
+              <input
+                value={wizard.mustVisitQuery ?? ''}
+                onChange={(e) => patchWizard({ mustVisitQuery: e.target.value })}
+                placeholder="Ej. Tower Bridge, British Museum…"
+                disabled={!wizard.cityPick}
+              />
+            </label>
+            {searchingMust && <p className="muted tiny">Buscando…</p>}
+            {mustSuggestions.length > 0 && (
+              <ul className="suggest-cities">
+                {mustSuggestions.map((s) => (
+                  <li key={`${s.lat}-${s.lng}-${s.label}`}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const exists = (wizard.mustVisits ?? []).some(
+                          (m) => Math.abs(m.lat - s.lat) < 0.0005 && Math.abs(m.lng - s.lng) < 0.0005,
+                        )
+                        if (!exists) {
+                          patchWizard({
+                            mustVisits: [
+                              ...(wizard.mustVisits ?? []),
+                              { name: s.shortName, lat: s.lat, lng: s.lng },
+                            ],
+                            mustVisitQuery: '',
+                          })
+                        } else {
+                          patchWizard({ mustVisitQuery: '' })
+                        }
+                        setMustSuggestions([])
+                      }}
+                    >
+                      <strong>{s.shortName}</strong>
+                      <span className="muted tiny">{s.kind} · {s.displayName}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {(() => {
+            const budget = estimateTripBudget({
+              cityName: wizard.cityPick?.name ?? wizard.cityQuery,
+              displayName: wizard.cityPick?.displayName,
+              startDate: wizard.startDate,
+              endDate: wizard.endDate,
+              foodBudget: wizard.routeStyle.foodBudget,
+            })
+            return (
+              <div className="budget-box">
+                <strong>Presupuesto orientativo</strong>
+                <p>
+                  ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/persona/día · total ~{' '}
+                  {budget.totalMin}–{budget.totalMax} €/persona ({budget.days} días)
+                </p>
+                <p className="muted tiny">{budget.blurb}</p>
+              </div>
+            )
+          })()}
+
           {error && <p className="error">{error}</p>}
 
           <div className="wiz-actions">
-            <button type="button" className="btn ghost" onClick={() => go(2)} disabled={generating}>
+            <button type="button" className="btn ghost" onClick={() => go(3)} disabled={generating}>
               Atrás
             </button>
             <button
               type="button"
               className="btn primary"
               onClick={() => void generateTrip()}
-              disabled={generating}
+              disabled={generating || !wizard.cityPick}
             >
               {generating ? 'Generando plan (~15–40 s)…' : 'Generar viaje'}
             </button>

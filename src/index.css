@@ -118,13 +118,97 @@ a {
 
 .wiz-progress {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.35rem;
   margin: 0 0 1.75rem;
   padding: 0.35rem;
   background: rgba(255, 255, 255, 0.45);
   border-radius: 999px;
   border: 1px solid var(--line);
+}
+
+.wiz-summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.wiz-summary-row {
+  width: 100%;
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  display: grid;
+  grid-template-columns: 7.5rem 1fr auto;
+  gap: 0.65rem;
+  align-items: start;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.wiz-summary-k {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sea);
+}
+
+.wiz-summary-v {
+  font-size: 0.92rem;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.wiz-summary-edit {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--sand-deep);
+}
+
+.budget-box {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  background: rgba(31, 111, 99, 0.08);
+  border-left: 3px solid var(--sea-soft);
+}
+
+.budget-box strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.budget-box p {
+  margin: 0.2rem 0;
+}
+
+.stop-photo {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(11, 31, 36, 0.06);
+}
+
+.stop-user-notes {
+  margin-top: 0.45rem;
+}
+
+.stop-user-notes input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font: inherit;
+  font-size: 0.85rem;
+  background: #fff;
 }
 
 .wiz-step {
@@ -544,6 +628,19 @@ a {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  display: grid;
+  gap: 0.2rem;
+}
+
+.day-card-wrap {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.day-card-actions {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0 0.15rem 0.15rem;
 }
 
 .day-preview {
@@ -857,6 +954,180 @@ code {
   font-family: var(--font-display);
   margin: 0;
   font-size: 1.6rem;
+}
+
+.chaos-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.checkin-list {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.checkin-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.checkin-item.current {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.checkin-item.done {
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.checkin-item.skipped {
+  opacity: 0.45;
+}
+
+.checkin-mark {
+  width: 1.1rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.copilot-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.copilot-thread {
+  flex: 1;
+  display: grid;
+  gap: 0.65rem;
+  margin: 0.75rem 0;
+  max-height: 48vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.copilot-bubble {
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.copilot-bubble.user {
+  background: rgba(31, 111, 99, 0.08);
+  border-color: rgba(31, 111, 99, 0.25);
+  justify-self: end;
+  max-width: 92%;
+}
+
+.copilot-bubble.assistant {
+  max-width: 100%;
+}
+
+.copilot-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: var(--font-body, inherit);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.copilot-compose {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  position: sticky;
+  bottom: 0.5rem;
+  background: linear-gradient(transparent, var(--bg) 30%);
+  padding-top: 0.5rem;
+}
+
+.copilot-compose input {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  font: inherit;
+  background: var(--surface);
+  color: inherit;
+}
+
+.copilot-share {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.copilot-start {
+  margin-top: 1.5rem;
+}
+
+.copilot-start-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.2rem;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
+.copilot-start-card h2 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.tg-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #2aabee;
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.copilot-loc {
+  margin: 0.75rem 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.tg-fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1.1rem, env(safe-area-inset-bottom));
+  z-index: 60;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 0;
+  background: #2aabee;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 28px rgba(42, 171, 238, 0.45);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.tg-fab:hover {
+  filter: brightness(1.06);
+}
+
+.copilot-page .tg-fab {
+  bottom: max(4.5rem, calc(env(safe-area-inset-bottom) + 3.5rem));
 }
 
 .date-selects {

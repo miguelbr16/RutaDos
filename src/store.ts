@@ -3,14 +3,18 @@ import { persist } from 'zustand/middleware'
 import { geocodeCity, geocodeHotel } from './lib/geocode'
 import { discoverPlaces } from './lib/discover'
 import { landmarksForDestination, mergeLandmarks } from './lib/landmarks'
+import { boostSponsoredPlaces } from './lib/partners'
 import {
   addManualStop,
   addPlaceAsStop,
   buildDayPlans,
+  chaosReplanDay,
   moveStop,
   optimizeOrder,
   rebuildDayTransport,
   removeStop,
+  replanDayForFocus,
+  type ChaosMode,
 } from './lib/plan'
 import { uid } from './lib/id'
 import {
@@ -105,6 +109,9 @@ interface WizardDraft {
   hotelSkipped: boolean
   airportPick: { name: string; code?: string; lat: number; lng: number } | null
   areaScale: AreaScale
+  /** Sitios que queréis sí o sí (opcional; vacío = solo recomendaciones) */
+  mustVisits: Array<{ name: string; lat: number; lng: number }>
+  mustVisitQuery: string
 }
 
 type View =
@@ -115,6 +122,8 @@ type View =
   | { name: 'onroute'; tripId: string; dayId: string }
   | { name: 'guides'; tripId: string }
   | { name: 'build'; tripId: string; dayId?: string }
+  | { name: 'share'; token: string }
+  | { name: 'copilot'; tripId: string; dayId?: string }
   | { name: 'auth' }
   | { name: 'settings' }
 
@@ -156,6 +165,24 @@ interface AppState {
     stopId: string,
     mode: TransitMode,
   ) => void
+  setStopUserNotes: (tripId: string, dayId: string, stopId: string, userNotes: string) => void
+  setStopVisitStatus: (
+    tripId: string,
+    dayId: string,
+    stopId: string,
+    status: 'pending' | 'done' | 'skipped',
+  ) => void
+  setStopReaction: (
+    tripId: string,
+    dayId: string,
+    stopId: string,
+    reaction: 'like' | 'dislike' | null,
+  ) => void
+  /** Posponer parada: quitar del día y marcar en wishlist para otro día */
+  deferStopToLater: (tripId: string, dayId: string, stopId: string) => void
+  /** Añadir un sitio pospuesto a este día */
+  addDeferredToDay: (tripId: string, dayId: string, placeId: string) => void
+  chaosReplan: (tripId: string, dayId: string, mode: ChaosMode) => void
   setCustomDayPlaces: (tripId: string, dayId: string, places: GeoPlace[]) => void
   importTrips: (trips: Trip[]) => void
 }
@@ -184,6 +211,8 @@ const initialWizard = (): WizardDraft => ({
   hotelSkipped: false,
   airportPick: null,
   areaScale: 'city',
+  mustVisits: [],
+  mustVisitQuery: '',
 })
 
 export const useAppStore = create<AppState>()(
@@ -322,9 +351,23 @@ export const useAppStore = create<AppState>()(
             wizard.routeStyle,
             dayCount,
           )
-          const places = mergeLandmarks(
-            rawPlaces,
-            landmarksForDestination(city.name, city.displayName),
+          const mustPlaces: GeoPlace[] = (wizard.mustVisits ?? []).map((m, i) => ({
+            id: `must-${i}-${m.lat.toFixed(4)}-${m.lng.toFixed(4)}`,
+            name: m.name,
+            lat: m.lat,
+            lng: m.lng,
+            category: 'must_see' as const,
+            tier: 'must' as const,
+            source: 'manual' as const,
+            notes: 'Sí o sí · lo pedisteis',
+            score: 130,
+            tags: ['must_visit'],
+          }))
+          const places = boostSponsoredPlaces(
+            mergeLandmarks(
+              [...mustPlaces, ...rawPlaces],
+              landmarksForDestination(city.name, city.displayName),
+            ),
           )
           if (!places.length) {
             throw new Error(
@@ -418,7 +461,22 @@ export const useAppStore = create<AppState>()(
       setDayFocus: (tripId, dayId, focus) => {
         get().updateDayStops(tripId, dayId, (t, id) => {
           const day = t.days.find((d) => d.id === id)!
-          return { ...day, focus }
+          const reserved = new Set<string>()
+          for (const d of t.days) {
+            if (d.id === id) continue
+            for (const s of d.stops) {
+              if (!s.isHotel && s.placeId) reserved.add(s.placeId)
+            }
+          }
+          return replanDayForFocus(
+            day,
+            t.places,
+            focus,
+            t.routeStyle,
+            t.logistics ?? DEFAULT_LOGISTICS,
+            { lat: t.city.lat, lng: t.city.lng },
+            reserved,
+          )
         })
       },
 
@@ -447,6 +505,167 @@ export const useAppStore = create<AppState>()(
               : s,
           )
           return { ...day, stops }
+        })
+      },
+
+      setStopUserNotes: (tripId, dayId, stopId, userNotes) => {
+        get().updateDayStops(tripId, dayId, (t, id) => {
+          const day = t.days.find((d) => d.id === id)!
+          return {
+            ...day,
+            stops: day.stops.map((s) =>
+              s.id === stopId ? { ...s, userNotes: userNotes || undefined } : s,
+            ),
+          }
+        })
+      },
+
+      setStopVisitStatus: (tripId, dayId, stopId, status) => {
+        get().updateDayStops(tripId, dayId, (t, id) => {
+          const day = t.days.find((d) => d.id === id)!
+          return {
+            ...day,
+            stops: day.stops.map((s) =>
+              s.id === stopId ? { ...s, visitStatus: status } : s,
+            ),
+          }
+        })
+      },
+
+      setStopReaction: (tripId, dayId, stopId, reaction) => {
+        set((s) => {
+          const trips = s.trips.map((t) => {
+            if (t.id !== tripId) return t
+            const days = t.days.map((d) => {
+              if (d.id !== dayId) return d
+              return {
+                ...d,
+                stops: d.stops.map((stop) => {
+                  if (stop.id !== stopId) return stop
+                  return {
+                    ...stop,
+                    reaction: reaction ?? undefined,
+                  }
+                }),
+              }
+            })
+            const stop = t.days.flatMap((d) => d.stops).find((x) => x.id === stopId)
+            const places = t.places.map((p) => {
+              if (!stop || p.id !== stop.placeId) return p
+              return { ...p, reaction: reaction ?? undefined }
+            })
+            const next = { ...t, days, places, updatedAt: new Date().toISOString() }
+            scheduleSync(next)
+            return next
+          })
+          return { trips }
+        })
+      },
+
+      deferStopToLater: (tripId, dayId, stopId) => {
+        set((s) => {
+          const trips = s.trips.map((t) => {
+            if (t.id !== tripId) return t
+            const day = t.days.find((d) => d.id === dayId)
+            const stop = day?.stops.find((x) => x.id === stopId)
+            if (!day || !stop || stop.isHotel) return t
+
+            let places = [...t.places]
+            const existing = places.find((p) => p.id === stop.placeId)
+            if (existing) {
+              places = places.map((p) =>
+                p.id === stop.placeId
+                  ? { ...p, deferred: true, score: Math.min(100, p.score + 15) }
+                  : p,
+              )
+            } else {
+              places.push({
+                id: stop.placeId,
+                name: stop.name,
+                lat: stop.lat,
+                lng: stop.lng,
+                category: stop.category,
+                tier: 'recommended',
+                source: 'manual',
+                score: 85,
+                deferred: true,
+                notes: 'Pospuesto para otro día',
+              })
+            }
+
+            const nextDay = rebuildDayTransport(
+              {
+                ...day,
+                stops: day.stops.filter((s) => s.id !== stopId),
+              },
+              t.routeStyle.mobility,
+              t.routeStyle,
+              parkPool({ ...t, places }),
+              { retime: true, hotel: t.logistics?.hotel ?? null, wishlist: places },
+            )
+
+            const next: Trip = {
+              ...t,
+              places,
+              days: t.days.map((d) => (d.id === dayId ? nextDay : d)),
+              updatedAt: new Date().toISOString(),
+            }
+            scheduleSync(next)
+            return next
+          })
+          return { trips }
+        })
+      },
+
+      addDeferredToDay: (tripId, dayId, placeId) => {
+        set((s) => {
+          const trips = s.trips.map((t) => {
+            if (t.id !== tripId) return t
+            const place = t.places.find((p) => p.id === placeId)
+            const day = t.days.find((d) => d.id === dayId)
+            if (!place || !day) return t
+            const nextDay = addPlaceAsStop(
+              day,
+              place,
+              t.routeStyle.mobility,
+              t.routeStyle,
+              parkPool(t),
+            )
+            const places = t.places.map((p) =>
+              p.id === placeId ? { ...p, deferred: false } : p,
+            )
+            const next: Trip = {
+              ...t,
+              places,
+              days: t.days.map((d) => (d.id === dayId ? nextDay : d)),
+              updatedAt: new Date().toISOString(),
+            }
+            scheduleSync(next)
+            return next
+          })
+          return { trips }
+        })
+      },
+
+      chaosReplan: (tripId, dayId, mode) => {
+        get().updateDayStops(tripId, dayId, (t, id) => {
+          const day = t.days.find((d) => d.id === id)!
+          const reserved = new Set<string>()
+          for (const d of t.days) {
+            if (d.id === id) continue
+            for (const s of d.stops) {
+              if (!s.isHotel && s.placeId) reserved.add(s.placeId)
+            }
+          }
+          return chaosReplanDay(
+            day,
+            mode,
+            t.places,
+            t.routeStyle,
+            t.logistics ?? DEFAULT_LOGISTICS,
+            { lat: t.city.lat, lng: t.city.lng },
+            reserved,
+          )
         })
       },
 

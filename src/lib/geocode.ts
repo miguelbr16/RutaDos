@@ -354,6 +354,54 @@ export async function geocodeHotel(
   throw new Error(`No encontramos “${query.trim()}” cerca de ${cityName}`)
 }
 
+/** Monumentos / sitios concretos en una ciudad (wizard “sí o sí”). */
+export async function searchCityPlaces(
+  query: string,
+  cityName: string,
+  limit = 8,
+): Promise<PlaceSuggestion[]> {
+  const q = query.trim()
+  if (q.length < 2) return []
+
+  if (isGoogleMapsUrl(q)) {
+    const resolved = await resolveGoogleMapsUrl(q)
+    if (resolved && Number.isFinite(resolved.lat) && Number.isFinite(resolved.lng)) {
+      return [
+        {
+          label: `${resolved.name} (enlace Maps)`,
+          shortName: resolved.name,
+          lat: resolved.lat,
+          lng: resolved.lng,
+          displayName: resolved.name,
+          kind: 'enlace',
+        },
+      ]
+    }
+  }
+
+  const fromUrl = extractCoordsFromMapsUrl(q)
+  if (fromUrl) {
+    const name = extractNameFromMapsUrl(q) || q.slice(0, 40)
+    return [
+      {
+        label: `${name} (coords)`,
+        shortName: name,
+        lat: fromUrl.lat,
+        lng: fromUrl.lng,
+        displayName: name,
+        kind: 'enlace',
+      },
+    ]
+  }
+
+  const city = cityName.trim()
+  const attempts = city
+    ? [`${q}, ${city}`, `${q} ${city}`, q]
+    : [q]
+  const lists = await Promise.all(attempts.map((a) => nominatimSearch(a, 6).then((d) => d.map(toSuggestion))))
+  return mergeSuggestions(lists, limit)
+}
+
 function clampBbox(
   bbox: CityInfo['bbox'],
   lat: number,

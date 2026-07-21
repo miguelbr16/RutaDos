@@ -10,17 +10,28 @@ import { GuidesPage } from './pages/GuidesPage'
 import { BuildPage } from './pages/BuildPage'
 import { AuthPage } from './pages/AuthPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { SharePage } from './pages/SharePage'
+import { CopilotPage, TelegramCopilotFab } from './pages/CopilotPage'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { mergeTrips, pullTrips, rowToTrip, type TripRow } from './lib/sync'
 
 export default function App() {
   const view = useAppStore((s) => s.view)
+  const setView = useAppStore((s) => s.setView)
   const initAuth = useAuthStore((s) => s.init)
   const coupleId = useAuthStore((s) => s.coupleId)
 
   useEffect(() => {
     void initAuth()
   }, [initAuth])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const share = params.get('share')
+    if (share) {
+      setView({ name: 'share', token: share })
+    }
+  }, [setView])
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !coupleId) return
@@ -72,8 +83,21 @@ export default function App() {
       {view.name === 'onroute' && <OnRoutePage tripId={view.tripId} dayId={view.dayId} />}
       {view.name === 'guides' && <GuidesPage tripId={view.tripId} />}
       {view.name === 'build' && <BuildPage tripId={view.tripId} dayId={view.dayId} />}
+      {view.name === 'share' && <SharePage token={view.token} />}
+      {view.name === 'copilot' && (
+        <CopilotPage tripId={view.tripId} dayId={view.dayId} />
+      )}
       {view.name === 'auth' && <AuthPage />}
       {view.name === 'settings' && <SettingsPage />}
+      {(view.name === 'trip' ||
+        view.name === 'day' ||
+        view.name === 'onroute' ||
+        view.name === 'build') && (
+        <TelegramCopilotFab
+          tripId={view.tripId}
+          dayId={'dayId' in view ? view.dayId : undefined}
+        />
+      )}
     </div>
   )
 }

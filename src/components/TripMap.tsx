@@ -232,6 +232,34 @@ export function TripMap({
                 <Popup>
                   <strong>{s.name}</strong>
                   <div>{s.isHotel ? 'Hotel' : CATEGORY_LABELS[s.category]}</div>
+                  {(s.photoUrls?.length || s.photoUrl) && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 4,
+                        marginTop: 6,
+                        maxWidth: 220,
+                        overflowX: 'auto',
+                      }}
+                    >
+                      {(s.photoUrls?.length ? s.photoUrls : s.photoUrl ? [s.photoUrl] : []).map(
+                        (src) => (
+                          <img
+                            key={src}
+                            src={src}
+                            alt=""
+                            style={{
+                              width: 96,
+                              height: 72,
+                              objectFit: 'cover',
+                              borderRadius: 8,
+                              flex: '0 0 auto',
+                            }}
+                          />
+                        ),
+                      )}
+                    </div>
+                  )}
                   {s.transitMode && (
                     <div className="muted">{TRANSIT_MODE_LABELS[s.transitMode]} →</div>
                   )}

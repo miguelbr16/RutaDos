@@ -16,6 +16,10 @@ import {
   tripToKml,
 } from '../lib/exportGmaps'
 import { getCityGuide, genericGuide } from '../lib/cityGuides'
+import { estimateFromTrip } from '../lib/budget'
+import { createTripShareToken, shareUrlForToken } from '../lib/share'
+import { isSupabaseConfigured } from '../lib/supabase'
+import { googleMapsDirectionsUrl } from '../lib/mapsUrl'
 
 export function TripPage({ tripId }: { tripId: string }) {
   const trip = useAppStore((s) => s.trips.find((t) => t.id === tripId))
@@ -27,6 +31,8 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [paste, setPaste] = useState('')
   const [importMsg, setImportMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [shareMsg, setShareMsg] = useState<string | null>(null)
+  const [shareBusy, setShareBusy] = useState(false)
 
   if (!trip) {
     return (
@@ -42,6 +48,48 @@ export function TripPage({ tripId }: { tripId: string }) {
   const allStops = trip.days.flatMap((d) => d.stops)
   const guide =
     getCityGuide(trip.city.name, trip.city.displayName) ?? genericGuide(trip.city.name)
+  const budget = estimateFromTrip(trip)
+
+  function exportTripJson() {
+    const blob = new Blob([JSON.stringify(trip, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${safeFilename(trip!.title)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function onShare() {
+    setShareBusy(true)
+    setShareMsg(null)
+    try {
+      if (!isSupabaseConfigured) {
+        exportTripJson()
+        setShareMsg(
+          'Sin Supabase no hay link web. Se descargó el viaje en JSON para compartirlo a mano.',
+        )
+        return
+      }
+      const token = await createTripShareToken(trip!)
+      const url = shareUrlForToken(token)
+      try {
+        await navigator.clipboard.writeText(url)
+        setShareMsg(`Link copiado: ${url}`)
+      } catch {
+        setShareMsg(`Link: ${url}`)
+      }
+    } catch (e) {
+      exportTripJson()
+      setShareMsg(
+        e instanceof Error
+          ? `${e.message} Se descargó JSON como respaldo.`
+          : 'No se pudo crear el link. Se descargó JSON.',
+      )
+    } finally {
+      setShareBusy(false)
+    }
+  }
 
   function exportToGoogleMaps() {
     const kml = tripToKml(trip!)
@@ -115,6 +163,15 @@ export function TripPage({ tripId }: { tripId: string }) {
 
       <TripMap stops={allStops.slice(0, 40)} height="220px" showLegend />
 
+      <div className="budget-box" style={{ marginTop: '1rem' }}>
+        <strong>Presupuesto orientativo</strong>
+        <p>
+          ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/persona/día · total ~{' '}
+          {budget.totalMin}–{budget.totalMax} €/persona ({budget.nights} noches)
+        </p>
+        <p className="muted tiny">{budget.blurb}</p>
+      </div>
+
       <div className="panel tip-panel">
         <h3>Cómo planificamos (estilo guía)</h3>
         <ul className="howto">
@@ -141,6 +198,21 @@ export function TripPage({ tripId }: { tripId: string }) {
         <button
           type="button"
           className="btn ghost sm"
+          disabled={shareBusy}
+          onClick={() => void onShare()}
+        >
+          {shareBusy ? 'Compartiendo…' : 'Compartir'}
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => setView({ name: 'copilot', tripId })}
+        >
+          Copiloto
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
           onClick={() => setView({ name: 'build', tripId })}
         >
           Armar ruta nosotros
@@ -156,6 +228,11 @@ export function TripPage({ tripId }: { tripId: string }) {
           Importar enlaces
         </button>
       </div>
+      {shareMsg && <p className="muted tiny">{shareMsg}</p>}
+      <p className="muted tiny">
+        Compartir: enviad el link a vuestra pareja. Con cuenta + Pareja, notas, me gusta / no quiero
+        y el check-in se sincronizan. Sin Supabase, se descarga JSON.
+      </p>
 
       {exportOpen && (
         <div className="panel">
@@ -229,29 +306,49 @@ export function TripPage({ tripId }: { tripId: string }) {
         <ul className="day-list">
           {trip.days.map((day) => (
             <li key={day.id}>
-              <button
-                type="button"
-                className="day-card"
-                onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
-              >
-                <span className="day-label">{day.label}</span>
-                <span className="muted">
-                  {day.stops.length} paradas
-                  {day.intensity === 'arrival'
-                    ? ' · llegada suave'
-                    : day.intensity === 'departure'
-                      ? ' · salida'
-                      : ''}
-                </span>
-                {day.note && <span className="day-preview">{day.note}</span>}
-                <span className="day-preview">
-                  {day.stops
-                    .slice(0, 3)
-                    .map((s) => s.name)
-                    .join(' · ')}
-                  {day.stops.length > 3 ? '…' : ''}
-                </span>
-              </button>
+              <div className="day-card-wrap">
+                <button
+                  type="button"
+                  className="day-card"
+                  onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
+                >
+                  <span className="day-label">{day.label}</span>
+                  <span className="muted">
+                    {day.stops.length} paradas
+                    {day.intensity === 'arrival'
+                      ? ' · llegada suave'
+                      : day.intensity === 'departure'
+                        ? ' · salida'
+                        : ''}
+                  </span>
+                  {day.note && <span className="day-preview">{day.note}</span>}
+                  <span className="day-preview">
+                    {day.stops
+                      .slice(0, 3)
+                      .map((s) => s.name)
+                      .join(' · ')}
+                    {day.stops.length > 3 ? '…' : ''}
+                  </span>
+                </button>
+                <div className="day-card-actions">
+                  <a
+                    className="btn ghost sm"
+                    href={googleMapsDirectionsUrl(day.stops)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Maps
+                  </a>
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    onClick={() => setView({ name: 'onroute', tripId: trip.id, dayId: day.id })}
+                  >
+                    Check-in
+                  </button>
+                </div>
+              </div>
             </li>
           ))}
         </ul>

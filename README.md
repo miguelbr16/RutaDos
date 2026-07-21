@@ -65,3 +65,4 @@ O conecta el repo en Cloudflare Pages: build `npm run build`, output `dist`.
 - Overpass + OSRM + Nominatim
 - Supabase free (opcional)
 - Hosting Vercel / Cloudflare Pages free
+- Copiloto in-app + compartir consejo por WhatsApp/Telegram; bot Telegram opcional (gratis) — ver [`docs/COPILOTO_TELEGRAM.md`](docs/COPILOTO_TELEGRAM.md)

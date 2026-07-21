@@ -26,6 +26,7 @@ import {
   GOOGLE_MY_MAPS_URL,
   safeFilename,
 } from '../lib/exportGmaps'
+import { fetchPlacePhotoUrls } from '../lib/placePhotos'
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
@@ -49,6 +50,11 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const addSuggestedToDay = useAppStore((s) => s.addSuggestedToDay)
   const setDayFocus = useAppStore((s) => s.setDayFocus)
   const setStopTransitMode = useAppStore((s) => s.setStopTransitMode)
+  const setStopUserNotes = useAppStore((s) => s.setStopUserNotes)
+  const setStopReaction = useAppStore((s) => s.setStopReaction)
+  const deferStopToLater = useAppStore((s) => s.deferStopToLater)
+  const addDeferredToDay = useAppStore((s) => s.addDeferredToDay)
+  const chaosReplan = useAppStore((s) => s.chaosReplan)
 
   const [route, setRoute] = useState<{ lat: number; lng: number }[] | null>(null)
   const [manualOpen, setManualOpen] = useState(false)
@@ -57,6 +63,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const [manualNotes, setManualNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [photoByStop, setPhotoByStop] = useState<Record<string, string[]>>({})
 
   const day = trip?.days.find((d) => d.id === dayId)
 
@@ -74,12 +81,40 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
     }
   }, [day?.stops])
 
+  useEffect(() => {
+    if (!day?.stops.length) return
+    let cancelled = false
+    void (async () => {
+      const next: Record<string, string[]> = {}
+      for (const s of day.stops.slice(0, 14)) {
+        if (s.isHotel) continue
+        if (s.photoUrls?.length) {
+          next[s.id] = s.photoUrls
+          continue
+        }
+        if (s.photoUrl) {
+          next[s.id] = [s.photoUrl]
+          continue
+        }
+        const urls = await fetchPlacePhotoUrls(s.name, s.lat, s.lng, 3)
+        if (urls.length) next[s.id] = urls
+      }
+      if (!cancelled) setPhotoByStop(next)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [day?.id, day?.stops])
+
   const usedIds = useMemo(() => new Set(day?.stops.map((s) => s.placeId) ?? []), [day?.stops])
 
   const suggestions: GeoPlace[] = useMemo(() => {
     if (!trip || !day) return []
     const pool = trip.places.filter((p) => !usedIds.has(p.id) && p.category !== 'nightlife')
     if (!pool.length) return []
+
+    const deferred = pool.filter((p) => p.deferred)
+    const rest = pool.filter((p) => !p.deferred)
 
     const anchor =
       day.stops.length > 0
@@ -91,7 +126,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           ? { lat: trip.logistics.hotel.lat, lng: trip.logistics.hotel.lng }
           : { lat: trip.city.lat, lng: trip.city.lng }
 
-    const near = pool
+    const near = rest
       .map((p) => ({ p, d: haversineKm(anchor.lat, anchor.lng, p.lat, p.lng) }))
       .filter((x) => x.d <= 4.5)
       .sort((a, b) => a.d - b.d || b.p.score - a.p.score)
@@ -100,12 +135,17 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
     const corridorKm = Math.min(0.8, 0.25 + trip.routeStyle.detourMinutes / 120)
     const along =
       trip.routeStyle.detours && route && route.length > 1
-        ? filterAlongRoute(pool, route, corridorKm, 8)
+        ? filterAlongRoute(rest, route, corridorKm, 8)
         : []
 
     const seen = new Set<string>()
     const out: GeoPlace[] = []
-    for (const p of [...along, ...near, ...pool.sort((a, b) => b.score - a.score)]) {
+    for (const p of [
+      ...deferred,
+      ...along,
+      ...near,
+      ...rest.sort((a, b) => b.score - a.score),
+    ]) {
       if (seen.has(p.id)) continue
       seen.add(p.id)
       out.push(p)
@@ -126,6 +166,11 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   }
 
   const ordered = [...day.stops].sort((a, b) => a.order - b.order)
+  const mapStops = ordered.map((s) => {
+    const urls = photoByStop[s.id]
+    if (!urls?.length) return s
+    return { ...s, photoUrl: urls[0], photoUrls: urls }
+  })
 
   async function submitManual(e: React.FormEvent) {
     e.preventDefault()
@@ -179,7 +224,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         {trip.logistics?.hotel && <p className="muted">Base: {trip.logistics.hotel.name} (ida y vuelta)</p>}
       </header>
 
-      <TripMap stops={ordered} route={route} height="220px" showLegend showLegs />
+      <TripMap stops={mapStops} route={route} height="220px" showLegend showLegs />
 
       <div className="field" style={{ marginTop: '0.75rem' }}>
         <span>Enfoque del día</span>
@@ -196,11 +241,34 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           ))}
         </div>
         <p className="muted tiny">
-          «Solo centro» = preferís ciudad. Las afueras siguen en la wishlist / «Armar nosotros».
+          Al cambiar el enfoque se rehace el plan del día (centro vs afueras). Las notas vuestras se
+          pierden en paradas que se sustituyen.
         </p>
       </div>
 
       <div className="toolbar">
+        <a
+          className="btn primary sm"
+          href={googleMapsDirectionsUrl(ordered)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Abrir día en Maps
+        </a>
+        <button
+          type="button"
+          className="btn primary sm"
+          onClick={() => setView({ name: 'onroute', tripId, dayId })}
+        >
+          Check-in / En ruta
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => setView({ name: 'copilot', tripId, dayId })}
+        >
+          Copiloto
+        </button>
         <button type="button" className="btn ghost sm" onClick={() => optimizeDay(tripId, dayId)}>
           Optimizar orden
         </button>
@@ -214,9 +282,6 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         <button type="button" className="btn ghost sm" onClick={() => setManualOpen((v) => !v)}>
           + Sitio manual
         </button>
-        <a className="btn ghost sm" href={googleMapsDirectionsUrl(ordered)} target="_blank" rel="noreferrer">
-          Abrir ruta en Maps
-        </a>
         <button
           type="button"
           className="btn ghost sm"
@@ -231,19 +296,46 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
             )
           }}
         >
-          Este día → Maps
+          Este día → My Maps
+        </button>
+      </div>
+
+      <div className="chaos-bar">
+        <span className="muted tiny">Si el plan se tuerce:</span>
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => {
+            chaosReplan(tripId, dayId, 'late')
+            setMsg('Replan: vais tarde — menos paradas desde media tarde.')
+          }}
+        >
+          Vamos tarde
         </button>
         <button
           type="button"
-          className="btn primary sm"
-          onClick={() => setView({ name: 'onroute', tripId, dayId })}
+          className="btn ghost sm"
+          onClick={() => {
+            chaosReplan(tripId, dayId, 'rain')
+            setMsg('Replan: lluvia — priorizamos sitios cubiertos.')
+          }}
         >
-          En ruta
+          Llueve
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => {
+            chaosReplan(tripId, dayId, 'shorter')
+            setMsg('Replan: día más ligero.')
+          }}
+        >
+          Día más corto
         </button>
       </div>
       <p className="muted tiny">
-        «Optimizar orden» reordena la ruta y actualiza las horas (cena ~20:00–21:00). Usalo también
-        después de añadir paradas.
+        «Abrir día en Maps» lleva la ruta ordenada. Check-in marca hecho / para otro día. El replan
+        conserva lo ya marcado como hecho.
       </p>
 
       {manualOpen && (
@@ -287,7 +379,16 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
                 )}
                 <div className="stop-row">
                   <div className="stop-main">
-                    <span className="num">{i + 1}</span>
+                    {photoByStop[stop.id]?.[0] || stop.photoUrl ? (
+                      <img
+                        className="stop-photo"
+                        src={photoByStop[stop.id]?.[0] || stop.photoUrl}
+                        alt=""
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="num">{i + 1}</span>
+                    )}
                     <div>
                       <strong>
                         {stop.suggestedTime ? `${stop.suggestedTime} · ` : ''}
@@ -295,10 +396,70 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
                       </strong>
                       <div className="muted">
                         {stop.isHotel ? 'Hotel' : CATEGORY_LABELS[stop.category]}
+                        {stop.sponsored ? ' · partner' : ''}
                       </div>
                       {stop.notes && stop.notes !== 'start' && stop.notes !== 'end' ? (
                         <p className="stop-tip">{stop.notes}</p>
                       ) : null}
+                      {!stop.isHotel && (
+                        <label className="stop-user-notes">
+                          <span className="muted tiny">Vuestra nota</span>
+                          <input
+                            value={stop.userNotes ?? ''}
+                            placeholder="Reserva, tip, cerrado…"
+                            onChange={(e) =>
+                              setStopUserNotes(tripId, dayId, stop.id, e.target.value)
+                            }
+                          />
+                        </label>
+                      )}
+                      {!stop.isHotel && (
+                        <div className="row gap wrap" style={{ marginTop: '0.35rem' }}>
+                          <button
+                            type="button"
+                            className={`chip ${stop.reaction === 'like' ? 'on' : ''}`}
+                            onClick={() =>
+                              setStopReaction(
+                                tripId,
+                                dayId,
+                                stop.id,
+                                stop.reaction === 'like' ? null : 'like',
+                              )
+                            }
+                          >
+                            Me gusta
+                          </button>
+                          <button
+                            type="button"
+                            className={`chip ${stop.reaction === 'dislike' ? 'on' : ''}`}
+                            onClick={() =>
+                              setStopReaction(
+                                tripId,
+                                dayId,
+                                stop.id,
+                                stop.reaction === 'dislike' ? null : 'dislike',
+                              )
+                            }
+                          >
+                            No quiero
+                          </button>
+                          <button
+                            type="button"
+                            className="chip"
+                            onClick={() => {
+                              deferStopToLater(tripId, dayId, stop.id)
+                              setMsg(`“${stop.name}” queda para otro día.`)
+                            }}
+                          >
+                            Otro día
+                          </button>
+                          {(stop.visitStatus === 'done' || stop.visitStatus === 'skipped') && (
+                            <span className="muted tiny">
+                              {stop.visitStatus === 'done' ? 'Hecho' : 'Saltado'}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {next && (
                         <div className="leg">
                           <div className="mode-row">
@@ -396,7 +557,9 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
 
       <section className="section">
         <h2>Más recomendaciones</h2>
-        <p className="muted">Cercanas a este día o a la ruta. Tocá para añadir.</p>
+        <p className="muted">
+          Primero salen sitios pospuestos de otro día. Tocá para añadir.
+        </p>
         <ul className="suggest-list">
           {suggestions.map((p) => (
             <li key={p.id}>
@@ -404,13 +567,21 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
                 type="button"
                 className="suggest-item"
                 onClick={() => {
-                  addSuggestedToDay(tripId, dayId, p)
-                  setMsg('Añadido. Podés optimizar el orden para actualizar horas.')
+                  if (p.deferred) addDeferredToDay(tripId, dayId, p.id)
+                  else addSuggestedToDay(tripId, dayId, p)
+                  setMsg(
+                    p.deferred
+                      ? 'Añadido el sitio que habíais dejado para otro día.'
+                      : 'Añadido. Podés optimizar el orden para actualizar horas.',
+                  )
                 }}
               >
                 <span className="cat">{CATEGORY_LABELS[p.category]}</span>
-                <strong>{p.name}</strong>
-                <span className="add">Añadir</span>
+                <strong>
+                  {p.deferred ? '↻ ' : ''}
+                  {p.name}
+                </strong>
+                <span className="add">{p.deferred ? 'Recuperar' : 'Añadir'}</span>
               </button>
             </li>
           ))}
