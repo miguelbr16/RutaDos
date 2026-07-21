@@ -340,13 +340,11 @@ function detectIntent(raw: string): 'route' | 'next' | 'howto' | 'nearby' | 'hel
 
 export function copilotHelpText(): string {
   return [
-    'Soy vuestro copiloto de viaje (Telegram-style, gratis). Elegid:',
-    '• Qué toca ahora',
-    '• Ruta de hoy',
-    '• Cómo llego (transporte / Maps)',
-    '• Qué hay cerca (monumentos por la zona)',
+    'Soy vuestro copiloto (todo dentro de la app). Elegid:',
+    '• Qué toca ahora · Ruta de hoy · Cómo llego · Qué hay cerca',
+    '• Está cerrado · Hay mucha cola · Vamos tarde (ajuste fino)',
     '',
-    'Ubicación: GPS o pegad un link de Google Maps / Apple Maps.',
+    'Ubicación: GPS o link de Google Maps / Apple Maps.',
   ].join('\n')
 }
 
@@ -417,12 +415,82 @@ export async function answerCopilot(
   return replyRoute(trip, day, here)
 }
 
-/** Enlace para abrir el bot de Telegram (gratis) o compartir texto. */
+/** Sin viaje: solo orientación por zona (OSM). */
+export async function answerCopilotStandalone(
+  message: string,
+  here: CopilotHere,
+): Promise<CopilotMsg> {
+  const intent = detectIntent(message)
+  if (intent === 'help') {
+    return {
+      id: `a-${Date.now()}`,
+      role: 'assistant',
+      text: [
+        'Sin viaje todavía puedo:',
+        '• Deciros qué hay cerca (monumentos / museos)',
+        '• Abrir Maps desde vuestra ubicación',
+        '',
+        'Cread un viaje para ruta del día, transporte y check-in.',
+      ].join('\n'),
+      mapsUrl: googleMapsPlaceUrl(here.lat, here.lng),
+      at: new Date().toISOString(),
+    }
+  }
+
+  const osm = await fetchNearbySights(here.lat, here.lng, 1200)
+  const lines = [
+    'Estáis aquí (sin viaje planificado).',
+    '',
+    osm.length ? 'Sitios de interés cerca:' : 'No encontré atracciones cerca ahora.',
+    ...osm.slice(0, 7).map(
+      (x) =>
+        `• ${x.name} (${x.kind}) · ${
+          x.km < 1 ? Math.round(x.km * 1000) + ' m' : x.km.toFixed(1) + ' km'
+        }`,
+    ),
+    '',
+    'Cuando tengáis un viaje, os digo la ruta óptima y el transporte.',
+  ]
+  return {
+    id: `a-${Date.now()}`,
+    role: 'assistant',
+    text: lines.join('\n'),
+    mapsUrl: osm[0]
+      ? googleMapsTransitLegUrl(here, osm[0], 'walking')
+      : googleMapsPlaceUrl(here.lat, here.lng),
+    at: new Date().toISOString(),
+  }
+}
+
+/** Abre la app de Telegram (tg://) — username sin @ en VITE_TELEGRAM_BOT. */
+export function telegramAppDeepLink(botUsername?: string, startPayload?: string): string | null {
+  const user = (botUsername || import.meta.env.VITE_TELEGRAM_BOT || '').replace(/^@/, '').trim()
+  if (!user) return null
+  if (startPayload) {
+    return `tg://resolve?domain=${encodeURIComponent(user)}&start=${encodeURIComponent(startPayload)}`
+  }
+  return `tg://resolve?domain=${encodeURIComponent(user)}`
+}
+
+/** Fallback https (escritorio / si tg:// no responde). */
 export function telegramBotUrl(botUsername?: string, startPayload?: string): string | null {
-  const user = (botUsername || import.meta.env.VITE_TELEGRAM_BOT || '').replace(/^@/, '')
+  const user = (botUsername || import.meta.env.VITE_TELEGRAM_BOT || '').replace(/^@/, '').trim()
   if (!user) return null
   if (startPayload) return `https://t.me/${user}?start=${encodeURIComponent(startPayload)}`
   return `https://t.me/${user}`
+}
+
+export function openTelegramBot(startPayload?: string): boolean {
+  const app = telegramAppDeepLink(undefined, startPayload)
+  const web = telegramBotUrl(undefined, startPayload)
+  if (!app || !web) return false
+  // Intenta app nativa; si no, https
+  window.location.href = app
+  window.setTimeout(() => {
+    // Si seguimos en la misma página (escritorio), ir a t.me
+    if (!document.hidden) window.location.href = web
+  }, 600)
+  return true
 }
 
 export function shareAdviceTelegram(text: string, mapsUrl?: string): string {

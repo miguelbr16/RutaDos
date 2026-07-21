@@ -27,6 +27,8 @@ import {
   safeFilename,
 } from '../lib/exportGmaps'
 import { fetchPlacePhotoUrls } from '../lib/placePhotos'
+import { hoursForPlace, evaluateOpeningHours, type PlaceHours } from '../lib/openingHours'
+import { saveOfflineDay } from '../lib/offlineDay'
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
@@ -64,8 +66,27 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [photoByStop, setPhotoByStop] = useState<Record<string, string[]>>({})
+  const [hoursByStop, setHoursByStop] = useState<Record<string, PlaceHours>>({})
+  const [online, setOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  )
 
   const day = trip?.days.find((d) => d.id === dayId)
+
+  useEffect(() => {
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => {
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (trip && day) saveOfflineDay(trip, day)
+  }, [trip, day])
 
   useEffect(() => {
     if (!day?.stops.length) {
@@ -105,6 +126,27 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       cancelled = true
     }
   }, [day?.id, day?.stops])
+
+  useEffect(() => {
+    if (!day?.stops.length || !online) return
+    let cancelled = false
+    void (async () => {
+      const next: Record<string, PlaceHours> = {}
+      for (const s of day.stops.slice(0, 12)) {
+        if (s.isHotel) continue
+        if (s.openingHours) {
+          next[s.id] = evaluateOpeningHours(s.openingHours)
+          continue
+        }
+        const h = await hoursForPlace(s.name, s.lat, s.lng)
+        next[s.id] = h
+      }
+      if (!cancelled) setHoursByStop(next)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [day?.id, day?.stops, online])
 
   const usedIds = useMemo(() => new Set(day?.stops.map((s) => s.placeId) ?? []), [day?.stops])
 
@@ -202,6 +244,11 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
 
   return (
     <div className="page">
+      {!online && (
+        <p className="offline-banner">
+          Sin conexión — este día está guardado en el móvil para consultarlo offline.
+        </p>
+      )}
       <button
         type="button"
         className="btn ghost sm back"
@@ -398,6 +445,13 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
                         {stop.isHotel ? 'Hotel' : CATEGORY_LABELS[stop.category]}
                         {stop.sponsored ? ' · partner' : ''}
                       </div>
+                      {hoursByStop[stop.id] && !stop.isHotel && (
+                        <p
+                          className={`hours-line ${hoursByStop[stop.id].status}`}
+                        >
+                          {hoursByStop[stop.id].label}
+                        </p>
+                      )}
                       {stop.notes && stop.notes !== 'start' && stop.notes !== 'end' ? (
                         <p className="stop-tip">{stop.notes}</p>
                       ) : null}

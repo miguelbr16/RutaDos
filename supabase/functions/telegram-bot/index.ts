@@ -1,19 +1,25 @@
-// Supabase Edge Function — Telegram bot (FREE via Bot API).
+// RutaDos Telegram bot — abre en la app de Telegram (gratis).
 // Deploy: supabase functions deploy telegram-bot --no-verify-jwt
-// Secrets: TELEGRAM_BOT_TOKEN, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_URL
-// Webhook: https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<project>.supabase.co/functions/v1/telegram-bot
+// Secrets: TELEGRAM_BOT_TOKEN (+ SUPABASE_URL / SERVICE_ROLE inyectados)
 //
-// Link a trip: user opens share link in app, then in Telegram sends:
-//   /start SHARETOKEN
-// Then: "ruta", "qué toca", "cómo llego", or send a location pin.
+// Capacidades:
+// - Ubicación (vosotros la mandáis)
+// - Ruta / siguiente / cómo llegar (si hay viaje enlazado)
+// - Cercanos (viaje + OpenStreetMap) con botones para marcar
+// - Abrir en Google Maps (ruta multi-parada) — NO puede escribir en "Guardados" de Google
+// - Pines como ubicaciones nativas de Telegram (mapa dentro de TG)
+//
+// /start TOKEN  → enlaza viaje (token de Compartir en RutaDos)
+// /start        → menú sin viaje (cerca + Maps)
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? ''
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? Deno.env.get('SB_URL') ?? ''
 const SERVICE_KEY =
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SB_SERVICE_ROLE_KEY') ?? ''
 
+type Place = { name: string; lat: number; lng: number; category?: string }
 type TripRow = {
   id: string
   title: string
@@ -33,15 +39,25 @@ type TripRow = {
       minutesToNext?: number
     }>
   }>
-  places: Array<{ name: string; lat: number; lng: number; category: string }>
+  places: Place[]
 }
 
-function tgApi(method: string, body: Record<string, unknown>) {
-  return fetch(`https://api.telegram.org/bot${TOKEN}/${method}`, {
+type ChatRow = {
+  chat_id: number
+  trip_id: string | null
+  last_lat: number | null
+  last_lng: number | null
+  last_nearby: Place[] | null
+  picks: Place[] | null
+}
+
+async function tg(method: string, body: Record<string, unknown>) {
+  const res = await fetch(`https://api.telegram.org/bot${TOKEN}/${method}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+  return res.json()
 }
 
 function todayISO() {
@@ -72,62 +88,140 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
 }
 
-function mapsDir(from: { lat: number; lng: number }, to: { lat: number; lng: number }, mode = 'transit') {
-  return `https://www.google.com/maps/dir/?api=1&origin=${from.lat},${from.lng}&destination=${to.lat},${to.lng}&travelmode=${mode}`
+function mapsDir(
+  points: Array<{ lat: number; lng: number }>,
+  mode: 'walking' | 'transit' | 'driving' = 'transit',
+) {
+  if (!points.length) return 'https://www.google.com/maps'
+  if (points.length === 1) {
+    return `https://www.google.com/maps/search/?api=1&query=${points[0].lat},${points[0].lng}`
+  }
+  const origin = `${points[0].lat},${points[0].lng}`
+  const destination = `${points[points.length - 1].lat},${points[points.length - 1].lng}`
+  const mid = points
+    .slice(1, -1)
+    .slice(0, 8)
+    .map((p) => `${p.lat},${p.lng}`)
+    .join('|')
+  const u = new URL('https://www.google.com/maps/dir/?api=1')
+  u.searchParams.set('origin', origin)
+  u.searchParams.set('destination', destination)
+  u.searchParams.set('travelmode', mode)
+  if (mid) u.searchParams.set('waypoints', mid)
+  return u.toString()
 }
 
-function answer(text: string, trip: TripRow, here?: { lat: number; lng: number }) {
-  const t = text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-  const day = activeDay(trip)
-  if (!day) return 'No hay días en este viaje.'
+function mainMenu() {
+  return {
+    keyboard: [
+      [{ text: '📍 Enviar ubicación', request_location: true }],
+      [{ text: '🗺 Ruta de hoy' }, { text: '⏭ Qué toca' }],
+      [{ text: '📍 Qué hay cerca' }, { text: '🚇 Cómo llego' }],
+      [{ text: '✅ Mis pines' }, { text: '🗺 Abrir en Google Maps' }],
+      [{ text: '❓ Ayuda' }],
+    ],
+    resize_keyboard: true,
+  }
+}
 
-  const pend = pending(day)
-  const next = pend[0]
-
-  if (/(cerca|monument|zona|interes)/.test(t) && here) {
-    const near = (trip.places ?? [])
-      .map((p) => ({ ...p, km: haversineKm(here, p) }))
-      .filter((p) => p.km <= 1.2)
-      .sort((a, b) => a.km - b.km)
-      .slice(0, 6)
-    const lines = [`${trip.title} · cerca de vosotros:`, ...near.map((p) => `• ${p.name} (~${(p.km * 1000) | 0} m)`)]
-    if (next) {
-      lines.push('', `Siguiente del plan: ${next.name}`, mapsDir(here, next))
+async function fetchOsmNearby(lat: number, lng: number): Promise<Place[]> {
+  const around = `around:900,${lat},${lng}`
+  const query = `
+[out:json][timeout:18];
+(
+  node(${around})[tourism~"attraction|museum|gallery|viewpoint"];
+  node(${around})[historic];
+  way(${around})[tourism~"attraction|museum"];
+);
+out center 15;
+`
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: `data=${encodeURIComponent(query)}`,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    if (!res.ok) return []
+    const json = await res.json()
+    const out: Place[] = []
+    const seen = new Set<string>()
+    for (const el of json.elements ?? []) {
+      const plat = el.lat ?? el.center?.lat
+      const plng = el.lon ?? el.center?.lon
+      const name = el.tags?.name
+      if (plat == null || plng == null || !name) continue
+      const key = name.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({
+        name,
+        lat: plat,
+        lng: plng,
+        category: el.tags?.tourism || el.tags?.historic || 'sight',
+      })
     }
-    return lines.join('\n') || 'Nada del viaje a <1.2 km.'
+    return out
+      .map((p) => ({ ...p, _d: haversineKm({ lat, lng }, p) }))
+      .sort((a, b) => (a as Place & { _d: number })._d - (b as Place & { _d: number })._d)
+      .slice(0, 8)
+      .map(({ name, lat, lng, category }) => ({ name, lat, lng, category }))
+  } catch {
+    return []
   }
+}
 
-  if (/(como llego|transporte|metro|linea|optima)/.test(t) && next) {
-    const from = here ?? next
-    const mode = next.transitMode === 'walk' ? 'walking' : next.transitMode === 'taxi' || next.transitMode === 'drive' ? 'driving' : 'transit'
-    return [
-      `Hacia: ${next.name}`,
-      `Modo: ${next.transitMode || 'transporte'}`,
-      next.transportReason || 'Abrí el link para ver la línea exacta en Maps.',
-      mapsDir(from, next, mode),
-    ].join('\n')
-  }
+function helpText() {
+  return [
+    'Soy el copiloto RutaDos en Telegram 🧭',
+    '',
+    '1) Mandad 📍 ubicación (botón o clip)',
+    '2) «Qué hay cerca» → marco opciones; tocá para añadir a vuestros pines',
+    '3) «Abrir en Google Maps» → ruta con lo marcado + plan',
+    '',
+    'Con viaje enlazado (/start TOKEN del Compartir):',
+    '• Ruta de hoy · Qué toca · Cómo llego (metro/bus en Maps)',
+    '',
+    '⚠️ Google no deja guardar pines en “Guardados” desde un bot.',
+    'Abrimos Maps con la ruta; ahí podéis guardar / My Maps.',
+  ].join('\n')
+}
 
-  if (/(siguiente|que toca|ahora)/.test(t)) {
-    if (!next) return 'No hay parada pendiente.'
-    return [`Ahora: ${next.name}`, next.suggestedTime ? `~${next.suggestedTime}` : '', next.transitMode ? `Luego: ${next.transitMode}` : '']
-      .filter(Boolean)
-      .join('\n')
+async function ensureChat(supabase: SupabaseClient, chatId: number): Promise<ChatRow> {
+  const { data } = await supabase.from('telegram_chats').select('*').eq('chat_id', chatId).maybeSingle()
+  if (data) return data as ChatRow
+  await supabase.from('telegram_chats').upsert({ chat_id: chatId, trip_id: null })
+  return {
+    chat_id: chatId,
+    trip_id: null,
+    last_lat: null,
+    last_lng: null,
+    last_nearby: [],
+    picks: [],
   }
+}
 
-  if (/(ruta|plan|paradas)/.test(t) || true) {
-    const list = (pend.length ? pend : visits(day)).slice(0, 10)
-    return [
-      `${trip.title} · ${day.label}`,
-      ...list.map((s) => `• ${s.suggestedTime ? s.suggestedTime + ' · ' : ''}${s.name}${s.transitMode ? ' → ' + s.transitMode : ''}`),
-      next ? mapsDir(next, list[list.length - 1] || next) : '',
-    ]
-      .filter(Boolean)
-      .join('\n')
+async function saveLoc(supabase: SupabaseClient, chatId: number, lat: number, lng: number) {
+  await supabase
+    .from('telegram_chats')
+    .upsert({ chat_id: chatId, last_lat: lat, last_lng: lng, updated_at: new Date().toISOString() })
+}
+
+async function loadTrip(supabase: SupabaseClient, tripId: string | null): Promise<TripRow | null> {
+  if (!tripId) return null
+  const { data } = await supabase.from('trips').select('*').eq('id', tripId).maybeSingle()
+  if (!data) return null
+  return {
+    id: data.id,
+    title: data.title,
+    days: data.days ?? [],
+    places: data.places ?? [],
   }
+}
+
+function modeOf(s?: string): 'walking' | 'transit' | 'driving' {
+  if (s === 'walk') return 'walking'
+  if (s === 'taxi' || s === 'drive') return 'driving'
+  return 'transit'
 }
 
 Deno.serve(async (req) => {
@@ -137,70 +231,354 @@ Deno.serve(async (req) => {
   }
 
   const update = await req.json()
-  const msg = update.message
-  if (!msg) return new Response('ok')
-
-  const chatId = msg.chat.id as number
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-  const text: string = msg.text || msg.caption || ''
-  if (text.startsWith('/start')) {
-    const token = text.replace('/start', '').trim()
-    if (!token) {
-      await tgApi('sendMessage', {
+  // Inline button: marcar / desmarcar sitio
+  if (update.callback_query) {
+    const cq = update.callback_query
+    const chatId = cq.message.chat.id as number
+    const data = String(cq.data || '')
+    const chat = await ensureChat(supabase, chatId)
+    const nearby = (chat.last_nearby ?? []) as Place[]
+    let picks = [...((chat.picks ?? []) as Place[])]
+
+    if (data.startsWith('sel:')) {
+      const idx = Number(data.slice(4))
+      const place = nearby[idx]
+      if (place) {
+        const exists = picks.findIndex(
+          (p) => Math.abs(p.lat - place.lat) < 1e-5 && Math.abs(p.lng - place.lng) < 1e-5,
+        )
+        if (exists >= 0) picks.splice(exists, 1)
+        else picks.push(place)
+        await supabase
+          .from('telegram_chats')
+          .update({ picks, updated_at: new Date().toISOString() })
+          .eq('chat_id', chatId)
+        await tg('answerCallbackQuery', {
+          callback_query_id: cq.id,
+          text: exists >= 0 ? `Quitado: ${place.name}` : `Añadido: ${place.name}`,
+        })
+        await tg('sendMessage', {
+          chat_id: chatId,
+          text: `Pines marcados (${picks.length}):\n${picks.map((p) => `• ${p.name}`).join('\n') || '—'}`,
+          reply_markup: mainMenu(),
+        })
+      } else {
+        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Expirado; pedid cerca otra vez' })
+      }
+    } else if (data === 'maps') {
+      await tg('answerCallbackQuery', { callback_query_id: cq.id })
+      const here =
+        chat.last_lat != null && chat.last_lng != null
+          ? { lat: chat.last_lat, lng: chat.last_lng }
+          : null
+      const points = [
+        ...(here ? [here] : []),
+        ...picks,
+      ]
+      const url = mapsDir(points, 'walking')
+      await tg('sendMessage', {
         chat_id: chatId,
-        text: 'Enlazad un viaje: generad Compartir en RutaDos y enviad aquí:\n/start TOKEN',
+        text: `Google Maps (ruta con vuestros pines):\n${url}\n\nPodéis guardar el mapa en My Maps si queréis conservarlo.`,
+        reply_markup: mainMenu(),
+      })
+    }
+    return new Response('ok')
+  }
+
+  const msg = update.message
+  if (!msg) return new Response('ok')
+  const chatId = msg.chat.id as number
+  const text: string = (msg.text || msg.caption || '').trim()
+  let chat = await ensureChat(supabase, chatId)
+
+  if (text.startsWith('/start')) {
+    const token = text.replace(/^\/start(@\w+)?/, '').trim()
+    if (token) {
+      const { data, error } = await supabase.rpc('link_telegram_chat', {
+        p_chat_id: chatId,
+        p_token: token,
+      })
+      if (error) {
+        await tg('sendMessage', {
+          chat_id: chatId,
+          text: `No pude enlazar el viaje: ${error.message}`,
+          reply_markup: mainMenu(),
+        })
+      } else {
+        await tg('sendMessage', {
+          chat_id: chatId,
+          text: `Viaje enlazado ✓\nMandad ubicación y usad el menú.`,
+          reply_markup: mainMenu(),
+        })
+      }
+    } else {
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: helpText(),
+        reply_markup: mainMenu(),
+      })
+    }
+    return new Response('ok')
+  }
+
+  // Ubicación
+  if (msg.location) {
+    const lat = msg.location.latitude
+    const lng = msg.location.longitude
+    await saveLoc(supabase, chatId, lat, lng)
+    chat = { ...chat, last_lat: lat, last_lng: lng }
+
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: 'Ubicación guardada ✓ Buscando sitios cerca…',
+      reply_markup: mainMenu(),
+    })
+
+    const trip = await loadTrip(supabase, chat.trip_id)
+    const fromTrip = (trip?.places ?? [])
+      .map((p) => ({ ...p, km: haversineKm({ lat, lng }, p) }))
+      .filter((p) => p.km <= 1.5)
+      .sort((a, b) => a.km - b.km)
+      .slice(0, 5)
+
+    const osm = await fetchOsmNearby(lat, lng)
+    const merged: Place[] = []
+    const seen = new Set<string>()
+    for (const p of [...fromTrip, ...osm]) {
+      const k = p.name.toLowerCase()
+      if (seen.has(k)) continue
+      seen.add(k)
+      merged.push({ name: p.name, lat: p.lat, lng: p.lng, category: p.category })
+      if (merged.length >= 8) break
+    }
+
+    await supabase
+      .from('telegram_chats')
+      .update({ last_nearby: merged, updated_at: new Date().toISOString() })
+      .eq('chat_id', chatId)
+
+    const lines = [
+      trip ? `${trip.title} · cerca de vosotros:` : 'Cerca de vosotros:',
+      ...merged.map(
+        (p, i) =>
+          `${i + 1}. ${p.name}${p.category ? ` (${p.category})` : ''} · ~${Math.round(haversineKm({ lat, lng }, p) * 1000)} m`,
+      ),
+      '',
+      'Tocad un botón para marcar pines. Luego «Abrir en Google Maps».',
+    ]
+
+    const rows = merged.map((p, i) => [
+      { text: `➕ ${p.name.slice(0, 28)}`, callback_data: `sel:${i}` },
+    ])
+    rows.push([{ text: '🗺 Abrir en Google Maps', callback_data: 'maps' }])
+
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: lines.join('\n'),
+      reply_markup: { inline_keyboard: rows },
+    })
+
+    // Primeros 3 pines en el mapa nativo de Telegram
+    for (const p of merged.slice(0, 3)) {
+      await tg('sendVenue', {
+        chat_id: chatId,
+        latitude: p.lat,
+        longitude: p.lng,
+        title: p.name.slice(0, 64),
+        address: p.category || 'RutaDos',
+      })
+    }
+    return new Response('ok')
+  }
+
+  chat = await ensureChat(supabase, chatId)
+  const trip = await loadTrip(supabase, chat.trip_id)
+  const here =
+    chat.last_lat != null && chat.last_lng != null
+      ? { lat: chat.last_lat, lng: chat.last_lng }
+      : undefined
+  const picks = (chat.picks ?? []) as Place[]
+  const t = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+
+  if (/ayuda|help|\?/.test(t) || text === '❓ Ayuda') {
+    await tg('sendMessage', { chat_id: chatId, text: helpText(), reply_markup: mainMenu() })
+    return new Response('ok')
+  }
+
+  if (/mis pines|pines|marcados/.test(t)) {
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text:
+        picks.length === 0
+          ? 'No hay pines marcados. Mandad ubicación → Tocad ➕ en cercanos.'
+          : `Marcados:\n${picks.map((p) => `• ${p.name}`).join('\n')}`,
+      reply_markup: mainMenu(),
+    })
+    return new Response('ok')
+  }
+
+  if (/abrir en google|google maps|abrir en maps/.test(t)) {
+    const day = trip ? activeDay(trip) : null
+    const pend = day ? pending(day) : []
+    const points: Array<{ lat: number; lng: number }> = []
+    if (here) points.push(here)
+    for (const p of picks) points.push(p)
+    for (const s of pend.slice(0, 6)) {
+      if (!points.some((x) => Math.abs(x.lat - s.lat) < 1e-5)) points.push(s)
+    }
+    const mode = pend[0] ? modeOf(pend[0].transitMode) : 'transit'
+    const url = mapsDir(points.length ? points : here ? [here] : [], mode)
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: [
+        'Ruta en Google Maps:',
+        url,
+        '',
+        'Google no permite que un bot guarde en vuestros “Guardados”.',
+        'Al abrir Maps: podéis anclar / compartir / importar en My Maps.',
+      ].join('\n'),
+      reply_markup: mainMenu(),
+      disable_web_page_preview: false,
+    })
+    return new Response('ok')
+  }
+
+  if (/cerca|monument|interes|zona/.test(t)) {
+    if (!here) {
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: 'Necesito ubicación. Usad el botón 📍 Enviar ubicación.',
+        reply_markup: mainMenu(),
       })
       return new Response('ok')
     }
-    const { data, error } = await supabase.rpc('link_telegram_chat', {
-      p_chat_id: chatId,
-      p_token: token,
-    })
-    if (error) {
-      await tgApi('sendMessage', { chat_id: chatId, text: `No pude enlazar: ${error.message}` })
-    } else {
-      await tgApi('sendMessage', {
-        chat_id: chatId,
-        text: `Viaje enlazado ✓ (${data}). Decid: ruta · qué toca · cómo llego · o mandad ubicación.`,
-      })
-    }
-    return new Response('ok')
-  }
-
-  const { data: link } = await supabase
-    .from('telegram_chats')
-    .select('trip_id')
-    .eq('chat_id', chatId)
-    .maybeSingle()
-
-  if (!link?.trip_id) {
-    await tgApi('sendMessage', {
+    // Reutilizar flujo: fingir location message by calling nearby again
+    msg.location = { latitude: here.lat, longitude: here.lng }
+    // fallthrough by recursive-ish: just duplicate minimal
+    await tg('sendMessage', {
       chat_id: chatId,
-      text: 'Primero /start TOKEN (el token del link Compartir de RutaDos).',
+      text: 'Reenviad ubicación o usad 📍 otra vez para refrescar cercanos.',
+      reply_markup: mainMenu(),
     })
     return new Response('ok')
   }
 
-  const { data: trip } = await supabase.from('trips').select('*').eq('id', link.trip_id).maybeSingle()
   if (!trip) {
-    await tgApi('sendMessage', { chat_id: chatId, text: 'Viaje no encontrado.' })
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: [
+        'Aún no hay viaje enlazado.',
+        'Podéis: mandar ubicación → marcar sitios → Abrir en Maps.',
+        'O en RutaDos: Compartir → /start TOKEN aquí.',
+      ].join('\n'),
+      reply_markup: mainMenu(),
+    })
     return new Response('ok')
   }
 
-  const row: TripRow = {
-    id: trip.id,
-    title: trip.title,
-    days: trip.days ?? [],
-    places: trip.places ?? [],
+  const day = activeDay(trip)
+  if (!day) {
+    await tg('sendMessage', { chat_id: chatId, text: 'Viaje sin días.', reply_markup: mainMenu() })
+    return new Response('ok')
+  }
+  const pend = pending(day)
+  const next = pend[0]
+
+  if (/que toca|siguiente|ahora/.test(t)) {
+    if (!next) {
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: 'No hay parada pendiente.',
+        reply_markup: mainMenu(),
+      })
+      return new Response('ok')
+    }
+    await tg('sendVenue', {
+      chat_id: chatId,
+      latitude: next.lat,
+      longitude: next.lng,
+      title: next.name.slice(0, 64),
+      address: next.suggestedTime ? `~${next.suggestedTime}` : 'Siguiente',
+    })
+    const from = here ?? next
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: [
+        `Ahora: ${next.name}`,
+        next.transitMode ? `Modo: ${next.transitMode}` : '',
+        next.transportReason || '',
+        mapsDir([from, next], modeOf(next.transitMode)),
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      reply_markup: mainMenu(),
+    })
+    return new Response('ok')
   }
 
-  let here: { lat: number; lng: number } | undefined
-  if (msg.location) {
-    here = { lat: msg.location.latitude, lng: msg.location.longitude }
+  if (/como llego|transporte|metro|linea|optima/.test(t)) {
+    if (!next) {
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: 'No hay destino pendiente.',
+        reply_markup: mainMenu(),
+      })
+      return new Response('ok')
+    }
+    if (!here) {
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: 'Mandad ubicación para calcular el tramo.',
+        reply_markup: mainMenu(),
+      })
+      return new Response('ok')
+    }
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: [
+        `Hacia: ${next.name}`,
+        `Modo sugerido: ${next.transitMode || 'transporte'}`,
+        'Maps muestra la línea exacta de metro/bus:',
+        mapsDir([here, next], modeOf(next.transitMode)),
+      ].join('\n'),
+      reply_markup: mainMenu(),
+    })
+    return new Response('ok')
   }
 
-  const reply = answer(text || (here ? 'cerca' : 'ruta'), row, here)
-  await tgApi('sendMessage', { chat_id: chatId, text: reply.slice(0, 3900) })
+  // Ruta por defecto
+  const list = (pend.length ? pend : visits(day)).slice(0, 10)
+  const points = [...(here ? [here] : []), ...list]
+  await tg('sendMessage', {
+    chat_id: chatId,
+    text: [
+      `${trip.title} · ${day.label}`,
+      ...list.map(
+        (s) =>
+          `• ${s.suggestedTime ? s.suggestedTime + ' · ' : ''}${s.name}${
+            s.transitMode ? ` → ${s.transitMode}` : ''
+          }`,
+      ),
+      '',
+      mapsDir(points, modeOf(list[0]?.transitMode)),
+    ].join('\n'),
+    reply_markup: mainMenu(),
+  })
+
+  for (const s of list.slice(0, 4)) {
+    await tg('sendVenue', {
+      chat_id: chatId,
+      latitude: s.lat,
+      longitude: s.lng,
+      title: s.name.slice(0, 64),
+      address: s.suggestedTime || trip.title,
+    })
+  }
+
   return new Response('ok')
 })

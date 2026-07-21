@@ -7,9 +7,29 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // En preview local el SW cacheaba builds viejos y parecía que “no se podía” elegir fechas futuras
-      selfDestroying: true,
       includeAssets: ['favicon.svg'],
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,ico,woff2,png,webp}'],
+        navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/[a-z]+\.tile\.openstreetmap\.org\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'osm-tiles',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 7 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/.*\.wikipedia\.org\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'wiki-thumbs',
+              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 3 },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'RutaDos',
         short_name: 'RutaDos',

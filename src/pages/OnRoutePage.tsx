@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CATEGORY_LABELS, TRANSPORT_LABELS, TRANSIT_MODE_LABELS } from '../types'
 import { useAppStore } from '../store'
 import { TripMap } from '../components/TripMap'
@@ -9,6 +9,8 @@ import {
   googleMapsTransitLegUrl,
   travelModeForTransit,
 } from '../lib/mapsUrl'
+import { saveOfflineDay } from '../lib/offlineDay'
+import { hoursForPlace, type PlaceHours } from '../lib/openingHours'
 
 export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const trip = useAppStore((s) => s.trips.find((t) => t.id === tripId))
@@ -17,8 +19,28 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
   const setStopReaction = useAppStore((s) => s.setStopReaction)
   const deferStopToLater = useAppStore((s) => s.deferStopToLater)
   const chaosReplan = useAppStore((s) => s.chaosReplan)
+  const [hours, setHours] = useState<PlaceHours | null>(null)
+  const [online, setOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  )
 
   const day = trip?.days.find((d) => d.id === dayId)
+
+  useEffect(() => {
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => {
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (trip && day) saveOfflineDay(trip, day)
+  }, [trip, day])
+
   const ordered = useMemo(
     () => (day ? [...day.stops].sort((a, b) => a.order - b.order) : []),
     [day],
@@ -31,6 +53,20 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
   }, [visits])
 
   const current = visits[currentIndex]
+
+  useEffect(() => {
+    if (!current || !online) {
+      setHours(null)
+      return
+    }
+    let cancelled = false
+    void hoursForPlace(current.name, current.lat, current.lng).then((h) => {
+      if (!cancelled) setHours(h)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [current?.id, online])
   const next = visits[currentIndex + 1]
   const remaining = current
     ? ordered.filter((s) => {
@@ -59,6 +95,11 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
 
   return (
     <div className="page onroute">
+      {!online && (
+        <p className="offline-banner">
+          Sin conexión — usáis la copia del día guardada en el móvil.
+        </p>
+      )}
       <button
         type="button"
         className="btn ghost sm back"
@@ -122,6 +163,7 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
             </span>
             <h2>{current.name}</h2>
             <p className="muted">{CATEGORY_LABELS[current.category]}</p>
+            {hours && <p className={`hours-line ${hours.status}`}>{hours.label}</p>}
             {current.userNotes && <p className="stop-tip">{current.userNotes}</p>}
             {next && (
               <p className="leg">

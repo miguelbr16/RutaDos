@@ -123,7 +123,7 @@ type View =
   | { name: 'guides'; tripId: string }
   | { name: 'build'; tripId: string; dayId?: string }
   | { name: 'share'; token: string }
-  | { name: 'copilot'; tripId: string; dayId?: string }
+  | { name: 'copilot'; tripId?: string; dayId?: string }
   | { name: 'auth' }
   | { name: 'settings' }
 

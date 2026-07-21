@@ -140,6 +140,8 @@ export interface Stop {
   visitStatus?: 'pending' | 'done' | 'skipped'
   /** Reacción compartida de la pareja */
   reaction?: 'like' | 'dislike'
+  /** OSM opening_hours crudo */
+  openingHours?: string
   photoUrl?: string
   /** Hasta ~3 thumbs (mapa / detalle) */
   photoUrls?: string[]

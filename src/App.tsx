@@ -89,15 +89,7 @@ export default function App() {
       )}
       {view.name === 'auth' && <AuthPage />}
       {view.name === 'settings' && <SettingsPage />}
-      {(view.name === 'trip' ||
-        view.name === 'day' ||
-        view.name === 'onroute' ||
-        view.name === 'build') && (
-        <TelegramCopilotFab
-          tripId={view.tripId}
-          dayId={'dayId' in view ? view.dayId : undefined}
-        />
-      )}
+      <TelegramCopilotFab />
     </div>
   )
 }

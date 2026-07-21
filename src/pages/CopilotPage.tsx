@@ -2,20 +2,29 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../store'
 import {
   answerCopilot,
+  answerCopilotStandalone,
   copilotHelpText,
   isMapsLocationLink,
+  openTelegramBot,
   pickActiveDay,
   resolveLocationFromMapsLink,
-  telegramBotUrl,
   type CopilotHere,
   type CopilotMsg,
 } from '../lib/copilot'
 
-const CHOICES = [
+const CHOICES_WITH_TRIP = [
   { id: 'next', label: 'Qué toca ahora', prompt: 'Qué toca ahora' },
   { id: 'route', label: 'Ruta de hoy', prompt: 'Ruta de hoy' },
   { id: 'howto', label: 'Cómo llego', prompt: 'Cómo llego' },
   { id: 'near', label: 'Qué hay cerca', prompt: 'Qué hay cerca' },
+  { id: 'closed', label: 'Está cerrado', prompt: 'está cerrado' },
+  { id: 'queue', label: 'Hay mucha cola', prompt: 'hay mucha cola' },
+  { id: 'late', label: 'Vamos tarde', prompt: 'vamos tarde' },
+] as const
+
+const CHOICES_NO_TRIP = [
+  { id: 'near', label: 'Qué hay cerca', prompt: 'Qué hay cerca' },
+  { id: 'here', label: 'Estoy aquí', prompt: 'estoy aquí' },
 ] as const
 
 function TelegramIcon({ size = 28 }: { size?: number }) {
@@ -26,9 +35,16 @@ function TelegramIcon({ size = 28 }: { size?: number }) {
   )
 }
 
-export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string }) {
-  const trip = useAppStore((s) => s.trips.find((t) => t.id === tripId))
+export function CopilotPage({ tripId, dayId }: { tripId?: string; dayId?: string }) {
+  const trips = useAppStore((s) => s.trips)
+  const activeTripId = useAppStore((s) => s.activeTripId)
+  const resolvedTripId = tripId || activeTripId || trips[0]?.id
+  const trip = resolvedTripId ? trips.find((t) => t.id === resolvedTripId) : undefined
   const setView = useAppStore((s) => s.setView)
+  const chaosReplan = useAppStore((s) => s.chaosReplan)
+  const deferStopToLater = useAppStore((s) => s.deferStopToLater)
+  const setStopVisitStatus = useAppStore((s) => s.setStopVisitStatus)
+
   const [started, setStarted] = useState(false)
   const [input, setInput] = useState('')
   const [mapsLink, setMapsLink] = useState('')
@@ -39,7 +55,7 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const day = trip ? pickActiveDay(trip, dayId) : null
-  const botUrl = telegramBotUrl()
+  const choices = trip ? CHOICES_WITH_TRIP : CHOICES_NO_TRIP
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -51,7 +67,16 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
       {
         id: 'welcome',
         role: 'assistant',
-        text: copilotHelpText(),
+        text: trip
+          ? copilotHelpText()
+          : [
+              'Hola — soy el copiloto de RutaDos (todo dentro de la app).',
+              'Todavía no hay viaje: puedo orientaros por la zona.',
+              '• «Qué hay cerca» / «Estoy aquí»',
+              '• Pegad un link de Google Maps o Apple Maps',
+              '',
+              'Para ruta del día y transporte, cread un viaje antes.',
+            ].join('\n'),
         at: new Date().toISOString(),
       },
     ])
@@ -87,7 +112,7 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
     setLocMsg('Leyendo link de Maps…')
     const resolved = await resolveLocationFromMapsLink(q)
     if (!resolved) {
-      setLocMsg('No pude leer ese link. Probá Google Maps o Apple Maps con coordenadas / pin.')
+      setLocMsg('No pude leer ese link. Probá Google Maps o Apple Maps con pin.')
       return null
     }
     const h = { lat: resolved.lat, lng: resolved.lng }
@@ -98,7 +123,7 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
   }
 
   async function ask(text: string) {
-    if (!trip || !text.trim()) return
+    if (!text.trim()) return
     if (!started) startChat()
 
     const userMsg: CopilotMsg = {
@@ -115,7 +140,12 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
       const looksLikeLink = isMapsLocationLink(text) || /maps\.(google|apple)|goo\.gl/i.test(text)
       if (looksLikeLink) {
         loc = (await applyMapsLink(text)) ?? loc
-        if (loc) {
+        if (loc && !trip) {
+          const reply = await answerCopilotStandalone('estoy aquí', loc)
+          setMessages((m) => [...m, reply])
+          return
+        }
+        if (loc && trip) {
           const reply = await answerCopilot('estoy aquí', trip, {
             dayId: day?.id ?? dayId,
             here: loc,
@@ -129,7 +159,6 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
         text,
       )
       if (needsLoc && !loc) {
-        // No forzar GPS: pedir link o GPS en el mensaje
         setMessages((m) => [
           ...m,
           {
@@ -138,11 +167,101 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
             text: [
               'Para orientaros necesito dónde estáis.',
               '• Tocad «Usar GPS», o',
-              '• Pegad un link de Google Maps / Apple Maps (en el campo de ubicación o aquí mismo).',
+              '• Pegad un link de Google Maps / Apple Maps.',
             ].join('\n'),
             at: new Date().toISOString(),
           },
         ])
+        return
+      }
+
+      // Ajuste fino con viaje + día
+      if (trip && day) {
+        const t = text
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/\p{M}/gu, '')
+        if (/cerrado|cierra|no abre|closed/.test(t)) {
+          const next = day.stops.find(
+            (s) => !s.isHotel && (s.visitStatus ?? 'pending') === 'pending',
+          )
+          if (next) {
+            deferStopToLater(trip.id, day.id, next.id)
+            setMessages((m) => [
+              ...m,
+              {
+                id: `a-${Date.now()}`,
+                role: 'assistant',
+                text: `«${next.name}» queda para otro día. Paso a la siguiente del plan.`,
+                at: new Date().toISOString(),
+              },
+            ])
+            const reply = await answerCopilot('qué toca', trip, {
+              dayId: day.id,
+              here: loc ?? undefined,
+            })
+            setMessages((m) => [...m, reply])
+            return
+          }
+        }
+        if (/cola|queue|espera|lleno|saturad/.test(t)) {
+          const next = day.stops.find(
+            (s) => !s.isHotel && (s.visitStatus ?? 'pending') === 'pending',
+          )
+          if (next) {
+            setStopVisitStatus(trip.id, day.id, next.id, 'skipped')
+            setMessages((m) => [
+              ...m,
+              {
+                id: `a-${Date.now()}`,
+                role: 'assistant',
+                text: `Saltamos «${next.name}» por la cola. Podéis recuperarlo otro día o más tarde.`,
+                at: new Date().toISOString(),
+              },
+            ])
+            const reply = await answerCopilot('qué toca', trip, {
+              dayId: day.id,
+              here: loc ?? undefined,
+            })
+            setMessages((m) => [...m, reply])
+            return
+          }
+        }
+        if (/tarde|nos retras|retraso|late/.test(t)) {
+          chaosReplan(trip.id, day.id, 'late')
+          setMessages((m) => [
+            ...m,
+            {
+              id: `a-${Date.now()}`,
+              role: 'assistant',
+              text: 'Replan: vais tarde — jornada más corta. Conservo lo ya hecho.',
+              at: new Date().toISOString(),
+            },
+          ])
+          const reply = await answerCopilot('ruta', trip, {
+            dayId: day.id,
+            here: loc ?? undefined,
+          })
+          setMessages((m) => [...m, reply])
+          return
+        }
+      }
+
+      if (!trip) {
+        if (!loc) {
+          setMessages((m) => [
+            ...m,
+            {
+              id: `a-${Date.now()}`,
+              role: 'assistant',
+              text: 'Sin viaje aún. Dadme ubicación (GPS o link) y pedid «qué hay cerca», o cread un viaje para la ruta completa.',
+              at: new Date().toISOString(),
+            },
+          ])
+          return
+        }
+        const reply = await answerCopilotStandalone(text, loc)
+        setMessages((m) => [...m, reply])
         return
       }
 
@@ -156,27 +275,16 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
     }
   }
 
-  if (!trip) {
-    return (
-      <div className="page">
-        <p>Viaje no encontrado.</p>
-        <button type="button" className="btn" onClick={() => setView({ name: 'home' })}>
-          Inicio
-        </button>
-      </div>
-    )
-  }
-
   return (
     <div className="page copilot-page">
       <button
         type="button"
         className="btn ghost sm back"
-        onClick={() =>
-          dayId
-            ? setView({ name: 'onroute', tripId, dayId })
-            : setView({ name: 'trip', tripId })
-        }
+        onClick={() => {
+          if (dayId && trip) setView({ name: 'onroute', tripId: trip.id, dayId })
+          else if (trip) setView({ name: 'trip', tripId: trip.id })
+          else setView({ name: 'home' })
+        }}
       >
         ← Atrás
       </button>
@@ -184,7 +292,7 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
       <p className="brand small">Copiloto</p>
       <h1>Agente en vivo</h1>
       <p className="muted tiny">
-        {trip.title}
+        {trip ? trip.title : 'Sin viaje aún'}
         {day ? ` · ${day.label}` : ''}
         {here ? ' · ubicación lista' : ''}
       </p>
@@ -197,16 +305,33 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
             </div>
             <h2>Empezar chat</h2>
             <p className="muted">
-              Os digo la ruta, el siguiente sitio, cómo llegar y qué hay cerca. Sin WhatsApp (de
-              pago): solo este chat y Telegram si lo configuráis.
+              El botón azul abre la app de Telegram (copiloto ahí). Aquí también podéis chatear en
+              la web si queréis.
             </p>
             <button type="button" className="btn primary" onClick={startChat}>
-              Empezar chat
+              Empezar chat aquí
             </button>
-            {botUrl && (
-              <a className="btn ghost" href={botUrl} target="_blank" rel="noreferrer">
-                Abrir bot en Telegram
-              </a>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                if (!openTelegramBot()) {
+                  setLocMsg(
+                    'Configurad VITE_TELEGRAM_BOT=TuBot en .env (username de @BotFather, sin @).',
+                  )
+                }
+              }}
+            >
+              Abrir app Telegram
+            </button>
+            {!trip && (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => setView({ name: 'wizard', step: 0 })}
+              >
+                Crear un viaje
+              </button>
             )}
           </div>
         </div>
@@ -216,7 +341,7 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
             Elegid una opción:
           </p>
           <div className="chips">
-            {CHOICES.map((c) => (
+            {choices.map((c) => (
               <button
                 key={c.id}
                 type="button"
@@ -232,15 +357,10 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
           <div className="copilot-loc panel">
             <strong>¿Dónde estáis?</strong>
             <p className="muted tiny">
-              GPS (opcional) o pegad un link de Google Maps / Apple Maps si no queréis compartir
-              ubicación.
+              GPS (opcional) o pegad un link de Google Maps / Apple Maps.
             </p>
             <div className="toolbar">
-              <button
-                type="button"
-                className="btn ghost sm"
-                onClick={() => void requestLocation()}
-              >
+              <button type="button" className="btn ghost sm" onClick={() => void requestLocation()}>
                 Usar GPS
               </button>
             </div>
@@ -297,54 +417,44 @@ export function CopilotPage({ tripId, dayId }: { tripId: string; dayId?: string 
           </form>
         </>
       )}
-
-      <a
-        className="tg-fab"
-        href={botUrl || undefined}
-        onClick={(e) => {
-          if (!botUrl) {
-            e.preventDefault()
-            if (!started) startChat()
-            else bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-          }
-        }}
-        target={botUrl ? '_blank' : undefined}
-        rel={botUrl ? 'noreferrer' : undefined}
-        title={botUrl ? 'Abrir Telegram' : 'Hablar con el agente'}
-        aria-label="Telegram copiloto"
-      >
-        <TelegramIcon size={30} />
-      </a>
     </div>
   )
 }
 
-/** Botón flotante Telegram → abre el copiloto del viaje activo. */
-export function TelegramCopilotFab({
-  tripId,
-  dayId,
-}: {
-  tripId: string
-  dayId?: string
-}) {
-  const setView = useAppStore((s) => s.setView)
-  const botUrl = telegramBotUrl()
+/** Botón flotante → abre la app de Telegram (bot). */
+export function TelegramCopilotFab() {
+  const view = useAppStore((s) => s.view)
+  const [hint, setHint] = useState<string | null>(null)
+
+  if (view.name === 'copilot') return null
 
   return (
-    <button
-      type="button"
-      className="tg-fab"
-      title="Copiloto"
-      aria-label="Abrir copiloto"
-      onClick={() => {
-        if (botUrl && (window as unknown as { __preferTelegram?: boolean }).__preferTelegram) {
-          window.open(botUrl, '_blank', 'noopener')
-          return
-        }
-        setView({ name: 'copilot', tripId, dayId })
-      }}
-    >
-      <TelegramIcon size={30} />
-    </button>
+    <>
+      {hint && (
+        <div className="tg-fab-hint" role="status">
+          {hint}
+          <button type="button" className="icon-btn" onClick={() => setHint(null)} aria-label="Cerrar">
+            ×
+          </button>
+        </div>
+      )}
+      <button
+        type="button"
+        className="tg-fab"
+        title="Abrir copiloto en Telegram"
+        aria-label="Abrir Telegram"
+        onClick={() => {
+          const ok = openTelegramBot()
+          if (!ok) {
+            setHint(
+              'Falta configurar el bot: en .env poned VITE_TELEGRAM_BOT=NombreDeVuestroBot (sin @). Crearlo en @BotFather.',
+            )
+          }
+        }}
+      >
+        <TelegramIcon size={30} />
+      </button>
+    </>
   )
 }
+

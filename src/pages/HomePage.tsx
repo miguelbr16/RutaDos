@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { useAppStore } from '../store'
+import { loadOfflineDay } from '../lib/offlineDay'
 
 export function HomePage() {
   const trips = useAppStore((s) => s.trips)
@@ -6,6 +8,21 @@ export function HomePage() {
   const deleteTrip = useAppStore((s) => s.deleteTrip)
   const resetWizard = useAppStore((s) => s.resetWizard)
   const importTrips = useAppStore((s) => s.importTrips)
+  const [online, setOnline] = useState(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  )
+  const offlineSnap = !online ? loadOfflineDay() : null
+
+  useEffect(() => {
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => {
+      window.removeEventListener('online', on)
+      window.removeEventListener('offline', off)
+    }
+  }, [])
 
   function startWizard() {
     resetWizard()
@@ -40,6 +57,14 @@ export function HomePage() {
 
   return (
     <div className="page home-page">
+      {!online && (
+        <p className="offline-banner">
+          Sin conexión.
+          {offlineSnap
+            ? ` Día guardado: ${offlineSnap.tripTitle} · ${offlineSnap.day.label} (${offlineSnap.day.stops.filter((s) => !s.isHotel).length} paradas).`
+            : ' Abrí un día con datos para guardarlo offline.'}
+        </p>
+      )}
       <header className="hero home-hero">
         <div className="hero-plane" aria-hidden>
           <svg className="hero-route" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid slice">
