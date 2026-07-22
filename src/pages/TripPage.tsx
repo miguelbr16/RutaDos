@@ -33,7 +33,6 @@ import type { VenueKind } from '../lib/bookingLinks'
 import { openTelegramBot } from '../lib/copilot'
 import { loadOfflineDay } from '../lib/offlineDay'
 import { genericGuide, getCityGuide } from '../lib/cityGuides'
-import { photoForDestination } from '../lib/quickDestinations'
 import { fetchPlacePhotoUrls } from '../lib/placePhotos'
 import type { Stop } from '../types'
 
@@ -91,7 +90,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         stops.map(async (s) => {
           if (s.isHotel || s.photoUrl || s.photoUrls?.length) return s
           try {
-            const urls = await fetchPlacePhotoUrls(s.name, s.lat, s.lng, 1)
+            const urls = await fetchPlacePhotoUrls(s.name, s.lat, s.lng, 3)
             if (!urls.length) return s
             return { ...s, photoUrl: urls[0], photoUrls: urls }
           } catch {
@@ -443,6 +442,14 @@ export function TripPage({ tripId }: { tripId: string }) {
         </div>
       )}
 
+      <header className="trip-v2-head">
+        <h1>{trip.title}</h1>
+        <p>
+          {trip.startDate} → {trip.endDate}
+          {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
+        </p>
+      </header>
+
       <div className="trip-v2-budget">
         <span className="trip-v2-budget-label">Presupuesto orientativo</span>
         <strong>
@@ -456,28 +463,12 @@ export function TripPage({ tripId }: { tripId: string }) {
       <div className="trip-v2-layout">
         <div className="trip-v2-map-col">
           <div className="trip-v2-map-wrap">
-            {photoForDestination(trip.city.name) ? (
-              <img
-                className="trip-v2-map-bg"
-                src={photoForDestination(trip.city.name)}
-                alt=""
-                aria-hidden
-              />
-            ) : null}
             <div className="trip-v2-map-inner">
               <TripMap
                 stops={mapStops.length ? mapStops : allStops.slice(0, 40)}
-                height="260px"
+                height="320px"
                 showLegend
-                photoPins
               />
-            </div>
-            <div className="trip-v2-map-overlay">
-              <h1>{trip.title}</h1>
-              <p>
-                {trip.startDate} → {trip.endDate}
-                {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
-              </p>
             </div>
           </div>
         </div>

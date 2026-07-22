@@ -15,28 +15,7 @@ export type MapPickable = {
   selected?: boolean
 }
 
-function pinIcon(
-  color: string,
-  n: number | string,
-  opts?: { hotel?: boolean; photoUrl?: string },
-) {
-  const hotel = opts?.hotel
-  const photoUrl = opts?.photoUrl
-  if (photoUrl && !hotel) {
-    const safeUrl = photoUrl.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
-    return L.divIcon({
-      className: 'ruta-pin ruta-pin-photo',
-      html: `<div class="ruta-pin-photo-shell">
-        <div class="ruta-pin-photo-img" style="border-color:${color}">
-          <img src="${safeUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" />
-        </div>
-        <span class="ruta-pin-photo-num" style="background:${color}">${n}</span>
-      </div>`,
-      iconSize: [48, 48],
-      iconAnchor: [24, 48],
-      popupAnchor: [0, -48],
-    })
-  }
+function pinIcon(color: string, n: number | string, hotel?: boolean) {
   const bg = hotel ? '#1a4a5c' : color
   return L.divIcon({
     className: 'ruta-pin',
@@ -53,8 +32,42 @@ function pinIcon(
     ">${n}</span></div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 28],
-    popupAnchor: [0, -28],
+    popupAnchor: [0, -30],
   })
+}
+
+function StopPopup({ stop, visitLabel }: { stop: Stop; visitLabel?: number | string }) {
+  const photos = stop.photoUrls?.length ? stop.photoUrls : stop.photoUrl ? [stop.photoUrl] : []
+  const category = stop.isHotel ? 'Hotel' : CATEGORY_LABELS[stop.category]
+  const color = categoryColor(stop.category)
+
+  return (
+    <div className="map-stop-popup">
+      {photos.length > 0 ? (
+        <div className="map-stop-popup-photos">
+          {photos.slice(0, 3).map((src) => (
+            <img key={src} src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
+          ))}
+        </div>
+      ) : (
+        <div className="map-stop-popup-placeholder" style={{ background: color }} aria-hidden />
+      )}
+      <div className="map-stop-popup-body">
+        <div className="map-stop-popup-head">
+          {visitLabel != null && !stop.isHotel ? (
+            <span className="map-stop-popup-num" style={{ background: color }}>
+              {visitLabel}
+            </span>
+          ) : null}
+          <strong>{stop.name}</strong>
+        </div>
+        <span className="map-stop-popup-cat">{category}</span>
+        {stop.transitMode ? (
+          <span className="map-stop-popup-transit">{TRANSIT_MODE_LABELS[stop.transitMode]} →</span>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 function pickPinIcon(color: string, selected: boolean) {
@@ -135,8 +148,6 @@ interface Props {
   /** Pines tocables para armar ruta (wishlist en mapa) */
   pickables?: MapPickable[]
   onPick?: (id: string) => void
-  /** Pines con foto cuando hay thumbnail (Wikipedia/OSM) */
-  photoPins?: boolean
 }
 
 export function TripMap({
@@ -149,7 +160,6 @@ export function TripMap({
   defaultCenter = null,
   pickables = [],
   onPick,
-  photoPins = false,
 }: Props) {
   const ordered = [...stops].sort((a, b) => a.order - b.order)
   const center: [number, number] = ordered.length
@@ -240,15 +250,11 @@ export function TripMap({
             ))}
           {ordered.map((s) => {
             const label = s.isHotel ? 'H' : ++visitNum
-            const thumb = photoPins ? s.photoUrl || s.photoUrls?.[0] : undefined
             return (
               <Marker
                 key={s.id}
                 position={[s.lat, s.lng]}
-                icon={pinIcon(categoryColor(s.category), label, {
-                  hotel: s.isHotel,
-                  photoUrl: thumb,
-                })}
+                icon={pinIcon(categoryColor(s.category), label, s.isHotel)}
                 eventHandlers={
                   onPick && !s.isHotel
                     ? {
@@ -257,41 +263,9 @@ export function TripMap({
                     : undefined
                 }
               >
-                <Popup>
-                  <strong>{s.name}</strong>
-                  <div>{s.isHotel ? 'Hotel' : CATEGORY_LABELS[s.category]}</div>
-                  {(s.photoUrls?.length || s.photoUrl) && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        gap: 4,
-                        marginTop: 6,
-                        maxWidth: 220,
-                        overflowX: 'auto',
-                      }}
-                    >
-                      {(s.photoUrls?.length ? s.photoUrls : s.photoUrl ? [s.photoUrl] : []).map(
-                        (src) => (
-                          <img
-                            key={src}
-                            src={src}
-                            alt=""
-                            style={{
-                              width: 96,
-                              height: 72,
-                              objectFit: 'cover',
-                              borderRadius: 8,
-                              flex: '0 0 auto',
-                            }}
-                          />
-                        ),
-                      )}
-                    </div>
-                  )}
-                  {s.transitMode && (
-                    <div className="muted">{TRANSIT_MODE_LABELS[s.transitMode]} →</div>
-                  )}
-                  {onPick && !s.isHotel && <div className="muted">Toca para quitar</div>}
+                <Popup className="map-stop-popup-wrap" minWidth={240} maxWidth={280}>
+                  <StopPopup stop={s} visitLabel={s.isHotel ? undefined : label} />
+                  {onPick && !s.isHotel ? <p className="map-stop-popup-hint">Toca el pin para quitar</p> : null}
                 </Popup>
               </Marker>
             )
