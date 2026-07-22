@@ -85,7 +85,7 @@ export async function fetchNearbyVenues(opts: {
   radiusM?: number
   limit?: number
 }): Promise<NearbyVenue[]> {
-  const radiusM = opts.radiusM ?? (opts.kind === 'hotel' ? 2500 : 1800)
+  const radiusM = opts.radiusM ?? (opts.kind === 'hotel' ? 4500 : 1800)
   const limit = opts.limit ?? 10
   const query = queryFor(opts.kind, opts.lat, opts.lng, radiusM)
 

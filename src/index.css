@@ -210,7 +210,41 @@ a {
   width: min(40rem, calc(100% - var(--page-pad) * 2));
   margin: 0 auto;
   padding: calc(5.5rem + env(safe-area-inset-top, 0px)) 0 2rem;
-  animation: rise 700ms var(--ease) both;
+}
+
+.home-anim {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: homeRise 0.75s var(--ease) forwards;
+}
+
+.home-anim-1 {
+  animation-delay: 0.08s;
+}
+.home-anim-2 {
+  animation-delay: 0.2s;
+}
+.home-anim-3 {
+  animation-delay: 0.34s;
+}
+.home-anim-4 {
+  animation-delay: 0.48s;
+}
+.home-anim-5 {
+  animation-delay: 0.2s;
+}
+.home-anim-6 {
+  animation-delay: 0.32s;
+}
+.home-anim-7 {
+  animation-delay: 0.44s;
+}
+
+@keyframes homeRise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .home-landing-brand {
@@ -257,36 +291,96 @@ a {
 .home-tools {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.15rem;
-  margin-top: 1.25rem;
-  padding-top: 1rem;
+  gap: 0.45rem;
+  margin-top: 1.35rem;
+  padding-top: 1.1rem;
   border-top: 1px solid var(--line);
 }
 
-.home-tool-link {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  padding: 0.25rem 0.2rem;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
+.home-tools .btn {
+  flex: 1 1 auto;
+  min-width: 6.5rem;
+}
+
+.home-promise {
+  width: min(40rem, calc(100% - var(--page-pad) * 2));
+  margin: -0.35rem auto 0;
+  padding: 1.5rem 0 0.35rem;
+}
+
+.home-promise-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 4vw, 1.55rem);
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.02em;
+}
+
+.home-promise-lede {
+  margin: 0 0 1rem;
+  max-width: 36ch;
+}
+
+.home-pillars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.home-pillar {
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.home-pillar strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.home-pillar span {
   color: var(--muted);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-  text-decoration-color: color-mix(in srgb, var(--muted) 45%, transparent);
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
-.home-tool-link:hover {
-  color: var(--deep);
+.home-empty-card {
+  padding: 1.15rem 1.1rem;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--sea) 35%, var(--line));
+  background: color-mix(in srgb, var(--sea) 6%, #fff);
+  display: grid;
+  gap: 0.45rem;
+  justify-items: start;
 }
 
-.home-tool-sep {
-  color: color-mix(in srgb, var(--muted) 55%, transparent);
-  font-size: 0.82rem;
-  user-select: none;
+.home-empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.home-empty-card .muted {
+  margin: 0;
+}
+
+.venue-fallbacks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0.65rem;
+}
+
+.hotel-suggest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .home-trips-panel {
@@ -425,8 +519,13 @@ a {
   .home-landing-photo,
   .home-route-path,
   .home-route-pin,
-  .home-landing-copy {
+  .home-anim {
     animation: none !important;
+  }
+
+  .home-anim {
+    opacity: 1;
+    transform: none;
   }
 
   .home-route-path {

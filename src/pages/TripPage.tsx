@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   DEFAULT_PREFERENCES,
   PREFERENCE_LABELS,
@@ -26,7 +26,7 @@ import { createTripShareToken, shareUrlForToken } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { googleMapsDirectionsUrl } from '../lib/mapsUrl'
 import { prefsSummaryLine } from '../lib/prefPlan'
-import { hotelBookingUrl } from '../lib/bookingLinks'
+import { hotelBookingUrl, hotelCitySearchUrl } from '../lib/bookingLinks'
 import { VenueFinder } from '../components/VenueFinder'
 import type { VenueKind } from '../lib/bookingLinks'
 import { openTelegramBot } from '../lib/copilot'
@@ -76,11 +76,6 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
 
-  useEffect(() => {
-    if (!trip?.logistics?.hotelSkipped || trip.logistics?.hotel) return
-    setVenueKind('hotel')
-  }, [trip?.id, trip?.logistics?.hotelSkipped, trip?.logistics?.hotel])
-
   if (!trip) {
     return (
       <div className="page">
@@ -93,12 +88,25 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   const allStops = trip.days.flatMap((d) => d.stops)
+  const visitStops = allStops.filter((s) => !s.isHotel)
+  const hotelSearchPoint = (() => {
+    if (!visitStops.length) return { lat: trip.city.lat, lng: trip.city.lng }
+    const lat = visitStops.reduce((a, s) => a + s.lat, 0) / visitStops.length
+    const lng = visitStops.reduce((a, s) => a + s.lng, 0) / visitStops.length
+    return { lat, lng }
+  })()
   const budget = estimateFromTrip(trip)
   const offlinePack = loadOfflineDay()
   const offlineForThisTrip = offlinePack?.tripId === trip.id ? offlinePack : null
   const guide = getCityGuide(trip.city.name, trip.city.displayName) ?? genericGuide(trip.city.name)
-  const showHotelSuggest =
-    Boolean(trip.logistics?.hotelSkipped) && !trip.logistics?.hotel && !hotelBannerDismissed
+  const showHotelSuggest = !trip.logistics?.hotel && !hotelBannerDismissed
+  const bookingCityUrl = hotelCitySearchUrl({
+    city: trip.city.name,
+    lat: hotelSearchPoint.lat,
+    lng: hotelSearchPoint.lng,
+    checkin: trip.startDate,
+    checkout: trip.endDate,
+  })
 
   function exportTripJson() {
     const blob = new Blob([JSON.stringify(trip, null, 2)], { type: 'application/json' })
@@ -468,7 +476,9 @@ export function TripPage({ tripId }: { tripId: string }) {
               <div>
                 <strong>¿Dónde dormir?</strong>
                 <p className="muted tiny">
-                  Generaste el viaje sin hotel. Te sugerimos sitios cerca del centro de la ruta.
+                  {trip.logistics?.hotelSkipped
+                    ? 'Generaste el viaje sin hotel. Buscá cerca de la ruta o en Booking.'
+                    : 'Aún no hay hotel en el plan. Elegí uno cerca de la ruta o en Booking.'}
                 </p>
               </div>
               <div className="hotel-suggest-actions">
@@ -477,8 +487,11 @@ export function TripPage({ tripId }: { tripId: string }) {
                   className="btn primary sm"
                   onClick={() => setVenueKind('hotel')}
                 >
-                  Ver hoteles
+                  Cerca de la ruta
                 </button>
+                <a className="btn ghost sm" href={bookingCityUrl} target="_blank" rel="noreferrer">
+                  Booking
+                </a>
                 <button
                   type="button"
                   className="btn ghost sm"
@@ -528,9 +541,22 @@ export function TripPage({ tripId }: { tripId: string }) {
           {venueKind && (
             <VenueFinder
               kind={venueKind}
-              lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
-              lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
+              lat={
+                venueKind === 'hotel'
+                  ? hotelSearchPoint.lat
+                  : (trip.logistics?.hotel?.lat ?? trip.city.lat)
+              }
+              lng={
+                venueKind === 'hotel'
+                  ? hotelSearchPoint.lng
+                  : (trip.logistics?.hotel?.lng ?? trip.city.lng)
+              }
               city={trip.city.name}
+              checkin={trip.startDate}
+              checkout={trip.endDate}
+              nearLabel={
+                venueKind === 'hotel' ? 'Cerca del centro de vuestra ruta' : undefined
+              }
               onClose={() => setVenueKind(null)}
               onAdd={
                 venueKind === 'hotel'

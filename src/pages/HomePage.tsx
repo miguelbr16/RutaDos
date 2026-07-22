@@ -2,6 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../store'
 import { loadOfflineDay } from '../lib/offlineDay'
 
+const PILLARS = [
+  {
+    title: 'Plan por días',
+    text: 'Itinerario claro: qué ver, a qué hora y en qué orden.',
+  },
+  {
+    title: 'Mapa y transporte',
+    text: 'Ruta en el mapa y links a metro, bus o taxi de la ciudad.',
+  },
+  {
+    title: 'Reservas al momento',
+    text: 'Entradas, mesas y hoteles cuando los necesitás en la ruta.',
+  },
+] as const
+
 export function HomePage() {
   const trips = useAppStore((s) => s.trips)
   const setView = useAppStore((s) => s.setView)
@@ -96,17 +111,33 @@ export function HomePage() {
         </div>
 
         <div className="home-landing-copy">
-          <p className="home-landing-brand">RutaDos</p>
-          <h1 className="home-landing-title">El viaje, día a día</h1>
-          <p className="home-landing-lede">
-            Armá la ruta, abrí el mapa y movete con metro, taxi o andando.
+          <p className="home-landing-brand home-anim home-anim-1">RutaDos</p>
+          <h1 className="home-landing-title home-anim home-anim-2">El viaje, día a día</h1>
+          <p className="home-landing-lede home-anim home-anim-3">
+            Planificá la ruta, abrí el mapa y movete con metro, taxi o andando — en el móvil,
+            cuando hace falta.
           </p>
-          <div className="home-landing-cta">
+          <div className="home-landing-cta home-anim home-anim-4">
             <button type="button" className="btn primary home-cta-main" onClick={startWizard}>
               Crear viaje
             </button>
           </div>
         </div>
+      </section>
+
+      <section className="home-promise" aria-label="Qué es RutaDos">
+        <h2 className="home-promise-title">Tu compañero en destino</h2>
+        <p className="muted home-promise-lede">
+          Menos pestañas, más calle: el plan listo para caminar, comer y dormir.
+        </p>
+        <ul className="home-pillars">
+          {PILLARS.map((p, i) => (
+            <li key={p.title} className={`home-pillar home-anim home-anim-${i + 5}`}>
+              <strong>{p.title}</strong>
+              <span>{p.text}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="home-trips-panel">
@@ -120,7 +151,13 @@ export function HomePage() {
         </div>
 
         {!trips.length ? (
-          <p className="home-empty muted">Todavía no hay ninguno. Empezá con el primero.</p>
+          <div className="home-empty-card">
+            <p className="home-empty-title">Todavía no hay ninguno</p>
+            <p className="muted tiny">Creá el primero y lo tenés organizado por días.</p>
+            <button type="button" className="btn primary sm" onClick={startWizard}>
+              Empezar
+            </button>
+          </div>
         ) : (
           <ul className="home-trip-list">
             {trips.map((t) => (
@@ -158,19 +195,13 @@ export function HomePage() {
         )}
 
         <nav className="home-tools" aria-label="Herramientas">
-          <button type="button" className="home-tool-link" onClick={() => setView({ name: 'settings' })}>
-            Ajustes y sync
+          <button type="button" className="btn ghost sm" onClick={() => setView({ name: 'settings' })}>
+            Ajustes
           </button>
-          <span className="home-tool-sep" aria-hidden>
-            ·
-          </span>
-          <button type="button" className="home-tool-link" onClick={exportAll}>
+          <button type="button" className="btn ghost sm" onClick={exportAll}>
             Exportar
           </button>
-          <span className="home-tool-sep" aria-hidden>
-            ·
-          </span>
-          <button type="button" className="home-tool-link" onClick={() => fileRef.current?.click()}>
+          <button type="button" className="btn ghost sm" onClick={() => fileRef.current?.click()}>
             Importar
           </button>
           <input

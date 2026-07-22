@@ -78,6 +78,35 @@ export function hotelBookingUrl(opts: {
   return u.toString()
 }
 
+/** Buscar hoteles en la ciudad (con fechas del viaje si las hay). */
+export function hotelCitySearchUrl(opts: {
+  city: string
+  lat?: number
+  lng?: number
+  checkin?: string
+  checkout?: string
+}): string {
+  const u = new URL('https://www.booking.com/searchresults.html')
+  u.searchParams.set('ss', opts.city)
+  if (opts.lat != null && opts.lng != null) {
+    u.searchParams.set('latitude', String(opts.lat))
+    u.searchParams.set('longitude', String(opts.lng))
+  }
+  if (opts.checkin) u.searchParams.set('checkin', opts.checkin)
+  if (opts.checkout) u.searchParams.set('checkout', opts.checkout)
+  u.searchParams.set('group_adults', '2')
+  u.searchParams.set('no_rooms', '1')
+  return u.toString()
+}
+
+/** Google Hotels / Maps hoteles cerca. */
+export function hotelMapsSearchUrl(opts: { city: string; lat?: number; lng?: number }): string {
+  if (opts.lat != null && opts.lng != null) {
+    return `https://www.google.com/maps/search/hotels/@${opts.lat},${opts.lng},14z`
+  }
+  return `https://www.google.com/maps/search/${encodeURIComponent(`hoteles ${opts.city}`)}`
+}
+
 export function hotelWebUrl(opts: {
   name: string
   lat: number
