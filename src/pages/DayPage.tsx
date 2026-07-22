@@ -457,7 +457,19 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       {packPreview && offlinePack && <OfflinePackPreview pack={offlinePack} />}
 
       <section className="section day-plan-section">
-        <h2>Ruta del día</h2>
+        <div className="section-head">
+          <h2>Ruta del día</h2>
+          <button
+            type="button"
+            className="btn ghost sm"
+            onClick={() => {
+              optimizeDay(tripId, dayId)
+              setMsg('Ruta reordenada por cercanía y horas actualizadas.')
+            }}
+          >
+            Reordenar
+          </button>
+        </div>
         <p className="muted tiny">
           Camino sugerido con transporte. Cambiá el modo en cada tramo y se recalcula.
         </p>
@@ -494,12 +506,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       </form>
 
       <section className="section">
-        <div className="section-head">
-          <h2>Sugerencias</h2>
-          <button type="button" className="btn ghost sm" onClick={() => optimizeDay(tripId, dayId)}>
-            Optimizar
-          </button>
-        </div>
+        <h2>Sugerencias</h2>
         <p className="muted tiny">Tocá para subir al plan.</p>
         <ul className="suggest-list">
           {suggestions.map((p) => (

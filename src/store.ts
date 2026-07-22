@@ -10,6 +10,7 @@ import {
   buildDayPlans,
   chaosReplanDay,
   moveStop,
+  optimizeKeepingDayArc,
   optimizeOrder,
   rebuildDayTransport,
   removeStop,
@@ -502,7 +503,7 @@ export const useAppStore = create<AppState>()(
         get().updateDayStops(tripId, dayId, (t, id) => {
           const day = t.days.find((d) => d.id === id)!
           const hotel = t.logistics?.hotel ?? null
-          const ordered = optimizeOrder(
+          const ordered = optimizeKeepingDayArc(
             day.stops,
             hotel ? { lat: hotel.lat, lng: hotel.lng } : null,
           )

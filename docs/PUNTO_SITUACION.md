@@ -6,7 +6,9 @@
 **UI:** español  
 **Bot:** [@RutaDosGuia_bot](https://t.me/RutaDosGuia_bot)  
 **Supabase:** `odecdpzcnsmvafvbuiby` · https://odecdpzcnsmvafvbuiby.supabase.co  
-**Vercel:** proyecto **ruta-dos** / RutaDos (auto-deploy en push; a veces hace falta Redeploy manual)
+**Vercel:** https://ruta-dos-miguelbr16s-projects.vercel.app  
+(proyecto **ruta-dos** · auto-deploy en push; a veces Redeploy manual)  
+Nota: `ruta-dos.vercel.app` ya no responde (404). Si al abrir la app pide login de Vercel, desactivá **Deployment Protection / Vercel Authentication** en Settings → Deployment Protection para que sea pública (PWA en el móvil).
 
 ---
 
@@ -43,10 +45,13 @@ Propuesta: plan diario personal (1–2) con mapa, transporte, offline del día y
 
 | Qué | Ref |
 |-----|-----|
+| Antes fix horas + UX offline/Vercel URL | `backup/pre-fix-order-hours` · tag `backup-pre-fix-order-hours` |
 | Antes visual día + offline | `backup/pre-day-visual-offline` · tag `backup-pre-day-visual-offline` |
 | Antes wizard visual | `backup/pre-wizard-visual` · tag `backup-pre-wizard-visual` |
 
 ```bash
+git reset --hard backup/pre-fix-order-hours
+# o
 git reset --hard backup/pre-wizard-visual
 # o
 git reset --hard backup/pre-day-visual-offline

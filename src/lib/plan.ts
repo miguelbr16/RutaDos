@@ -663,12 +663,11 @@ export function buildDayPlans(
       intensity,
     )
 
+    // Orden geo por franja del día, luego horas según ese orden (no dejar
+    // suggestedTime de la asignación previa: desordenaba la timeline).
     let stops = timed.map((t, idx) => placeToStop(t.place, idx, t.slot, t.time))
-    stops = optimizeOrder(stops, hotelPoint)
-    stops = [...stops]
-      .sort((a, b) => (a.suggestedTime || '').localeCompare(b.suggestedTime || ''))
-      .map((s, idx) => ({ ...s, order: idx }))
     stops = optimizeKeepingDayArc(stops, hotelPoint)
+    stops = retimeStops(stops, budget.startHour)
     stops = wrapWithHotelRoundTrip(
       stops,
       hotel,
@@ -790,11 +789,8 @@ export function replanDayForFocus(
 
   const timed = assignSlotsAndTimes(dayPlaces, budget.startHour, budget.endHour, day.intensity)
   let stops = timed.map((t, idx) => placeToStop(t.place, idx, t.slot, t.time))
-  stops = optimizeOrder(stops, hotelPoint)
-  stops = [...stops]
-    .sort((a, b) => (a.suggestedTime || '').localeCompare(b.suggestedTime || ''))
-    .map((s, idx) => ({ ...s, order: idx }))
   stops = optimizeKeepingDayArc(stops, hotelPoint)
+  stops = retimeStops(stops, budget.startHour)
   stops = wrapWithHotelRoundTrip(
     stops,
     hotel,
@@ -947,7 +943,7 @@ export function chaosReplanDay(
     ),
   ]
 
-  let stops = optimizeOrder(
+  let stops = optimizeKeepingDayArc(
     placeStops.map((s) => ({ ...s, visitStatus: s.visitStatus ?? 'pending' })),
     hotelPoint,
   )
@@ -975,11 +971,12 @@ export function chaosReplanDay(
 }
 
 /** Optimize path while roughly keeping morning → night progression */
-function optimizeKeepingDayArc(
+export function optimizeKeepingDayArc(
   stops: Stop[],
   startFrom?: { lat: number; lng: number } | null,
 ): Stop[] {
-  if (stops.length <= 3) return optimizeOrder(stops, startFrom)
+  const visits = stops.filter((s) => !s.isHotel)
+  if (visits.length <= 3) return optimizeOrder(visits, startFrom)
 
   const slotRank: Record<TimeSlot, number> = {
     morning: 0,
@@ -990,7 +987,7 @@ function optimizeKeepingDayArc(
   }
 
   const groups = new Map<number, Stop[]>()
-  for (const s of stops) {
+  for (const s of visits) {
     const r = slotRank[s.slot ?? 'afternoon']
     if (!groups.has(r)) groups.set(r, [])
     groups.get(r)!.push(s)

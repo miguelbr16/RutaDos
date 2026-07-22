@@ -33,6 +33,7 @@ import { hotelBookingUrl } from '../lib/bookingLinks'
 import { VenueFinder } from '../components/VenueFinder'
 import type { VenueKind } from '../lib/bookingLinks'
 import { openTelegramBot } from '../lib/copilot'
+import { loadOfflineDay } from '../lib/offlineDay'
 
 const STYLE_KEYS: PreferenceKey[] = [
   'museums',
@@ -87,6 +88,8 @@ export function TripPage({ tripId }: { tripId: string }) {
 
   const allStops = trip.days.flatMap((d) => d.stops)
   const budget = estimateFromTrip(trip)
+  const offlinePack = loadOfflineDay()
+  const offlineForThisTrip = offlinePack?.tripId === trip.id ? offlinePack : null
 
   function exportTripJson() {
     const blob = new Blob([JSON.stringify(trip, null, 2)], { type: 'application/json' })
@@ -203,6 +206,34 @@ export function TripPage({ tripId }: { tripId: string }) {
       </header>
 
       <TripMap stops={allStops.slice(0, 40)} height="220px" showLegend />
+
+      {offlineForThisTrip ? (
+        <div className="offline-banner ok" style={{ marginTop: '0.75rem' }}>
+          <strong>Pack offline listo</strong>
+          <p>
+            {offlineForThisTrip.dayLabel} · {offlineForThisTrip.stops.length} paradas. Abrí ese día
+            o En ruta aunque no haya red.
+          </p>
+          <button
+            type="button"
+            className="btn ghost sm"
+            onClick={() =>
+              setView({
+                name: 'day',
+                tripId: trip.id,
+                dayId: offlineForThisTrip.dayId,
+              })
+            }
+          >
+            Abrir día offline
+          </button>
+        </div>
+      ) : (
+        <p className="muted tiny" style={{ marginTop: '0.75rem' }}>
+          Tip: abrí un día y tocá «Offline» para guardar el pack del día (paradas + transporte) en el
+          móvil.
+        </p>
+      )}
 
       <div className="chaos-bar day-quick" style={{ marginTop: '0.75rem' }}>
         <button
@@ -436,7 +467,9 @@ export function TripPage({ tripId }: { tripId: string }) {
         <h2>Días</h2>
         <ul className="day-list visual">
           {trip.days.map((day) => {
-            const visits = day.stops.filter((s) => !s.isHotel)
+            const visits = [...day.stops]
+              .filter((s) => !s.isHotel)
+              .sort((a, b) => a.order - b.order)
             const tag =
               day.intensity === 'arrival'
                 ? 'Llegada'

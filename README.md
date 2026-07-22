@@ -48,8 +48,11 @@ Sin Supabase la app funciona en un solo dispositivo; usad Exportar/Importar para
 
 ### Vercel
 
+App: https://ruta-dos-miguelbr16s-projects.vercel.app  
+
 Conectar repo `miguelbr16/RutaDos`. Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TELEGRAM_BOT`.  
-Si la UI no cambia tras un push: **Redeploy** en el dashboard (caché / PWA).
+Si la UI no cambia tras un push: **Redeploy** en el dashboard (caché / PWA).  
+Si pide login de Vercel al abrir: Settings → **Deployment Protection** → desactivar Authentication (para PWA pública).
 
 ### Bot Telegram
 
