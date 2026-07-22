@@ -111,18 +111,7 @@ function mapsDir(
   return u.toString()
 }
 
-function mainMenu() {
-  return {
-    keyboard: [
-      [{ text: '📍 Enviar ubicación', request_location: true }],
-      [{ text: '🗺 Ruta de hoy' }, { text: '⏭ Qué toca' }],
-      [{ text: '📍 Qué hay cerca' }, { text: '🚇 Cómo llego' }],
-      [{ text: '✅ Mis pines' }, { text: '🗺 Abrir en Google Maps' }],
-      [{ text: '❓ Ayuda' }],
-    ],
-    resize_keyboard: true,
-  }
-}
+type NearbyMode = 'sights' | 'food' | 'all'
 
 const OVERPASS_MIRRORS = [
   'https://overpass-api.de/api/interpreter',
@@ -150,9 +139,33 @@ function rankNearby(lat: number, lng: number, places: Place[], limit = 8): Place
     }))
 }
 
-async function fetchOsmNearby(lat: number, lng: number): Promise<Place[]> {
+function overpassQuery(lat: number, lng: number, mode: NearbyMode): string {
   const around = `around:1800,${lat},${lng}`
-  const query = `
+  if (mode === 'food') {
+    return `
+[out:json][timeout:25];
+(
+  node(${around})[amenity~"restaurant|cafe|bar|fast_food|ice_cream|pub"];
+  way(${around})[amenity~"restaurant|cafe|bar|fast_food|ice_cream|pub"];
+);
+out center 30;
+`
+  }
+  if (mode === 'all') {
+    return `
+[out:json][timeout:25];
+(
+  node(${around})[tourism];
+  node(${around})[historic];
+  node(${around})[amenity~"museum|theatre|arts_centre|place_of_worship|fountain|restaurant|cafe"];
+  way(${around})[tourism];
+  way(${around})[historic];
+  way(${around})[amenity~"museum|theatre|arts_centre|restaurant|cafe"];
+);
+out center 35;
+`
+  }
+  return `
 [out:json][timeout:25];
 (
   node(${around})[tourism];
@@ -164,6 +177,14 @@ async function fetchOsmNearby(lat: number, lng: number): Promise<Place[]> {
 );
 out center 30;
 `
+}
+
+async function fetchOsmNearby(
+  lat: number,
+  lng: number,
+  mode: NearbyMode = 'sights',
+): Promise<Place[]> {
+  const query = overpassQuery(lat, lng, mode)
   for (const url of OVERPASS_MIRRORS) {
     try {
       const res = await fetch(url, {
@@ -192,7 +213,7 @@ out center 30;
       /* try next mirror */
     }
   }
-  return fetchWikiNearby(lat, lng)
+  return mode === 'food' ? [] : fetchWikiNearby(lat, lng)
 }
 
 /** Fallback si Overpass falla o no hay POIs con nombre. */
@@ -227,20 +248,134 @@ async function fetchWikiNearby(lat: number, lng: number): Promise<Place[]> {
   }
 }
 
+function detectNearbyMode(t: string): NearbyMode {
+  if (/comer|cena|almorz|desayun|restoran|restaurante|cafe|café|tapas|bar |pizza|comida/.test(t)) {
+    return 'food'
+  }
+  if (/recomiend|suger|que hacer|qué hacer|insitu|in situ|ahora|aqui|aquí|plan libre|sin plan/.test(t)) {
+    return 'all'
+  }
+  return 'sights'
+}
+
 function helpText() {
   return [
     'Soy el copiloto RutaDos en Telegram 🧭',
     '',
-    '1) Mandad 📍 ubicación (botón o clip)',
-    '2) «Qué hay cerca» → marco opciones; tocá para añadir a vuestros pines',
-    '3) «Abrir en Google Maps» → ruta con lo marcado + plan',
+    'Sin viaje planificado (modo in situ):',
+    '1) Mandad 📍 ubicación',
+    '2) Preguntad: «recomienda», «qué hay cerca», «dónde comer»…',
+    '3) Tocad ➕ para marcar pines → Abrir en Google Maps',
     '',
-    'Con viaje enlazado (/start TOKEN del Compartir):',
-    '• Ruta de hoy · Qué toca · Cómo llego (metro/bus en Maps)',
+    'Con viaje (Compartir → /start TOKEN):',
+    '• Ruta de hoy · Qué toca · Cómo llego',
     '',
-    '⚠️ Google no deja guardar pines en “Guardados” desde un bot.',
-    'Abrimos Maps con la ruta; ahí podéis guardar / My Maps.',
+    '⚠️ Google no deja guardar en “Guardados” desde un bot.',
   ].join('\n')
+}
+
+function mainMenu() {
+  return {
+    keyboard: [
+      [{ text: '📍 Enviar ubicación', request_location: true }],
+      [{ text: '✨ Recomiéndame' }, { text: '🍽 Dónde comer' }],
+      [{ text: '📍 Qué hay cerca' }, { text: '✅ Mis pines' }],
+      [{ text: '🗺 Ruta de hoy' }, { text: '⏭ Qué toca' }],
+      [{ text: '🚇 Cómo llego' }, { text: '🗺 Abrir en Google Maps' }],
+      [{ text: '❓ Ayuda' }],
+    ],
+    resize_keyboard: true,
+  }
+}
+
+async function sendNearbySuggestions(opts: {
+  supabase: SupabaseClient
+  chatId: number
+  lat: number
+  lng: number
+  trip: TripRow | null
+  mode?: NearbyMode
+  intro?: string
+}) {
+  const { supabase, chatId, lat, lng, trip, mode = 'sights', intro } = opts
+
+  await tg('sendMessage', {
+    chat_id: chatId,
+    text: intro || 'Buscando recomendaciones cerca de vosotros…',
+    reply_markup: mainMenu(),
+  })
+
+  const fromTrip = (trip?.places ?? [])
+    .map((p) => ({ ...p, km: haversineKm({ lat, lng }, p) }))
+    .filter((p) => p.km <= 1.8)
+    .sort((a, b) => a.km - b.km)
+    .slice(0, 5)
+
+  const osm = await fetchOsmNearby(lat, lng, mode)
+  const merged: Place[] = []
+  const seen = new Set<string>()
+  for (const p of [...fromTrip, ...osm]) {
+    const k = p.name.toLowerCase()
+    if (seen.has(k)) continue
+    seen.add(k)
+    merged.push({ name: p.name, lat: p.lat, lng: p.lng, category: p.category })
+    if (merged.length >= 8) break
+  }
+
+  await supabase
+    .from('telegram_chats')
+    .update({ last_nearby: merged, last_lat: lat, last_lng: lng, updated_at: new Date().toISOString() })
+    .eq('chat_id', chatId)
+
+  if (!merged.length) {
+    await tg('sendMessage', {
+      chat_id: chatId,
+      text: [
+        'No encontré sitios con nombre cerca.',
+        'Probad otra ubicación (centro / zona animada) o «dónde comer».',
+      ].join('\n'),
+      reply_markup: mainMenu(),
+    })
+    return
+  }
+
+  const title =
+    mode === 'food'
+      ? 'Para comer cerca:'
+      : trip
+        ? `${trip.title} · cerca de vosotros:`
+        : 'Recomendaciones in situ:'
+
+  const lines = [
+    title,
+    ...merged.map(
+      (p, i) =>
+        `${i + 1}. ${p.name}${p.category ? ` (${p.category})` : ''} · ~${Math.round(haversineKm({ lat, lng }, p) * 1000)} m`,
+    ),
+    '',
+    'Tocad ➕ para marcar. Luego «Abrir en Google Maps».',
+  ]
+
+  const rows = merged.map((p, i) => [
+    { text: `➕ ${p.name.slice(0, 28)}`, callback_data: `sel:${i}` },
+  ])
+  rows.push([{ text: '🗺 Abrir en Google Maps', callback_data: 'maps' }])
+
+  await tg('sendMessage', {
+    chat_id: chatId,
+    text: lines.join('\n'),
+    reply_markup: { inline_keyboard: rows },
+  })
+
+  for (const p of merged.slice(0, 3)) {
+    await tg('sendVenue', {
+      chat_id: chatId,
+      latitude: p.lat,
+      longitude: p.lng,
+      title: p.name.slice(0, 64),
+      address: p.category || 'RutaDos',
+    })
+  }
 }
 
 async function ensureChat(supabase: SupabaseClient, chatId: number): Promise<ChatRow> {
@@ -380,89 +515,21 @@ Deno.serve(async (req) => {
     return new Response('ok')
   }
 
-  // Ubicación
+  // Ubicación → recomendaciones in situ (con o sin viaje)
   if (msg.location) {
     const lat = msg.location.latitude
     const lng = msg.location.longitude
     await saveLoc(supabase, chatId, lat, lng)
-    chat = { ...chat, last_lat: lat, last_lng: lng }
-
-    await tg('sendMessage', {
-      chat_id: chatId,
-      text: 'Ubicación guardada ✓ Buscando sitios cerca…',
-      reply_markup: mainMenu(),
-    })
-
     const trip = await loadTrip(supabase, chat.trip_id)
-    const fromTrip = (trip?.places ?? [])
-      .map((p) => ({ ...p, km: haversineKm({ lat, lng }, p) }))
-      .filter((p) => p.km <= 1.5)
-      .sort((a, b) => a.km - b.km)
-      .slice(0, 5)
-
-    const osm = await fetchOsmNearby(lat, lng)
-    const merged: Place[] = []
-    const seen = new Set<string>()
-    for (const p of [...fromTrip, ...osm]) {
-      const k = p.name.toLowerCase()
-      if (seen.has(k)) continue
-      seen.add(k)
-      merged.push({ name: p.name, lat: p.lat, lng: p.lng, category: p.category })
-      if (merged.length >= 8) break
-    }
-
-    await supabase
-      .from('telegram_chats')
-      .update({ last_nearby: merged, updated_at: new Date().toISOString() })
-      .eq('chat_id', chatId)
-
-    if (!merged.length) {
-      await tg('sendMessage', {
-        chat_id: chatId,
-        text: [
-          'No encontré sitios con nombre cerca de esa ubicación.',
-          '',
-          'Probad:',
-          '• Otra ubicación (centro / zona turística)',
-          '• Enlazar un viaje: en RutaDos → Compartir → /start TOKEN aquí',
-          '• Volver a pulsar «Qué hay cerca»',
-        ].join('\n'),
-        reply_markup: mainMenu(),
-      })
-      return new Response('ok')
-    }
-
-    const lines = [
-      trip ? `${trip.title} · cerca de vosotros:` : 'Cerca de vosotros:',
-      ...merged.map(
-        (p, i) =>
-          `${i + 1}. ${p.name}${p.category ? ` (${p.category})` : ''} · ~${Math.round(haversineKm({ lat, lng }, p) * 1000)} m`,
-      ),
-      '',
-      'Tocad un botón para marcar pines. Luego «Abrir en Google Maps».',
-    ]
-
-    const rows = merged.map((p, i) => [
-      { text: `➕ ${p.name.slice(0, 28)}`, callback_data: `sel:${i}` },
-    ])
-    rows.push([{ text: '🗺 Abrir en Google Maps', callback_data: 'maps' }])
-
-    await tg('sendMessage', {
-      chat_id: chatId,
-      text: lines.join('\n'),
-      reply_markup: { inline_keyboard: rows },
+    await sendNearbySuggestions({
+      supabase,
+      chatId,
+      lat,
+      lng,
+      trip,
+      mode: 'all',
+      intro: 'Ubicación guardada ✓ Buscando recomendaciones in situ…',
     })
-
-    // Primeros 3 pines en el mapa nativo de Telegram
-    for (const p of merged.slice(0, 3)) {
-      await tg('sendVenue', {
-        chat_id: chatId,
-        latitude: p.lat,
-        longitude: p.lng,
-        title: p.name.slice(0, 64),
-        address: p.category || 'RutaDos',
-      })
-    }
     return new Response('ok')
   }
 
@@ -504,7 +571,7 @@ Deno.serve(async (req) => {
     for (const s of pend.slice(0, 6)) {
       if (!points.some((x) => Math.abs(x.lat - s.lat) < 1e-5)) points.push(s)
     }
-    const mode = pend[0] ? modeOf(pend[0].transitMode) : 'transit'
+    const mode = pend[0] ? modeOf(pend[0].transitMode) : 'walking'
     const url = mapsDir(points.length ? points : here ? [here] : [], mode)
     await tg('sendMessage', {
       chat_id: chatId,
@@ -521,22 +588,30 @@ Deno.serve(async (req) => {
     return new Response('ok')
   }
 
-  if (/cerca|monument|interes|zona/.test(t)) {
+  // Modo in situ: cerca / recomienda / comer (con o sin viaje)
+  if (
+    /cerca|monument|interes|zona|recomiend|suger|que hacer|que me|donde comer|comer|cena|restoran|cafe|✨|🍽/.test(
+      t,
+    ) ||
+    text === '✨ Recomiéndame' ||
+    text === '🍽 Dónde comer' ||
+    text === '📍 Qué hay cerca'
+  ) {
     if (!here) {
       await tg('sendMessage', {
         chat_id: chatId,
-        text: 'Necesito ubicación. Usad el botón 📍 Enviar ubicación.',
+        text: 'Para recomendaros in situ necesito ubicación. Usad 📍 Enviar ubicación.',
         reply_markup: mainMenu(),
       })
       return new Response('ok')
     }
-    // Reutilizar flujo: fingir location message by calling nearby again
-    msg.location = { latitude: here.lat, longitude: here.lng }
-    // fallthrough by recursive-ish: just duplicate minimal
-    await tg('sendMessage', {
-      chat_id: chatId,
-      text: 'Reenviad ubicación o usad 📍 otra vez para refrescar cercanos.',
-      reply_markup: mainMenu(),
+    await sendNearbySuggestions({
+      supabase,
+      chatId,
+      lat: here.lat,
+      lng: here.lng,
+      trip,
+      mode: detectNearbyMode(t + ' ' + text.toLowerCase()),
     })
     return new Response('ok')
   }
@@ -545,9 +620,12 @@ Deno.serve(async (req) => {
     await tg('sendMessage', {
       chat_id: chatId,
       text: [
-        'Aún no hay viaje enlazado.',
-        'Podéis: mandar ubicación → marcar sitios → Abrir en Maps.',
-        'O en RutaDos: Compartir → /start TOKEN aquí.',
+        'Modo in situ (sin viaje enlazado):',
+        '1) 📍 Enviar ubicación',
+        '2) «Recomiéndame» / «Dónde comer» / «Qué hay cerca»',
+        '3) Marcáis pines → Abrir en Google Maps',
+        '',
+        'Si más adelante tenéis plan en RutaDos: Compartir → /start TOKEN.',
       ].join('\n'),
       reply_markup: mainMenu(),
     })

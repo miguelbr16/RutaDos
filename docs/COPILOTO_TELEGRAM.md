@@ -8,10 +8,12 @@ WhatsApp bots **no** son gratis. Telegram Bot API **sí**.
 
 | Pedís | Qué hace |
 |--------|-----------|
-| 📍 Ubicación | La guarda y busca sitios cerca (viaje + OpenStreetMap) |
-| Botones ➕ | Marcáis pines (monumentos / sitios) |
-| Ruta / Qué toca / Cómo llego | Plan del viaje + link de transporte en Maps |
-| Abrir en Google Maps | Ruta multi-parada (vosotros + pines + plan) |
+| 📍 Ubicación | Guarda posición y recomienda sitios **in situ** (sin viaje hace falta) |
+| ✨ Recomiéndame / texto libre | Monumentos, atracciones, sitios cerca |
+| 🍽 Dónde comer | Bares / restaurantes / cafés cerca |
+| Botones ➕ | Marcáis pines |
+| Ruta / Qué toca / Cómo llego | Solo con viaje enlazado |
+| Abrir en Google Maps | Ruta con pines (+ plan si hay viaje) |
 | Venues en Telegram | Pines en el mapa nativo de Telegram |
 
 ## Límite importante (Google)
