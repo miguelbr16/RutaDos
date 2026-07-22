@@ -534,7 +534,118 @@
 }
 
 .wiz-v2-stage {
-  max-width: 40rem;
+  width: 100%;
+  max-width: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.wiz-v2-panel {
+  background: var(--v2-card);
+  border: 1px solid var(--v2-line);
+  border-radius: var(--v2-radius);
+  padding: 1rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.wiz-v2-panel.wiz-v2-dates {
+  margin-top: 0;
+  padding: 1rem;
+  box-shadow: none;
+}
+
+.wiz-v2-section-label {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sea);
+}
+
+.wizard-v2 .dest-grid,
+.wizard-v2 .dest-scroll {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wizard-v2 .dest-card {
+  min-height: 7.5rem;
+}
+
+.wiz-v2-highlights-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.wiz-v2-highlights-block.compact .muted {
+  display: none;
+}
+
+.wiz-v2-highlights {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.wiz-v2-highlight {
+  appearance: none;
+  border: 1px solid var(--v2-line);
+  background: #f8faf9;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font: inherit;
+  color: var(--v2-ink);
+}
+
+.wiz-v2-highlight.on {
+  background: rgba(42, 143, 122, 0.12);
+  border-color: var(--sea);
+  color: var(--sea);
+  font-weight: 600;
+}
+
+.wiz-v2-highlight:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.wiz-v2-step1-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.wiz-v2-step1-main {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.wiz-v2-side-card {
+  background: var(--v2-card);
+  border: 1px solid var(--v2-line);
+  border-radius: var(--v2-radius);
+  padding: 1rem;
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
+}
+
+.wiz-v2-side-photo {
+  width: 100%;
+  height: 6.5rem;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.wiz-v2-side-card > strong {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
 }
 
 .wiz-v2-head h2 {
@@ -565,13 +676,14 @@
 }
 
 .wiz-v2-dates {
-  background: var(--v2-card);
-  border-radius: var(--v2-radius);
-  padding: 1rem;
-  margin-top: 1rem;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  margin-top: 0;
   display: grid;
   gap: 0.65rem;
-  border: 1px solid var(--v2-line);
+  border: 0;
+  box-shadow: none;
 }
 
 .wiz-v2-nights {
@@ -986,6 +1098,20 @@
   .dest-scroll,
   .dest-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 720px) {
+  .wizard-v2 .dest-grid,
+  .wizard-v2 .dest-scroll {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .wiz-v2-step1-grid {
+    grid-template-columns: minmax(0, 1fr) 16.5rem;
+    align-items: start;
   }
 }
 

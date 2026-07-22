@@ -27,6 +27,8 @@ import {
   photoForDestination,
   type QuickDestination,
 } from '../lib/quickDestinations'
+import { getCityGuide } from '../lib/cityGuides'
+import { landmarksForDestination } from '../lib/landmarks'
 
 const PREF_HINTS: Record<PreferenceKey, string> = {
   monuments: 'Plazas, iconos, imprescindibles',
@@ -414,6 +416,27 @@ export function WizardPage() {
     return `${pace}, ${explore}. ${arrive}.`
   }, [wizard.routeStyle.pace, wizard.routeStyle.explore, wizard.arrivalTime])
 
+  const typicalSites = useMemo(() => {
+    if (!wizard.cityPick) return []
+    const landmarks = landmarksForDestination(wizard.cityPick.name, wizard.cityPick.displayName)
+    if (landmarks.length) {
+      return landmarks.slice(0, 8).map((l) => ({
+        name: l.name,
+        lat: l.lat,
+        lng: l.lng,
+        canAdd: true as const,
+      }))
+    }
+    const guide = getCityGuide(wizard.cityPick.name, wizard.cityPick.displayName)
+    if (!guide) return []
+    return [...guide.monuments, ...guide.museums].slice(0, 8).map((l) => ({
+      name: l.title.replace(/\s*\([^)]*\)\s*$/, '').trim(),
+      lat: 0,
+      lng: 0,
+      canAdd: false as const,
+    }))
+  }, [wizard.cityPick])
+
   const styleReady =
     !!wizard.routeStyle.pace &&
     !!wizard.routeStyle.explore &&
@@ -449,6 +472,53 @@ export function WizardPage() {
       buildQuickDestinationPatch(d, wizard.routeStyle.mobility),
     )
     setCitySuggestions([])
+  }
+
+  function addTypicalSite(site: { name: string; lat: number; lng: number; canAdd: boolean }) {
+    if (!site.canAdd) return
+    const exists = (wizard.mustVisits ?? []).some(
+      (m) => Math.abs(m.lat - site.lat) < 0.0005 && Math.abs(m.lng - site.lng) < 0.0005,
+    )
+    if (exists) return
+    patchWizard({
+      mustVisits: [...(wizard.mustVisits ?? []), { name: site.name, lat: site.lat, lng: site.lng }],
+    })
+  }
+
+  function renderCityHighlights(className?: string) {
+    if (!wizard.cityPick || !typicalSites.length) return null
+    return (
+      <div className={className ?? 'wiz-v2-highlights-block'}>
+        <p className="wiz-v2-section-label">Sitios típicos</p>
+        <ul className="wiz-v2-highlights">
+          {typicalSites.map((site) => {
+            const picked = site.canAdd
+              ? (wizard.mustVisits ?? []).some(
+                  (m) => Math.abs(m.lat - site.lat) < 0.0005 && Math.abs(m.lng - site.lng) < 0.0005,
+                )
+              : false
+            return (
+              <li key={site.name}>
+                <button
+                  type="button"
+                  className={picked ? 'wiz-v2-highlight on' : 'wiz-v2-highlight'}
+                  disabled={!site.canAdd}
+                  title={site.canAdd ? 'Priorizar en el plan' : undefined}
+                  onClick={() => addTypicalSite(site)}
+                >
+                  {site.name}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+        <p className="muted tiny">
+          {typicalSites.some((s) => s.canAdd)
+            ? 'Tocá para incluirlos sí o sí en el itinerario.'
+            : 'Referencia de lo más visitado en la ciudad.'}
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -487,89 +557,92 @@ export function WizardPage() {
             <p>Elegí un destino o buscá otro.</p>
           </header>
 
-          {!wizard.cityPick ? (
-            <>
-              <DestinationGrid
-                destinations={FEATURED_DESTINATIONS}
-                onPick={pickQuickDestination}
-                layout="scroll"
+          <div className="wiz-v2-panel">
+            <div className="wiz-v2-search">
+              <input
+                value={wizard.cityQuery}
+                onChange={(e) =>
+                  patchWizard({
+                    cityQuery: e.target.value,
+                    cityPick: null,
+                    hotelPick: null,
+                  })
+                }
+                placeholder="Buscar ciudad, región o país…"
+                autoComplete="off"
+                aria-label="Buscar destino"
               />
-              <div className="wiz-v2-search">
-                <input
-                  value={wizard.cityQuery}
-                  onChange={(e) =>
-                    patchWizard({
-                      cityQuery: e.target.value,
-                      cityPick: null,
-                      hotelPick: null,
-                    })
-                  }
-                  placeholder="🔍  Buscar ciudad, región o país…"
-                  autoComplete="off"
-                  aria-label="Buscar destino"
-                />
-              </div>
-            </>
-          ) : null}
-
-          {searchingCity && !wizard.cityPick && <p className="muted tiny">Buscando…</p>}
-
-          {citySuggestions.length > 0 && !wizard.cityPick && (
-            <div className="dest-dropdown">
-              <p className="dest-dropdown-label">Elegí una opción</p>
-              <ul className="suggest-cities">
-                {citySuggestions.map((s) => (
-                  <li key={s.label}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const scale = detectAreaScale(
-                          s.shortName,
-                          s.displayName,
-                          wizard.routeStyle.mobility ?? undefined,
-                          s.kind,
-                        )
-                        patchWizard({
-                          cityQuery: s.shortName,
-                          cityPick: {
-                            name: s.shortName,
-                            displayName: s.displayName,
-                            lat: s.lat,
-                            lng: s.lng,
-                          },
-                          hotelPick: null,
-                          airportPick: null,
-                          areaScale: scale,
-                        })
-                        setCitySuggestions([])
-                      }}
-                    >
-                      <span className="dest-main">{s.label}</span>
-                      <span className="dest-kind">{s.kind}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
             </div>
-          )}
 
-          {wizard.cityPick && (
-            <div className="dest-picked">
-              <div>
-                <strong>{wizard.cityPick.name}</strong>
-                <span className="muted tiny">{wizard.cityPick.displayName}</span>
+            {searchingCity && !wizard.cityPick ? <p className="muted tiny">Buscando…</p> : null}
+
+            {citySuggestions.length > 0 && !wizard.cityPick ? (
+              <div className="dest-dropdown">
+                <p className="dest-dropdown-label">Elegí una opción</p>
+                <ul className="suggest-cities">
+                  {citySuggestions.map((s) => (
+                    <li key={s.label}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const scale = detectAreaScale(
+                            s.shortName,
+                            s.displayName,
+                            wizard.routeStyle.mobility ?? undefined,
+                            s.kind,
+                          )
+                          patchWizard({
+                            cityQuery: s.shortName,
+                            cityPick: {
+                              name: s.shortName,
+                              displayName: s.displayName,
+                              lat: s.lat,
+                              lng: s.lng,
+                            },
+                            hotelPick: null,
+                            airportPick: null,
+                            areaScale: scale,
+                          })
+                          setCitySuggestions([])
+                        }}
+                      >
+                        <span className="dest-main">{s.label}</span>
+                        <span className="dest-kind">{s.kind}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <button
-                type="button"
-                className="btn ghost sm"
-                onClick={() => patchWizard({ cityPick: null })}
-              >
-                Cambiar
-              </button>
-            </div>
-          )}
+            ) : null}
 
-          {wizard.cityPick && (
+            {wizard.cityPick ? (
+              <div className="dest-picked">
+                <div>
+                  <strong>{wizard.cityPick.name}</strong>
+                  <span className="muted tiny">{wizard.cityPick.displayName}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => patchWizard({ cityPick: null })}
+                >
+                  Cambiar
+                </button>
+              </div>
+            ) : null}
+
+            <p className="wiz-v2-section-label">Destinos populares</p>
+            <DestinationGrid
+              destinations={FEATURED_DESTINATIONS}
+              onPick={pickQuickDestination}
+              selectedName={wizard.cityPick?.name ?? null}
+              layout="grid"
+            />
+
+            {renderCityHighlights()}
+          </div>
+
+          {wizard.cityPick ? (
             <div className="wiz-pill-block">
               <p className="wiz-section-label">Alcance</p>
               <div className="wiz-pills">
@@ -586,9 +659,9 @@ export function WizardPage() {
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
-          <div className="wiz-v2-dates">
+          <div className="wiz-v2-panel wiz-v2-dates">
             <TripDateFields label="Llegada" value={wizard.startDate} onChange={setStartDate} />
             <TripDateFields
               label="Salida"
@@ -785,19 +858,6 @@ export function WizardPage() {
               )}
             </div>
           </details>
-
-          <div className="wiz-v2-footer">
-            <div className="wiz-v2-footer-inner">
-            <button
-              type="button"
-              className="btn primary wiz-v2-cta"
-              disabled={!wizard.cityPick || wizard.endDate < wizard.startDate}
-              onClick={() => go(1)}
-            >
-              Continuar
-            </button>
-            </div>
-          </div>
         </section>
       )}
 
@@ -808,6 +868,8 @@ export function WizardPage() {
             <p>Un perfil y seguimos.</p>
           </header>
 
+          <div className="wiz-v2-step1-grid">
+            <div className="wiz-v2-step1-main">
           <div className="wiz-v2-presets">
             {PRESETS.map((p) => (
               <button
@@ -991,21 +1053,19 @@ export function WizardPage() {
               Paradas extra entre sitios
             </label>
           </details>
-
-          <div className="wiz-v2-footer">
-            <div className="wiz-v2-footer-inner">
-            <button type="button" className="btn ghost" onClick={() => go(0)}>
-              Atrás
-            </button>
-            <button
-              type="button"
-              className="btn primary wiz-v2-cta"
-              disabled={activePrefs.length === 0 || !styleReady}
-              onClick={() => go(2)}
-            >
-              Continuar
-            </button>
             </div>
+
+            <aside className="wiz-v2-side-card">
+              {wizard.cityPick && photoForDestination(wizard.cityPick.name) ? (
+                <img
+                  className="wiz-v2-side-photo"
+                  src={photoForDestination(wizard.cityPick.name)}
+                  alt=""
+                />
+              ) : null}
+              <strong>{wizard.cityPick?.name}</strong>
+              {renderCityHighlights('wiz-v2-highlights-block compact')}
+            </aside>
           </div>
         </section>
       )}
@@ -1184,24 +1244,53 @@ export function WizardPage() {
           })()}
 
           {error && <p className="error">{error}</p>}
+        </section>
+      )}
 
-          <div className="wiz-v2-footer">
-            <div className="wiz-v2-footer-inner">
-            <button type="button" className="btn ghost" onClick={() => go(1)} disabled={generating}>
-              Atrás
-            </button>
+      <div className="wiz-v2-footer">
+        <div className="wiz-v2-footer-inner">
+          {step === 0 ? (
             <button
               type="button"
               className="btn primary wiz-v2-cta"
-              onClick={() => void generateTrip()}
-              disabled={generating || !wizard.cityPick}
+              disabled={!wizard.cityPick || wizard.endDate < wizard.startDate}
+              onClick={() => go(1)}
             >
-              {generating ? 'Generando…' : 'Generar viaje'}
+              Continuar
             </button>
-            </div>
-          </div>
-        </section>
-      )}
+          ) : null}
+          {step === 1 ? (
+            <>
+              <button type="button" className="btn ghost" onClick={() => go(0)}>
+                Atrás
+              </button>
+              <button
+                type="button"
+                className="btn primary wiz-v2-cta"
+                disabled={activePrefs.length === 0 || !styleReady}
+                onClick={() => go(2)}
+              >
+                Continuar
+              </button>
+            </>
+          ) : null}
+          {step === 2 ? (
+            <>
+              <button type="button" className="btn ghost" onClick={() => go(1)} disabled={generating}>
+                Atrás
+              </button>
+              <button
+                type="button"
+                className="btn primary wiz-v2-cta"
+                onClick={() => void generateTrip()}
+                disabled={generating || !wizard.cityPick}
+              >
+                {generating ? 'Generando…' : 'Generar viaje'}
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }
