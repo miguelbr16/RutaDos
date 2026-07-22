@@ -23,6 +23,7 @@ import {
 import {
   FEATURED_DESTINATIONS,
   buildQuickDestinationPatch,
+  photoForDestination,
   type QuickDestination,
 } from '../lib/quickDestinations'
 
@@ -115,6 +116,7 @@ const PRESETS: Array<{
   id: string
   label: string
   desc: string
+  icon: string
   prefs: Preferences
   pace?: Pace
   explore?: ExploreMode
@@ -123,6 +125,7 @@ const PRESETS: Array<{
     id: 'classic',
     label: 'Clásico',
     desc: 'Iconos, museos y buen comer — sin prisa',
+    icon: '🏛️',
     pace: 'relaxed',
     explore: 'icons',
     prefs: emptyNightlife({
@@ -147,6 +150,7 @@ const PRESETS: Array<{
     id: 'local',
     label: 'Más local',
     desc: 'Barrios, mercados y secretos',
+    icon: '🧭',
     pace: 'normal',
     explore: 'local',
     prefs: emptyNightlife({
@@ -171,6 +175,7 @@ const PRESETS: Array<{
     id: 'food',
     label: 'Foodie',
     desc: 'Mercados, mesas y cafés primero',
+    icon: '🍷',
     pace: 'normal',
     explore: 'mixed',
     prefs: emptyNightlife({
@@ -446,29 +451,39 @@ export function WizardPage() {
   }
 
   return (
-    <div className="page wizard-page">
-      <div className="wiz-top">
-        <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'home' })}>
-          ← Inicio
+    <div className="page wizard-page wizard-v2">
+      <div className="wiz-v2-top">
+        <button type="button" className="wiz-v2-back" onClick={() => setView({ name: 'home' })}>
+          ←
         </button>
-        <nav className="wiz-track" aria-label="Progreso">
+        <span className="wiz-v2-step-label">
+          {step === 0 ? 'Destino' : step === 1 ? 'Estilo' : 'Confirmar'}
+        </span>
+        <nav className="wiz-v2-dots" aria-label="Progreso">
           {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className={
-                i === step ? 'wiz-track-seg on' : i < step ? 'wiz-track-seg done' : 'wiz-track-seg'
-              }
-              aria-hidden
-            />
+            <span key={i} className={i <= step ? 'on' : ''} aria-hidden />
           ))}
         </nav>
       </div>
 
+      {wizard.cityPick && step < 2 ? (
+        <div
+          className="wiz-v2-banner"
+          style={
+            photoForDestination(wizard.cityPick.name)
+              ? { backgroundImage: `url("${photoForDestination(wizard.cityPick.name)}")` }
+              : undefined
+          }
+        >
+          <strong>{wizard.cityPick.name}</strong>
+        </div>
+      ) : null}
+
       {step === 0 && (
-        <section className="wiz-stage">
-          <header className="wiz-stage-head">
-            <h2 className="wiz-title">¿A dónde vas?</h2>
-            <p className="muted">Destino y fechas. Lo demás es opcional.</p>
+        <section className="wiz-v2-stage">
+          <header className="wiz-v2-head">
+            <h2>¿A dónde vas?</h2>
+            <p>Elegí un destino o buscá otro.</p>
           </header>
 
           {!wizard.cityPick ? (
@@ -476,10 +491,9 @@ export function WizardPage() {
               <DestinationGrid
                 destinations={FEATURED_DESTINATIONS}
                 onPick={pickQuickDestination}
-                compact
+                layout="scroll"
               />
-              <label className="dest-search field">
-                <span>Otro destino</span>
+              <div className="wiz-v2-search">
                 <input
                   value={wizard.cityQuery}
                   onChange={(e) =>
@@ -489,10 +503,11 @@ export function WizardPage() {
                       hotelPick: null,
                     })
                   }
-                  placeholder="Buscar ciudad, región o país…"
+                  placeholder="🔍  Buscar ciudad, región o país…"
                   autoComplete="off"
+                  aria-label="Buscar destino"
                 />
-              </label>
+              </div>
             </>
           ) : null}
 
@@ -572,12 +587,8 @@ export function WizardPage() {
             </div>
           )}
 
-          <div className="wiz-dates-card rd-surface">
-            <TripDateFields
-              label="Llegada"
-              value={wizard.startDate}
-              onChange={setStartDate}
-            />
+          <div className="wiz-v2-dates">
+            <TripDateFields label="Llegada" value={wizard.startDate} onChange={setStartDate} />
             <TripDateFields
               label="Salida"
               value={wizard.endDate}
@@ -585,7 +596,7 @@ export function WizardPage() {
               onChange={setEndDate}
             />
             {nights > 0 ? (
-              <p className="muted tiny wiz-nights">
+              <p className="wiz-v2-nights">
                 {nights === 1 ? '1 noche' : `${nights} noches`} · {nights + 1} días
               </p>
             ) : null}
@@ -774,32 +785,32 @@ export function WizardPage() {
             </div>
           </details>
 
-          <div className="wiz-actions">
+          <div className="wiz-v2-footer">
             <button
               type="button"
-              className="btn primary"
+              className="btn primary wiz-v2-cta"
               disabled={!wizard.cityPick || wizard.endDate < wizard.startDate}
               onClick={() => go(1)}
             >
-              Siguiente
+              Continuar
             </button>
           </div>
         </section>
       )}
 
       {step === 1 && (
-        <section className="wiz-stage">
-          <header className="wiz-stage-head">
-            <h2 className="wiz-title">Tu estilo de viaje</h2>
-            <p className="muted">Elegí un perfil. Podés afinar después.</p>
+        <section className="wiz-v2-stage">
+          <header className="wiz-v2-head">
+            <h2>Tu estilo</h2>
+            <p>Un perfil y seguimos.</p>
           </header>
 
-          <div className="wiz-style-grid">
+          <div className="wiz-v2-presets">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                className={selectedPreset === p.id ? 'wiz-style-card on' : 'wiz-style-card'}
+                className={selectedPreset === p.id ? 'wiz-v2-preset on' : 'wiz-v2-preset'}
                 onClick={() => {
                   setSelectedPreset(p.id)
                   patchWizard({
@@ -814,22 +825,25 @@ export function WizardPage() {
                   })
                 }}
               >
-                <strong>{p.label}</strong>
-                <span>{p.desc}</span>
+                <span className="wiz-v2-preset-icon" aria-hidden>
+                  {p.icon}
+                </span>
+                <span>
+                  <strong>{p.label}</strong>
+                  <span>{p.desc}</span>
+                </span>
               </button>
             ))}
           </div>
 
-          <div className="wiz-choice-row rd-surface">
-            <p className="wiz-choice-label">Moverse</p>
-            <div className="wiz-choice-btns">
+          <div className="wiz-v2-segment">
+            <span>Moverse</span>
+            <div>
               {MOBILITY_OPTIONS.map((o) => (
                 <button
                   key={o.value}
                   type="button"
-                  className={
-                    wizard.routeStyle.mobility === o.value ? 'wiz-choice on' : 'wiz-choice'
-                  }
+                  className={wizard.routeStyle.mobility === o.value ? 'on' : ''}
                   onClick={() =>
                     patchWizard({ routeStyle: { ...wizard.routeStyle, mobility: o.value } })
                   }
@@ -840,16 +854,14 @@ export function WizardPage() {
             </div>
           </div>
 
-          <div className="wiz-choice-row rd-surface">
-            <p className="wiz-choice-label">Comida</p>
-            <div className="wiz-choice-btns">
+          <div className="wiz-v2-segment">
+            <span>Comida</span>
+            <div>
               {FOOD_OPTIONS.map((o) => (
                 <button
                   key={o.value}
                   type="button"
-                  className={
-                    wizard.routeStyle.foodBudget === o.value ? 'wiz-choice on' : 'wiz-choice'
-                  }
+                  className={wizard.routeStyle.foodBudget === o.value ? 'on' : ''}
                   onClick={() =>
                     patchWizard({
                       routeStyle: { ...wizard.routeStyle, foodBudget: o.value },
@@ -977,30 +989,51 @@ export function WizardPage() {
             </label>
           </details>
 
-          <div className="wiz-actions">
+          <div className="wiz-v2-footer">
             <button type="button" className="btn ghost" onClick={() => go(0)}>
               Atrás
             </button>
             <button
               type="button"
-              className="btn primary"
+              className="btn primary wiz-v2-cta"
               disabled={activePrefs.length === 0 || !styleReady}
               onClick={() => go(2)}
             >
-              Siguiente
+              Continuar
             </button>
           </div>
         </section>
       )}
 
       {step === 2 && (
-        <section className="wiz-stage">
-          <header className="wiz-stage-head">
-            <h2 className="wiz-title">Listo para generar</h2>
-            <p className="muted">Revisá el resumen. Podés editar cualquier bloque.</p>
+        <section className="wiz-v2-stage">
+          <header className="wiz-v2-head">
+            <h2>Tu viaje</h2>
+            <p>Revisá y generá el plan.</p>
           </header>
 
-          <ul className="wiz-summary rd-surface">
+          <article className="wiz-v2-boarding">
+            {wizard.cityPick && photoForDestination(wizard.cityPick.name) ? (
+              <img
+                className="wiz-v2-boarding-photo"
+                src={photoForDestination(wizard.cityPick.name)}
+                alt=""
+              />
+            ) : null}
+            <div className="wiz-v2-boarding-body">
+              <p className="wiz-v2-boarding-k">Destino</p>
+              <strong>{wizard.cityPick?.name ?? wizard.cityQuery}</strong>
+              <p className="wiz-v2-boarding-k">Fechas</p>
+              <span>
+                {wizard.startDate} → {wizard.endDate}
+                {nights > 0 ? ` · ${nights} noches` : ''}
+              </span>
+              <p className="wiz-v2-boarding-k">Estilo</p>
+              <span>{preview}</span>
+            </div>
+          </article>
+
+          <ul className="wiz-v2-checklist">
             <li>
               <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
                 <span className="wiz-summary-k">Destino</span>
@@ -1147,17 +1180,17 @@ export function WizardPage() {
 
           {error && <p className="error">{error}</p>}
 
-          <div className="wiz-actions">
+          <div className="wiz-v2-footer">
             <button type="button" className="btn ghost" onClick={() => go(1)} disabled={generating}>
               Atrás
             </button>
             <button
               type="button"
-              className="btn primary"
+              className="btn primary wiz-v2-cta"
               onClick={() => void generateTrip()}
               disabled={generating || !wizard.cityPick}
             >
-              {generating ? 'Generando plan (~15–40 s)…' : 'Generar viaje'}
+              {generating ? 'Generando…' : 'Generar viaje'}
             </button>
           </div>
         </section>

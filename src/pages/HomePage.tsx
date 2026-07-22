@@ -4,9 +4,16 @@ import { useAppStore } from '../store'
 import { loadOfflineDay } from '../lib/offlineDay'
 import {
   FEATURED_DESTINATIONS,
+  HERO_PHOTO,
   buildQuickDestinationPatch,
   type QuickDestination,
 } from '../lib/quickDestinations'
+
+const FEATURES = [
+  { icon: '🗺️', title: 'Mapa del día', text: 'Ruta clara parada a parada' },
+  { icon: '🚇', title: 'Transporte real', text: 'Links oficiales metro y bus' },
+  { icon: '🍽️', title: 'Reservar al momento', text: 'Hotel, mesa y entradas' },
+] as const
 
 export function HomePage() {
   const trips = useAppStore((s) => s.trips)
@@ -70,7 +77,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="home-page">
+    <div className="home-page home-v2">
       {!online && (
         <p className="offline-banner home-offline">
           Sin conexión.
@@ -80,58 +87,63 @@ export function HomePage() {
         </p>
       )}
 
-      <header className="home-top">
-        <span className="home-logo">RutaDos</span>
-        <button
-          type="button"
-          className="btn ghost sm home-settings"
-          onClick={() => setView({ name: 'settings' })}
-        >
-          Ajustes
+      <header className="home-v2-top">
+        <span className="home-v2-logo">
+          <span className="home-v2-logo-mark" aria-hidden />
+          RutaDos
+        </span>
+        <button type="button" className="home-v2-icon-btn" onClick={() => setView({ name: 'settings' })}>
+          ⚙
         </button>
       </header>
 
-      <section className="home-hero" aria-label="Inicio">
-        <img
-          className="home-hero-img"
-          src="/hero/landing.jpg"
-          alt=""
-          width={1600}
-          height={1067}
-          decoding="async"
-          fetchPriority="high"
-        />
-        <div className="home-hero-overlay" aria-hidden />
-        <div className="home-hero-inner">
-          <h1 className="home-hero-title">Tu ruta, día a día</h1>
-          <p className="home-hero-sub">
-            Itinerario claro, mapa en mano y reservas cuando las necesitás.
-          </p>
-          <button type="button" className="btn primary home-hero-cta" onClick={startWizard}>
+      <section className="home-v2-hero">
+        <img className="home-v2-hero-img" src={HERO_PHOTO} alt="" decoding="async" fetchPriority="high" />
+        <div className="home-v2-hero-shade" aria-hidden />
+        <div className="home-v2-hero-content">
+          <p className="home-v2-kicker">Planificador de viajes</p>
+          <h1>
+            Donde vayas,
+            <br />
+            <em>día a día</em>
+          </h1>
+          <p className="home-v2-lede">Itinerario, mapa y reservas en un solo sitio — en el móvil.</p>
+          <button type="button" className="btn primary home-v2-cta" onClick={startWizard}>
             Crear viaje
           </button>
         </div>
       </section>
 
-      <main className="home-main">
-        <section className="home-block" aria-label="Destinos sugeridos">
-          <div className="home-block-head">
-            <h2>Destinos</h2>
-            <p className="muted tiny">Tocá uno para empezar con la ciudad lista.</p>
+      <main className="home-v2-main">
+        <ul className="home-v2-features">
+          {FEATURES.map((f) => (
+            <li key={f.title}>
+              <span className="home-v2-feature-icon" aria-hidden>
+                {f.icon}
+              </span>
+              <strong>{f.title}</strong>
+              <span>{f.text}</span>
+            </li>
+          ))}
+        </ul>
+
+        <section className="home-v2-section">
+          <div className="home-v2-section-head">
+            <h2>Explorar destinos</h2>
+            <p>Empezá con la ciudad lista</p>
           </div>
           <DestinationGrid
             destinations={FEATURED_DESTINATIONS}
             onPick={startWithDestination}
+            layout="scroll"
           />
         </section>
 
-        <section className="home-block" aria-label="Tus viajes">
-          <div className="home-block-head home-block-head-row">
+        <section className="home-v2-section">
+          <div className="home-v2-section-head home-v2-section-row">
             <div>
               <h2>Mis viajes</h2>
-              {trips.length > 0 ? (
-                <p className="muted tiny">{trips.length} guardado{trips.length === 1 ? '' : 's'}</p>
-              ) : null}
+              {trips.length > 0 ? <p>{trips.length} guardados</p> : null}
             </div>
             {trips.length > 0 ? (
               <button type="button" className="btn ghost sm" onClick={startWizard}>
@@ -141,32 +153,36 @@ export function HomePage() {
           </div>
 
           {!trips.length ? (
-            <div className="home-empty">
-              <p>Aún no hay viajes planificados.</p>
+            <div className="home-v2-empty">
+              <p>Todavía no hay viajes.</p>
               <button type="button" className="btn primary sm" onClick={startWizard}>
                 Planificar el primero
               </button>
             </div>
           ) : (
-            <ul className="home-trips">
-              {trips.map((t) => (
-                <li key={t.id} className="home-trip-row">
+            <ul className="home-v2-trips">
+              {trips.map((t, i) => (
+                <li key={t.id}>
                   <button
                     type="button"
-                    className="home-trip-card"
+                    className="home-v2-trip"
                     onClick={() => setView({ name: 'trip', tripId: t.id })}
                   >
-                    <span className="home-trip-date">
-                      {t.startDate.slice(5).replace('-', '/')} – {t.endDate.slice(5).replace('-', '/')}
+                    <span className={`home-v2-trip-num c-${(i % 5) + 1}`}>{i + 1}</span>
+                    <span className="home-v2-trip-body">
+                      <strong>{t.title}</strong>
+                      <span>
+                        {t.startDate.slice(5).replace('-', '/')} – {t.endDate.slice(5).replace('-', '/')} ·{' '}
+                        {t.days.length} días
+                      </span>
                     </span>
-                    <strong>{t.title}</strong>
-                    <span className="muted tiny">
-                      {t.days.length} {t.days.length === 1 ? 'día' : 'días'}
+                    <span className="home-v2-trip-arrow" aria-hidden>
+                      →
                     </span>
                   </button>
                   <button
                     type="button"
-                    className="home-trip-remove"
+                    className="home-v2-trip-del"
                     aria-label={`Borrar ${t.title}`}
                     onClick={() => {
                       if (confirm(`¿Borrar viaje a ${t.title}?`)) deleteTrip(t.id)
@@ -180,14 +196,11 @@ export function HomePage() {
           )}
         </section>
 
-        <footer className="home-foot" aria-label="Herramientas">
-          <button type="button" className="home-foot-link" onClick={exportAll}>
-            Exportar viajes
+        <footer className="home-v2-foot">
+          <button type="button" onClick={exportAll}>
+            Exportar
           </button>
-          <span className="home-foot-dot" aria-hidden>
-            ·
-          </span>
-          <button type="button" className="home-foot-link" onClick={() => fileRef.current?.click()}>
+          <button type="button" onClick={() => fileRef.current?.click()}>
             Importar
           </button>
           <input

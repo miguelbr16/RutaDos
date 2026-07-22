@@ -27,9 +27,9 @@
 ## Mapa pantalla → inspiración
 
 ```
-HOME     → Landing agency + Touri (hero + destinos curados)
-WIZARD   → Touri + Travelscape (pocos pasos, preview mapa, resumen bonito)
-TRIP     → YOGO + Travelscape (mapa, stats, días, presupuesto visible)
+HOME     → Landing agency + Touri (hero editorial + destinos con foto)
+WIZARD   → Touri + Travelscape (dots progreso, banner ciudad, boarding pass)
+TRIP     → YOGO + Travelscape (mapa overlay, presupuesto visible, días color)
 DAY      → YOGO + Travel Booking (mapa + lista + reservar/comer)
 VENUES   → Travel Booking (cards foto, tabs hotel/comida)
 SHARE    → Travelscape (tarjeta visual del viaje)
@@ -39,30 +39,31 @@ SHARE    → Travelscape (tarjeta visual del viaje)
 
 ## Fases de diseño (orden recomendado)
 
-### Fase A — Hecho (sesión 22 jul 2026 noche)
+### Fase A — Hecho (rediseño v2, 22 jul 2026 noche)
 
-- [x] Home reescrita: hero compacto, grid destinos con gradientes, viajes en cards
-- [x] Wizard menos encuesta: progress 3 segmentos, destinos visuales, presets estilo cards
-- [x] Sistema `.rd-surface`, `DestinationGrid`, VenueFinder cards v2
-- [x] OpenTripMap integrado (opcional con `VITE_OPENTRIPMAP_KEY`) — ver `docs/OPENTRIPMAP.md`
-- [x] Afiliado Booking preparado sin activar — ver `docs/BOOKING_AFILIADO.md`
-- [x] Limpieza CSS muerto (~preset-card, icons.svg Vite)
+- [x] Home v2: hero editorial “Donde vayas, día a día”, features 3 columnas, destinos scroll con **foto Unsplash**
+- [x] Wizard v2: dots progreso, banner ciudad, search pill, presets con iconos, paso 3 **boarding pass**
+- [x] Trip v2: presupuesto **siempre visible**, mapa con overlay título + foto ciudad, días con borde color
+- [x] `src/redesign.css` importado en `main.tsx` (override limpio sobre `index.css`)
+- [x] `DestinationGrid` con `<img>` por destino
+- [x] VenueFinder cards v2 + OpenTripMap opcional — `docs/OPENTRIPMAP.md`
+- [x] Afiliado Booking preparado sin activar — `docs/BOOKING_AFILIADO.md`
 - [x] Fix selección aeropuerto wizard (comparar lat/lng/code)
+- [x] Fotos documentadas — `docs/IMAGENES.md`
 
 ### Fase B — Siguiente (prioridad alta)
 
-- [ ] **Wizard Touri:** mini mapa Leaflet al elegir destino; paso 3 tipo “boarding pass”
-- [ ] **Trip YOGO:** presupuesto fuera de “Opciones” (siempre visible); días con color D1/D2
+- [ ] **Wizard Touri:** mini mapa Leaflet al elegir destino (preview antes de generar)
 - [ ] **Day YOGO:** mapa fijo arriba; barra inferior sticky (Maps · Metro · Comer · En ruta)
-- [ ] Iconos/emoji en presets Clásico / Local / Foodie
+- [ ] Pulir trip: acciones rápidas fuera del menú ··· (Maps, compartir)
 
 ### Fase C — Pulido pre-lanzamiento
 
-- [ ] Fotos reales en dest cards (Wikimedia/Unsplash por ciudad)
 - [ ] Trip tabs: Mapa · Días · Alojamiento · Comer
 - [ ] SharePage más visual (mapa + fechas + CTA)
 - [ ] Página privacidad (requerida antes afiliado Booking)
 - [ ] Hero propio `/public/hero/` por destino o rotación
+- [ ] Sustituir Unsplash por fotos propias cuando existan
 
 ### Fase D — Post-beta (opcional)
 
@@ -92,16 +93,19 @@ Base de datos **gratis** de POIs turísticos y restaurantes valorados. **No es B
 
 ---
 
-## Archivos tocados en Fase A
+## Archivos tocados en Fase A v2
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/pages/HomePage.tsx` | Home nueva |
-| `src/pages/WizardPage.tsx` | Wizard visual |
-| `src/pages/TripPage.tsx` | Stats + panels |
-| `src/components/DestinationGrid.tsx` | Cards destino |
+| `src/pages/HomePage.tsx` | Home v2 |
+| `src/pages/WizardPage.tsx` | Wizard v2 |
+| `src/pages/TripPage.tsx` | Trip v2 |
+| `src/components/DestinationGrid.tsx` | Cards con foto |
 | `src/components/VenueFinder.tsx` | Cards enriquecidas |
-| `src/lib/quickDestinations.ts` | Destinos + gradientes |
+| `src/lib/quickDestinations.ts` | Destinos + URLs Unsplash |
 | `src/lib/opentripmap.ts` | Cliente OTM |
 | `src/lib/nearbyVenues.ts` | OSM + OTM |
-| `src/index.css` | Rediseño + limpieza |
+| `src/redesign.css` | **Nuevo** — estilos v2 |
+| `src/main.tsx` | Import redesign.css |
+| `src/App.tsx` | Fondo app-v2 sin atmosphere mint |
+| `docs/IMAGENES.md` | Atribución Unsplash |

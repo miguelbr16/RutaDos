@@ -74,8 +74,12 @@ export default function App() {
   }, [coupleId])
 
   return (
-    <div className="app-shell">
-      <div className="atmosphere" aria-hidden />
+    <div
+      className={`app-shell${view.name === 'home' || view.name === 'wizard' || view.name === 'trip' ? ' app-v2' : ''}`}
+    >
+      {view.name !== 'home' && view.name !== 'wizard' && view.name !== 'trip' ? (
+        <div className="atmosphere" aria-hidden />
+      ) : null}
       {view.name === 'home' && <HomePage />}
       {view.name === 'wizard' && <WizardPage />}
       {view.name === 'trip' && <TripPage tripId={view.tripId} />}

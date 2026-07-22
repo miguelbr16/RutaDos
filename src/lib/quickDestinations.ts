@@ -1,6 +1,10 @@
 import { detectAreaScale, type AreaScale } from './tripScale'
 import type { Mobility } from '../types'
 
+/** Fotos Unsplash (licencia Unsplash — uso gratuito) */
+export const HERO_PHOTO =
+  'https://images.unsplash.com/photo-1476514525535-07fb3d4fce65?auto=format&fit=crop&w=1600&q=80'
+
 export type QuickDestination = {
   label: string
   name: string
@@ -8,15 +12,14 @@ export type QuickDestination = {
   lat: number
   lng: number
   hint?: string
-  /** Texto corto para la card en home */
   tagline?: string
   scale?: AreaScale
   mobility?: Mobility
-  /** Gradiente CSS para cards visuales */
   accent: string
+  /** Imagen card (Unsplash) */
+  photo: string
 }
 
-/** Destinos curados — home + wizard */
 export const QUICK_DESTINATIONS: QuickDestination[] = [
   {
     label: 'Londres',
@@ -26,7 +29,9 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     lng: -0.1278,
     tagline: 'Metro y museos',
     scale: 'city',
-    accent: 'linear-gradient(145deg, #1a3a52 0%, #2a8f7a 55%, #0b1f24 100%)',
+    accent: 'linear-gradient(145deg, #1a3a52, #2a8f7a)',
+    photo:
+      'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Núremberg',
@@ -37,7 +42,9 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     hint: 'Navidad',
     tagline: 'Mercados y castillo',
     scale: 'city',
-    accent: 'linear-gradient(145deg, #4a2020 0%, #c96f28 50%, #2a1a10 100%)',
+    accent: 'linear-gradient(145deg, #4a2020, #c96f28)',
+    photo:
+      'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Japón',
@@ -48,7 +55,9 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     tagline: 'Tren y templos',
     scale: 'country',
     mobility: 'transit',
-    accent: 'linear-gradient(145deg, #2c1054 0%, #b54a6a 45%, #1a0a20 100%)',
+    accent: 'linear-gradient(145deg, #2c1054, #b54a6a)',
+    photo:
+      'https://images.unsplash.com/photo-1493976040374-85c8e912df84?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Madrid',
@@ -58,7 +67,9 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     lng: -3.7038,
     tagline: 'Arte y tapas',
     scale: 'city',
-    accent: 'linear-gradient(145deg, #8b4510 0%, #e08a3c 50%, #3a2010 100%)',
+    accent: 'linear-gradient(145deg, #8b4510, #e08a3c)',
+    photo:
+      'https://images.unsplash.com/photo-1539037116277-369510a2c113?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Roma',
@@ -68,7 +79,9 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     lng: 12.4964,
     tagline: 'Historia a pie',
     scale: 'city',
-    accent: 'linear-gradient(145deg, #5c3d1e 0%, #c9a227 48%, #2a1810 100%)',
+    accent: 'linear-gradient(145deg, #5c3d1e, #c9a227)',
+    photo:
+      'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Dolomitas',
@@ -80,7 +93,9 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     tagline: 'Carretera y miradores',
     scale: 'region',
     mobility: 'drive',
-    accent: 'linear-gradient(145deg, #3a5a7a 0%, #8ab4d4 55%, #1a2838 100%)',
+    accent: 'linear-gradient(145deg, #3a5a7a, #8ab4d4)',
+    photo:
+      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Suiza',
@@ -91,7 +106,9 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     tagline: 'Lagos y trenes',
     scale: 'country',
     mobility: 'transit',
-    accent: 'linear-gradient(145deg, #1a4a6a 0%, #4a9fd4 50%, #0a2030 100%)',
+    accent: 'linear-gradient(145deg, #1a4a6a, #4a9fd4)',
+    photo:
+      'https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Boston',
@@ -101,7 +118,9 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     lng: -71.0589,
     tagline: 'Freedom Trail',
     scale: 'city',
-    accent: 'linear-gradient(145deg, #1a3050 0%, #5a7a9a 55%, #0a1520 100%)',
+    accent: 'linear-gradient(145deg, #1a3050, #5a7a9a)',
+    photo:
+      'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'San Diego',
@@ -111,14 +130,21 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     lng: -117.1611,
     tagline: 'Costa y barrios',
     scale: 'city',
-    accent: 'linear-gradient(145deg, #0a4a5a 0%, #2aafb8 50%, #062028 100%)',
+    accent: 'linear-gradient(145deg, #0a4a5a, #2aafb8)',
+    photo:
+      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
   },
 ]
 
-/** Destinos destacados en la home (scroll horizontal) */
 export const FEATURED_DESTINATIONS = QUICK_DESTINATIONS.filter((d) =>
   ['Londres', 'Roma', 'Madrid', 'Núremberg', 'Japón'].includes(d.label),
 )
+
+export function photoForDestination(name: string): string | undefined {
+  return QUICK_DESTINATIONS.find(
+    (d) => d.name.toLowerCase() === name.toLowerCase() || d.label.toLowerCase() === name.toLowerCase(),
+  )?.photo
+}
 
 export function buildQuickDestinationPatch(
   d: QuickDestination,

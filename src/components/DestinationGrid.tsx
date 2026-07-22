@@ -5,12 +5,14 @@ type Props = {
   destinations: QuickDestination[]
   onPick: (d: QuickDestination) => void
   selectedName?: string | null
-  compact?: boolean
+  layout?: 'grid' | 'scroll'
 }
 
-export function DestinationGrid({ destinations, onPick, selectedName, compact }: Props) {
+export function DestinationGrid({ destinations, onPick, selectedName, layout = 'grid' }: Props) {
+  const listClass = layout === 'scroll' ? 'dest-scroll' : 'dest-grid'
+
   return (
-    <ul className={compact ? 'dest-grid dest-grid-compact' : 'dest-grid'}>
+    <ul className={listClass}>
       {destinations.map((d) => {
         const selected = selectedName === d.name
         return (
@@ -18,11 +20,17 @@ export function DestinationGrid({ destinations, onPick, selectedName, compact }:
             <button
               type="button"
               className={selected ? 'dest-card on' : 'dest-card'}
-              style={{ '--dest-accent': d.accent } as CSSProperties}
+              style={
+                {
+                  '--dest-accent': d.accent,
+                  '--dest-photo': `url("${d.photo}")`,
+                } as CSSProperties
+              }
               onClick={() => onPick(d)}
               aria-pressed={selected}
             >
-              <span className="dest-card-bg" aria-hidden />
+              <img className="dest-card-photo" src={d.photo} alt="" loading="lazy" decoding="async" />
+              <span className="dest-card-shade" aria-hidden />
               <span className="dest-card-body">
                 <strong>{d.label}</strong>
                 <span>{d.tagline ?? d.hint ?? 'Explorar'}</span>
