@@ -462,9 +462,20 @@ export async function answerCopilotStandalone(
   }
 }
 
+/** Username del bot (sin @). Env de build, o fallback del bot de producción. */
+function resolveTelegramBotUsername(botUsername?: string): string {
+  return (
+    botUsername ||
+    import.meta.env.VITE_TELEGRAM_BOT ||
+    'RutaDosGuia_bot'
+  )
+    .replace(/^@/, '')
+    .trim()
+}
+
 /** Abre la app de Telegram (tg://) — username sin @ en VITE_TELEGRAM_BOT. */
 export function telegramAppDeepLink(botUsername?: string, startPayload?: string): string | null {
-  const user = (botUsername || import.meta.env.VITE_TELEGRAM_BOT || '').replace(/^@/, '').trim()
+  const user = resolveTelegramBotUsername(botUsername)
   if (!user) return null
   if (startPayload) {
     return `tg://resolve?domain=${encodeURIComponent(user)}&start=${encodeURIComponent(startPayload)}`
@@ -474,7 +485,7 @@ export function telegramAppDeepLink(botUsername?: string, startPayload?: string)
 
 /** Fallback https (escritorio / si tg:// no responde). */
 export function telegramBotUrl(botUsername?: string, startPayload?: string): string | null {
-  const user = (botUsername || import.meta.env.VITE_TELEGRAM_BOT || '').replace(/^@/, '').trim()
+  const user = resolveTelegramBotUsername(botUsername)
   if (!user) return null
   if (startPayload) return `https://t.me/${user}?start=${encodeURIComponent(startPayload)}`
   return `https://t.me/${user}`
