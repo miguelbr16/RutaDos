@@ -6,6 +6,7 @@ import {
   type VenueKind,
 } from '../lib/bookingLinks'
 import { isOpenTripMapEnabled } from '../lib/opentripmap'
+import { Icon, type IconName } from './Icons'
 
 type Props = {
   kind: VenueKind
@@ -19,20 +20,20 @@ type Props = {
   onAdd?: (v: NearbyVenue) => void
 }
 
-const KIND_META: Record<VenueKind, { title: string; icon: string; empty: string }> = {
+const KIND_META: Record<VenueKind, { title: string; icon: IconName; empty: string }> = {
   hotel: {
     title: 'Hoteles cerca',
-    icon: '🏨',
+    icon: 'hotel',
     empty: 'Sin hoteles OSM aquí. Probá Booking o Maps abajo.',
   },
   restaurant: {
     title: 'Restaurantes cerca',
-    icon: '🍽️',
+    icon: 'restaurant',
     empty: 'No encontré restaurantes con nombre cerca. Ampliá la zona o probá Maps.',
   },
   cafe: {
     title: 'Cafés cerca',
-    icon: '☕',
+    icon: 'cafe',
     empty: 'No encontré cafés cerca. Probá otra zona del mapa.',
   },
 }
@@ -92,7 +93,7 @@ export function VenueFinder({
       <div className="venue-finder-head">
         <div className="venue-finder-title">
           <span className="venue-finder-icon" aria-hidden>
-            {meta.icon}
+            <Icon name={meta.icon} size={20} />
           </span>
           <div>
             <h2>{meta.title}</h2>
@@ -147,7 +148,7 @@ export function VenueFinder({
               />
             ) : (
               <div className="venue-thumb venue-thumb-fallback" aria-hidden>
-                {meta.icon}
+                <Icon name={meta.icon} size={22} />
               </div>
             )}
             <div className="venue-card-body">

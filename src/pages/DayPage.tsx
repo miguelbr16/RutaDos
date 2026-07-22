@@ -310,7 +310,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       </header>
 
       <div className="day-map-wrap">
-        <TripMap stops={mapStops} route={route} height="240px" showLegend showLegs />
+        <TripMap stops={mapStops} route={route} height="240px" showLegend showLegs photoPins />
       </div>
 
       <div className="day-primary-actions">

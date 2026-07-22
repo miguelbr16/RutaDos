@@ -13,6 +13,7 @@ import { searchDestinations, searchHotels, searchCityPlaces, type PlaceSuggestio
 import { TripDateFields } from '../components/TripDateFields'
 import { TripMap } from '../components/TripMap'
 import { DestinationGrid } from '../components/DestinationGrid'
+import { Icon, type IconName } from '../components/Icons'
 import { findAirportsForCity, type AirportOption } from '../lib/airports'
 import { estimateTripBudget } from '../lib/budget'
 import { isGoogleMapsUrl } from '../lib/importGmaps'
@@ -116,7 +117,7 @@ const PRESETS: Array<{
   id: string
   label: string
   desc: string
-  icon: string
+  icon: IconName
   prefs: Preferences
   pace?: Pace
   explore?: ExploreMode
@@ -125,7 +126,7 @@ const PRESETS: Array<{
     id: 'classic',
     label: 'Clásico',
     desc: 'Iconos, museos y buen comer — sin prisa',
-    icon: '🏛️',
+    icon: 'landmark',
     pace: 'relaxed',
     explore: 'icons',
     prefs: emptyNightlife({
@@ -150,7 +151,7 @@ const PRESETS: Array<{
     id: 'local',
     label: 'Más local',
     desc: 'Barrios, mercados y secretos',
-    icon: '🧭',
+    icon: 'compass',
     pace: 'normal',
     explore: 'local',
     prefs: emptyNightlife({
@@ -175,7 +176,7 @@ const PRESETS: Array<{
     id: 'food',
     label: 'Foodie',
     desc: 'Mercados, mesas y cafés primero',
-    icon: '🍷',
+    icon: 'wine',
     pace: 'normal',
     explore: 'mixed',
     prefs: emptyNightlife({
@@ -453,8 +454,8 @@ export function WizardPage() {
   return (
     <div className="page wizard-page wizard-v2">
       <div className="wiz-v2-top">
-        <button type="button" className="wiz-v2-back" onClick={() => setView({ name: 'home' })}>
-          ←
+        <button type="button" className="wiz-v2-back" aria-label="Inicio" onClick={() => setView({ name: 'home' })}>
+          <Icon name="chevron-left" size={20} />
         </button>
         <span className="wiz-v2-step-label">
           {step === 0 ? 'Destino' : step === 1 ? 'Estilo' : 'Confirmar'}
@@ -786,6 +787,7 @@ export function WizardPage() {
           </details>
 
           <div className="wiz-v2-footer">
+            <div className="wiz-v2-footer-inner">
             <button
               type="button"
               className="btn primary wiz-v2-cta"
@@ -794,6 +796,7 @@ export function WizardPage() {
             >
               Continuar
             </button>
+            </div>
           </div>
         </section>
       )}
@@ -826,7 +829,7 @@ export function WizardPage() {
                 }}
               >
                 <span className="wiz-v2-preset-icon" aria-hidden>
-                  {p.icon}
+                  <Icon name={p.icon} size={20} />
                 </span>
                 <span>
                   <strong>{p.label}</strong>
@@ -990,6 +993,7 @@ export function WizardPage() {
           </details>
 
           <div className="wiz-v2-footer">
+            <div className="wiz-v2-footer-inner">
             <button type="button" className="btn ghost" onClick={() => go(0)}>
               Atrás
             </button>
@@ -1001,6 +1005,7 @@ export function WizardPage() {
             >
               Continuar
             </button>
+            </div>
           </div>
         </section>
       )}
@@ -1181,6 +1186,7 @@ export function WizardPage() {
           {error && <p className="error">{error}</p>}
 
           <div className="wiz-v2-footer">
+            <div className="wiz-v2-footer-inner">
             <button type="button" className="btn ghost" onClick={() => go(1)} disabled={generating}>
               Atrás
             </button>
@@ -1192,6 +1198,7 @@ export function WizardPage() {
             >
               {generating ? 'Generando…' : 'Generar viaje'}
             </button>
+            </div>
           </div>
         </section>
       )}

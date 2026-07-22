@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Icon } from '../components/Icons'
 import {
   DEFAULT_PREFERENCES,
   PREFERENCE_LABELS,
@@ -33,6 +34,8 @@ import { openTelegramBot } from '../lib/copilot'
 import { loadOfflineDay } from '../lib/offlineDay'
 import { genericGuide, getCityGuide } from '../lib/cityGuides'
 import { photoForDestination } from '../lib/quickDestinations'
+import { fetchPlacePhotoUrls } from '../lib/placePhotos'
+import type { Stop } from '../types'
 
 const STYLE_KEYS: PreferenceKey[] = [
   'museums',
@@ -76,6 +79,32 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [venueKind, setVenueKind] = useState<VenueKind | null>(null)
   const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [mapStops, setMapStops] = useState<Stop[]>([])
+  const allStops = trip?.days.flatMap((d) => d.stops) ?? []
+
+  useEffect(() => {
+    if (!trip) return
+    let cancelled = false
+    const stops = allStops.slice(0, 40)
+    void (async () => {
+      const enriched = await Promise.all(
+        stops.map(async (s) => {
+          if (s.isHotel || s.photoUrl || s.photoUrls?.length) return s
+          try {
+            const urls = await fetchPlacePhotoUrls(s.name, s.lat, s.lng, 1)
+            if (!urls.length) return s
+            return { ...s, photoUrl: urls[0], photoUrls: urls }
+          } catch {
+            return s
+          }
+        }),
+      )
+      if (!cancelled) setMapStops(enriched)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [trip?.id, allStops.length])
 
   if (!trip) {
     return (
@@ -88,7 +117,6 @@ export function TripPage({ tripId }: { tripId: string }) {
     )
   }
 
-  const allStops = trip.days.flatMap((d) => d.stops)
   const visitStops = allStops.filter((s) => !s.isHotel)
   const hotelSearchPoint = (() => {
     if (!visitStops.length) return { lat: trip.city.lat, lng: trip.city.lng }
@@ -203,16 +231,22 @@ export function TripPage({ tripId }: { tripId: string }) {
   return (
     <div className="page trip-page trip-v2">
       <div className="trip-v2-top">
-        <button type="button" className="trip-v2-back" onClick={() => setView({ name: 'home' })}>
-          ←
+        <button
+          type="button"
+          className="trip-v2-back"
+          aria-label="Volver"
+          onClick={() => setView({ name: 'home' })}
+        >
+          <Icon name="chevron-left" size={20} />
         </button>
         <button
           type="button"
           className={moreOpen ? 'trip-v2-opt on' : 'trip-v2-opt'}
           aria-expanded={moreOpen}
+          aria-label={moreOpen ? 'Cerrar opciones' : 'Opciones'}
           onClick={() => setMoreOpen((v) => !v)}
         >
-          {moreOpen ? '✕' : '···'}
+          {moreOpen ? <Icon name="close" size={18} /> : <Icon name="more" size={18} />}
         </button>
       </div>
 
@@ -419,27 +453,36 @@ export function TripPage({ tripId }: { tripId: string }) {
         </span>
       </div>
 
-      <div className="trip-v2-map-wrap">
-        {photoForDestination(trip.city.name) ? (
-          <img
-            className="trip-v2-map-bg"
-            src={photoForDestination(trip.city.name)}
-            alt=""
-            aria-hidden
-          />
-        ) : null}
-        <div className="trip-v2-map-inner">
-          <TripMap stops={allStops.slice(0, 40)} height="260px" showLegend />
+      <div className="trip-v2-layout">
+        <div className="trip-v2-map-col">
+          <div className="trip-v2-map-wrap">
+            {photoForDestination(trip.city.name) ? (
+              <img
+                className="trip-v2-map-bg"
+                src={photoForDestination(trip.city.name)}
+                alt=""
+                aria-hidden
+              />
+            ) : null}
+            <div className="trip-v2-map-inner">
+              <TripMap
+                stops={mapStops.length ? mapStops : allStops.slice(0, 40)}
+                height="260px"
+                showLegend
+                photoPins
+              />
+            </div>
+            <div className="trip-v2-map-overlay">
+              <h1>{trip.title}</h1>
+              <p>
+                {trip.startDate} → {trip.endDate}
+                {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="trip-v2-map-overlay">
-          <h1>{trip.title}</h1>
-          <p>
-            {trip.startDate} → {trip.endDate}
-            {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
-          </p>
-        </div>
-      </div>
-      <div className="trip-v2-body">
+
+        <div className="trip-v2-body">
           {offlineForThisTrip ? (
             <div className="offline-banner ok compact">
               <strong>Offline · {offlineForThisTrip.dayLabel}</strong>
@@ -664,6 +707,7 @@ export function TripPage({ tripId }: { tripId: string }) {
             })}
           </ul>
         </section>
+        </div>
       </div>
     </div>
   )

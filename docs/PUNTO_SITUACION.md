@@ -20,23 +20,16 @@ Propuesta: plan día a día con mapa, transporte oficial, hoteles/restaurantes (
 
 ---
 
-## Fase actual: **Rediseño visual v2 (Fase A completa → Fase B pendiente)**
-
-La **funcionalidad** está bien; el foco es **dejar de parecer encuesta** y acercarse a apps tipo Touri/YOGO.
+## Fase actual: **Layout responsive + iconos profesionales (jul 2026)**
 
 | Capa | Estado |
 |------|--------|
-| Home v2: hero editorial + fotos destino + features + viajes numerados | **Hecho (v2)** |
-| Wizard v2: dots progreso, banner ciudad, search pill, presets iconos, boarding pass | **Hecho (v2)** |
-| Trip v2: presupuesto visible, mapa con overlay, días con color | **Hecho (v2)** |
-| CSS v2 separado (`src/redesign.css`) + fotos Unsplash | **Hecho (v2)** |
-| VenueFinder cards + OpenTripMap opcional | Hecho |
-| Fix aeropuerto wizard (selección) | Hecho |
+| Layout ancho en PC (`--layout-max: 72rem`) — home/wizard/trip | **Hecho** |
+| Home: hero full-bleed, columnas destinos + viajes en desktop | **Hecho** |
+| Iconos SVG (sin emojis) en home/wizard/venues | **Hecho** |
+| Trip: mapa + panel lateral en desktop; pines con foto | **Hecho** |
+| Wizard v2: presets, boarding pass, dots | Hecho |
 | Day / OnRoute estilo YOGO | **Pendiente (Fase B)** |
-| Wizard mapa preview Leaflet | **Pendiente (Fase B)** |
-| Trip tabs Mapa/Días/Hotel/Comer | **Pendiente (Fase C)** |
-| Afiliado Booking | Preparado, **no activar** — `docs/BOOKING_AFILIADO.md` |
-| OpenTripMap en prod | Código listo; falta key en Vercel — `docs/OPENTRIPMAP.md` |
 
 **Roadmap diseño completo:** `docs/DISENO_BEHANCE.md`  
 **Fotos legales:** `docs/IMAGENES.md`

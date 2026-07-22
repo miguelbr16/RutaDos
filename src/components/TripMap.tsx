@@ -15,7 +15,28 @@ export type MapPickable = {
   selected?: boolean
 }
 
-function pinIcon(color: string, n: number | string, hotel?: boolean) {
+function pinIcon(
+  color: string,
+  n: number | string,
+  opts?: { hotel?: boolean; photoUrl?: string },
+) {
+  const hotel = opts?.hotel
+  const photoUrl = opts?.photoUrl
+  if (photoUrl && !hotel) {
+    const safeUrl = photoUrl.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    return L.divIcon({
+      className: 'ruta-pin ruta-pin-photo',
+      html: `<div class="ruta-pin-photo-shell">
+        <div class="ruta-pin-photo-img" style="border-color:${color}">
+          <img src="${safeUrl}" alt="" loading="lazy" referrerpolicy="no-referrer" />
+        </div>
+        <span class="ruta-pin-photo-num" style="background:${color}">${n}</span>
+      </div>`,
+      iconSize: [48, 48],
+      iconAnchor: [24, 48],
+      popupAnchor: [0, -48],
+    })
+  }
   const bg = hotel ? '#1a4a5c' : color
   return L.divIcon({
     className: 'ruta-pin',
@@ -114,6 +135,8 @@ interface Props {
   /** Pines tocables para armar ruta (wishlist en mapa) */
   pickables?: MapPickable[]
   onPick?: (id: string) => void
+  /** Pines con foto cuando hay thumbnail (Wikipedia/OSM) */
+  photoPins?: boolean
 }
 
 export function TripMap({
@@ -126,6 +149,7 @@ export function TripMap({
   defaultCenter = null,
   pickables = [],
   onPick,
+  photoPins = false,
 }: Props) {
   const ordered = [...stops].sort((a, b) => a.order - b.order)
   const center: [number, number] = ordered.length
@@ -216,11 +240,15 @@ export function TripMap({
             ))}
           {ordered.map((s) => {
             const label = s.isHotel ? 'H' : ++visitNum
+            const thumb = photoPins ? s.photoUrl || s.photoUrls?.[0] : undefined
             return (
               <Marker
                 key={s.id}
                 position={[s.lat, s.lng]}
-                icon={pinIcon(categoryColor(s.category), label, s.isHotel)}
+                icon={pinIcon(categoryColor(s.category), label, {
+                  hotel: s.isHotel,
+                  photoUrl: thumb,
+                })}
                 eventHandlers={
                   onPick && !s.isHotel
                     ? {
