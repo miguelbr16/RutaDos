@@ -114,6 +114,9 @@ export interface GeoPlace {
   /** Sitio pospuesto desde otro día (prioridad en sugerencias) */
   deferred?: boolean
   reaction?: 'like' | 'dislike'
+  /** Web / contacto OSM (si existe) */
+  website?: string
+  phone?: string
 }
 
 export interface Stop {
@@ -148,6 +151,8 @@ export interface Stop {
   partnerId?: string
   sponsored?: boolean
   listingKind?: 'hotel' | 'restaurant' | 'experience' | 'agency'
+  website?: string
+  phone?: string
 }
 
 export interface DayPlan {

@@ -397,6 +397,11 @@ function placeToStop(place: GeoPlace, order: number, slot?: TimeSlot, time?: str
     order,
     slot: slot ?? place.bestSlot,
     suggestedTime: time,
+    website: place.website,
+    phone: place.phone,
+    listingKind: place.listingKind,
+    partnerId: place.partnerId,
+    sponsored: place.sponsored,
   }
 }
 

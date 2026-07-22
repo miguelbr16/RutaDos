@@ -8,6 +8,7 @@ import {
 import { googleMapsPlaceUrl, googleMapsTransitLegUrl, travelModeForTransit } from '../lib/mapsUrl'
 import type { PlaceHours } from '../lib/openingHours'
 import { fetchPlaceBlurb, type PlaceBlurb } from '../lib/placeWiki'
+import { hotelBookingUrl, restaurantReserveUrl, restaurantWebUrl } from '../lib/bookingLinks'
 
 type Props = {
   stops: Stop[]
@@ -181,6 +182,57 @@ export function DayTimeline({
                     >
                       Maps
                     </a>
+                    {stop.isHotel || stop.listingKind === 'hotel' ? (
+                      <a
+                        className="btn primary sm"
+                        href={hotelBookingUrl({
+                          name: stop.name,
+                          lat: stop.lat,
+                          lng: stop.lng,
+                        })}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Booking
+                      </a>
+                    ) : null}
+                    {(stop.category === 'food' ||
+                      stop.category === 'cafe' ||
+                      stop.listingKind === 'restaurant') && (
+                      <>
+                        <a
+                          className="btn ghost sm"
+                          href={restaurantWebUrl({
+                            name: stop.name,
+                            lat: stop.lat,
+                            lng: stop.lng,
+                            website: stop.website,
+                          })}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {stop.website ? 'Web' : 'Maps'}
+                        </a>
+                        <a
+                          className="btn primary sm"
+                          href={restaurantReserveUrl({
+                            name: stop.name,
+                            lat: stop.lat,
+                            lng: stop.lng,
+                            website: stop.website,
+                          })}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Reservar
+                        </a>
+                      </>
+                    )}
+                    {stop.phone ? (
+                      <a className="btn ghost sm" href={`tel:${stop.phone.replace(/\s/g, '')}`}>
+                        Llamar
+                      </a>
+                    ) : null}
                     <button type="button" className="btn ghost sm" onClick={() => onMove(stop.id, -1)}>
                       ↑
                     </button>

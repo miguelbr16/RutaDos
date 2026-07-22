@@ -3,14 +3,13 @@
 // Secrets: TELEGRAM_BOT_TOKEN (+ SUPABASE_URL / SERVICE_ROLE inyectados)
 //
 // Capacidades:
-// - Ubicación (vosotros la mandáis)
-// - Ruta / siguiente / cómo llegar (si hay viaje enlazado)
-// - Cercanos (viaje + OpenStreetMap) con botones para marcar
-// - Abrir en Google Maps (ruta multi-parada) — NO puede escribir en "Guardados" de Google
-// - Pines como ubicaciones nativas de Telegram (mapa dentro de TG)
+// - Ubicación → recomendaciones in situ
+// - Restaurantes / Hoteles con Web · Reservar · Booking · Maps
+// - Ruta / siguiente / cómo llegar (viaje enlazado)
+// - Pines + Google Maps
 //
 // /start TOKEN  → enlaza viaje (token de Compartir en RutaDos)
-// /start        → menú sin viaje (cerca + Maps)
+// /start        → menú sin viaje
 
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -19,7 +18,15 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? Deno.env.get('SB_URL') ?? '
 const SERVICE_KEY =
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SB_SERVICE_ROLE_KEY') ?? ''
 
-type Place = { name: string; lat: number; lng: number; category?: string }
+type Place = {
+  name: string
+  lat: number
+  lng: number
+  category?: string
+  website?: string
+  phone?: string
+}
+
 type TripRow = {
   id: string
   title: string
@@ -37,6 +44,9 @@ type TripRow = {
       visitStatus?: string
       transportReason?: string
       minutesToNext?: number
+      website?: string
+      phone?: string
+      category?: string
     }>
   }>
   places: Place[]
@@ -46,6 +56,10 @@ type TripRow = {
     explore?: string
     foodBudget?: string
     mobility?: string
+  } | null
+  city?: { name?: string; lat?: number; lng?: number } | null
+  logistics?: {
+    hotel?: { name: string; lat?: number; lng?: number } | null
   } | null
 }
 
@@ -119,7 +133,47 @@ function mapsDir(
   return u.toString()
 }
 
-type NearbyMode = 'sights' | 'food' | 'all'
+function normalizeWebsite(raw?: string | null): string | undefined {
+  if (!raw) return undefined
+  const t = raw.trim()
+  if (!t) return undefined
+  if (/^https?:\/\//i.test(t)) return t
+  if (/^www\./i.test(t)) return `https://${t}`
+  if (/^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(t)) return `https://${t}`
+  return undefined
+}
+
+function looksLikeBookingSite(url: string): boolean {
+  return /thefork|eltenedor|opentable|resy|sevenrooms|covermanager|quandoo|yelp\.|bookatable|tablecheck|tock\.com|exploretock|bookings?\./i.test(
+    url,
+  )
+}
+
+function mapsPlace(name: string, lat: number, lng: number) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} @${lat},${lng}`)}`
+}
+
+function restaurantReserveUrl(p: Place, city?: string) {
+  const web = normalizeWebsite(p.website)
+  if (web && looksLikeBookingSite(web)) return web
+  const q = `reservar mesa ${p.name}${city ? ` ${city}` : ''}`
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`
+}
+
+function restaurantWebUrl(p: Place) {
+  return normalizeWebsite(p.website) ?? mapsPlace(p.name, p.lat, p.lng)
+}
+
+function hotelBookingUrl(p: Place, city?: string) {
+  const ss = [p.name, city].filter(Boolean).join(' ').trim() || p.name
+  const u = new URL('https://www.booking.com/searchresults.html')
+  u.searchParams.set('ss', ss)
+  u.searchParams.set('latitude', String(p.lat))
+  u.searchParams.set('longitude', String(p.lng))
+  return u.toString()
+}
+
+type NearbyMode = 'sights' | 'food' | 'hotels' | 'all'
 
 const OVERPASS_MIRRORS = [
   'https://overpass-api.de/api/interpreter',
@@ -127,7 +181,7 @@ const OVERPASS_MIRRORS = [
   'https://overpass.kumi.systems/api/interpreter',
 ]
 
-function rankNearby(lat: number, lng: number, places: Place[], limit = 8): Place[] {
+function rankNearby(lat: number, lng: number, places: Place[], limit = 8, preferWeb = false): Place[] {
   const seen = new Set<string>()
   return places
     .filter((p) => {
@@ -136,27 +190,43 @@ function rankNearby(lat: number, lng: number, places: Place[], limit = 8): Place
       seen.add(key)
       return true
     })
-    .map((p) => ({ ...p, _d: haversineKm({ lat, lng }, p) }))
-    .sort((a, b) => (a as Place & { _d: number })._d - (b as Place & { _d: number })._d)
+    .map((p) => ({
+      ...p,
+      _d: haversineKm({ lat, lng }, p),
+      _w: preferWeb && p.website ? 0 : 1,
+    }))
+    .sort((a, b) => a._w - b._w || a._d - b._d)
     .slice(0, limit)
-    .map(({ name, lat: plat, lng: plng, category }) => ({
+    .map(({ name, lat: plat, lng: plng, category, website, phone }) => ({
       name,
       lat: plat,
       lng: plng,
       category,
+      website,
+      phone,
     }))
 }
 
 function overpassQuery(lat: number, lng: number, mode: NearbyMode): string {
-  const around = `around:1800,${lat},${lng}`
+  const around = `around:2000,${lat},${lng}`
   if (mode === 'food') {
     return `
 [out:json][timeout:25];
 (
-  node(${around})[amenity~"restaurant|cafe|bar|fast_food|ice_cream|pub"];
-  way(${around})[amenity~"restaurant|cafe|bar|fast_food|ice_cream|pub"];
+  node(${around})[amenity~"restaurant|cafe|fast_food|pub|bar"]["name"];
+  way(${around})[amenity~"restaurant|cafe|fast_food|pub|bar"]["name"];
 );
-out center 30;
+out center 45;
+`
+  }
+  if (mode === 'hotels') {
+    return `
+[out:json][timeout:25];
+(
+  node(${around})[tourism~"hotel|guest_house|hostel|motel"]["name"];
+  way(${around})[tourism~"hotel|guest_house|hostel|motel"]["name"];
+);
+out center 40;
 `
   }
   if (mode === 'all') {
@@ -187,12 +257,22 @@ out center 30;
 `
 }
 
+function osmContact(tags: Record<string, string> | undefined): { website?: string; phone?: string } {
+  if (!tags) return {}
+  const website = normalizeWebsite(
+    tags.website || tags['contact:website'] || tags.url || tags['contact:url'],
+  )
+  const phone = (tags.phone || tags['contact:phone'] || tags['contact:mobile'] || '').trim() || undefined
+  return { website, phone }
+}
+
 async function fetchOsmNearby(
   lat: number,
   lng: number,
   mode: NearbyMode = 'sights',
 ): Promise<Place[]> {
   const query = overpassQuery(lat, lng, mode)
+  const preferWeb = mode === 'food' || mode === 'hotels'
   for (const url of OVERPASS_MIRRORS) {
     try {
       const res = await fetch(url, {
@@ -208,23 +288,40 @@ async function fetchOsmNearby(
         const plng = el.lon ?? el.center?.lon
         const name = el.tags?.name || el.tags?.['name:es'] || el.tags?.['name:en']
         if (plat == null || plng == null || !name) continue
+        const { website, phone } = osmContact(el.tags)
         out.push({
           name,
           lat: plat,
           lng: plng,
           category: el.tags?.tourism || el.tags?.historic || el.tags?.amenity || 'sight',
+          website,
+          phone,
         })
       }
-      const ranked = rankNearby(lat, lng, out, 8)
+      // Prefer restaurants over bars when food mode
+      if (mode === 'food') {
+        out.sort((a, b) => {
+          const ar = a.category === 'restaurant' ? 0 : 1
+          const br = b.category === 'restaurant' ? 0 : 1
+          return ar - br
+        })
+      }
+      if (mode === 'hotels') {
+        out.sort((a, b) => {
+          const ah = a.category === 'hotel' ? 0 : 1
+          const bh = b.category === 'hotel' ? 0 : 1
+          return ah - bh
+        })
+      }
+      const ranked = rankNearby(lat, lng, out, 8, preferWeb)
       if (ranked.length) return ranked
     } catch {
       /* try next mirror */
     }
   }
-  return mode === 'food' ? [] : fetchWikiNearby(lat, lng)
+  return mode === 'food' || mode === 'hotels' ? [] : fetchWikiNearby(lat, lng)
 }
 
-/** Fallback si Overpass falla o no hay POIs con nombre. */
 async function fetchWikiNearby(lat: number, lng: number): Promise<Place[]> {
   try {
     const u = new URL('https://es.wikipedia.org/w/api.php')
@@ -236,19 +333,14 @@ async function fetchWikiNearby(lat: number, lng: number): Promise<Place[]> {
     u.searchParams.set('format', 'json')
     u.searchParams.set('origin', '*')
     const res = await fetch(u.toString(), {
-      headers: { 'User-Agent': 'RutaDosBot/1.0 (couple trip planner)' },
+      headers: { 'User-Agent': 'RutaDosBot/1.0 (trip planner)' },
     })
     if (!res.ok) return []
     const json = await res.json()
     const out: Place[] = []
     for (const hit of json.query?.geosearch ?? []) {
       if (hit.lat == null || hit.lon == null || !hit.title) continue
-      out.push({
-        name: hit.title,
-        lat: hit.lat,
-        lng: hit.lon,
-        category: 'wiki',
-      })
+      out.push({ name: hit.title, lat: hit.lat, lng: hit.lon, category: 'wiki' })
     }
     return rankNearby(lat, lng, out, 8)
   } catch {
@@ -257,10 +349,13 @@ async function fetchWikiNearby(lat: number, lng: number): Promise<Place[]> {
 }
 
 function detectNearbyMode(t: string): NearbyMode {
-  if (/comer|cena|almorz|desayun|restoran|restaurante|cafe|café|tapas|bar |pizza|comida/.test(t)) {
+  if (/hotel|aloj|hostel|hostal|dormir|booking/.test(t)) return 'hotels'
+  if (
+    /comer|cena|almorz|desayun|restoran|restaurante|cafe|café|tapas|bar |pizza|comida|🍽/.test(t)
+  ) {
     return 'food'
   }
-  if (/recomiend|suger|que hacer|qué hacer|insitu|in situ|ahora|aqui|aquí|plan libre|sin plan/.test(t)) {
+  if (/recomiend|suger|que hacer|qué hacer|insitu|in situ|ahora|aqui|aquí|plan libre|sin plan|✨/.test(t)) {
     return 'all'
   }
   return 'sights'
@@ -268,17 +363,20 @@ function detectNearbyMode(t: string): NearbyMode {
 
 function helpText() {
   return [
-    'Soy el copiloto RutaDos en Telegram 🧭',
+    'Soy el copiloto RutaDos 🧭',
     '',
-    'Sin viaje planificado (modo in situ):',
     '1) Mandad 📍 ubicación',
-    '2) Preguntad: «recomienda», «qué hay cerca», «dónde comer»…',
-    '3) Tocad ➕ para marcar pines → Abrir en Google Maps',
+    '2) Tocad:',
+    '   · 🍽 Restaurantes → web / reservar mesa',
+    '   · 🏨 Hoteles → web / Booking',
+    '   · ✨ Recomiéndame / 📍 Qué hay cerca',
+    '3) ➕ marca pines → Abrir en Google Maps',
     '',
     'Con viaje (Compartir → /start TOKEN):',
-    '• Ruta de hoy · Qué toca · Cómo llego',
+    '· Ruta de hoy · Qué toca · Cómo llego',
     '',
-    '⚠️ Google no deja guardar en “Guardados” desde un bot.',
+    'Los enlaces Web/Reservar/Booking abren el sitio real cuando OSM lo tiene;',
+    'si no, búsqueda en Google o Booking.',
   ].join('\n')
 }
 
@@ -286,14 +384,37 @@ function mainMenu() {
   return {
     keyboard: [
       [{ text: '📍 Enviar ubicación', request_location: true }],
-      [{ text: '✨ Recomiéndame' }, { text: '🍽 Dónde comer' }],
-      [{ text: '📍 Qué hay cerca' }, { text: '✅ Mis pines' }],
+      [{ text: '🍽 Restaurantes' }, { text: '🏨 Hoteles' }],
+      [{ text: '✨ Recomiéndame' }, { text: '📍 Qué hay cerca' }],
+      [{ text: '✅ Mis pines' }, { text: '🗺 Abrir en Google Maps' }],
       [{ text: '🗺 Ruta de hoy' }, { text: '⏭ Qué toca' }],
-      [{ text: '🚇 Cómo llego' }, { text: '🗺 Abrir en Google Maps' }],
-      [{ text: '❓ Ayuda' }],
+      [{ text: '🚇 Cómo llego' }, { text: '❓ Ayuda' }],
     ],
     resize_keyboard: true,
   }
+}
+
+function venueInlineRows(merged: Place[], mode: NearbyMode, city?: string) {
+  const rows: Array<Array<Record<string, string>>> = []
+  for (let i = 0; i < merged.length; i++) {
+    const p = merged[i]
+    const row: Array<Record<string, string>> = [
+      { text: `➕ ${p.name.slice(0, 22)}`, callback_data: `sel:${i}` },
+    ]
+    if (mode === 'food') {
+      row.push({ text: 'Web', url: restaurantWebUrl(p) })
+      row.push({ text: 'Reservar', url: restaurantReserveUrl(p, city) })
+    } else if (mode === 'hotels') {
+      const web = normalizeWebsite(p.website)
+      if (web) row.push({ text: 'Web', url: web })
+      row.push({ text: 'Booking', url: hotelBookingUrl(p, city) })
+    } else {
+      row.push({ text: 'Maps', url: mapsPlace(p.name, p.lat, p.lng) })
+    }
+    rows.push(row)
+  }
+  rows.push([{ text: '🗺 Abrir ruta con pines', callback_data: 'maps' }])
+  return rows
 }
 
 async function sendNearbySuggestions(opts: {
@@ -306,17 +427,28 @@ async function sendNearbySuggestions(opts: {
   intro?: string
 }) {
   const { supabase, chatId, lat, lng, trip, mode = 'sights', intro } = opts
+  const city = trip?.city?.name
 
   await tg('sendMessage', {
     chat_id: chatId,
-    text: intro || 'Buscando recomendaciones cerca de vosotros…',
+    text:
+      intro ||
+      (mode === 'food'
+        ? 'Buscando restaurantes cerca…'
+        : mode === 'hotels'
+          ? 'Buscando hoteles cerca…'
+          : 'Buscando recomendaciones cerca…'),
     reply_markup: mainMenu(),
   })
 
   const fromTrip = (trip?.places ?? [])
     .filter((p) => {
+      if (mode === 'food') {
+        return p.category === 'food' || p.category === 'cafe' || p.category === 'restaurant'
+      }
+      if (mode === 'hotels') return p.category === 'hotel' || p.category === 'custom'
       if (!trip?.preferences) return true
-      const cat = (p as Place & { category?: string }).category
+      const cat = p.category
       if (!cat) return true
       const prefs = trip.preferences
       if (cat === 'museum') return prefs.museums !== false
@@ -328,7 +460,7 @@ async function sendNearbySuggestions(opts: {
       return true
     })
     .map((p) => ({ ...p, km: haversineKm({ lat, lng }, p) }))
-    .filter((p) => p.km <= 1.8)
+    .filter((p) => p.km <= 2)
     .sort((a, b) => a.km - b.km)
     .slice(0, 5)
 
@@ -339,7 +471,14 @@ async function sendNearbySuggestions(opts: {
     const k = p.name.toLowerCase()
     if (seen.has(k)) continue
     seen.add(k)
-    merged.push({ name: p.name, lat: p.lat, lng: p.lng, category: p.category })
+    merged.push({
+      name: p.name,
+      lat: p.lat,
+      lng: p.lng,
+      category: p.category,
+      website: p.website,
+      phone: p.phone,
+    })
     if (merged.length >= 8) break
   }
 
@@ -353,7 +492,7 @@ async function sendNearbySuggestions(opts: {
       chat_id: chatId,
       text: [
         'No encontré sitios con nombre cerca.',
-        'Probad otra ubicación (centro / zona animada) o «dónde comer».',
+        'Probad otra ubicación (centro / zona animada).',
       ].join('\n'),
       reply_markup: mainMenu(),
     })
@@ -362,30 +501,49 @@ async function sendNearbySuggestions(opts: {
 
   const title =
     mode === 'food'
-      ? 'Para comer cerca:'
-      : trip
-        ? `${trip.title} · cerca${tripStyleLine(trip) ? ` (${tripStyleLine(trip)})` : ''}:`
-        : 'Recomendaciones in situ:'
+      ? '🍽 Restaurantes cerca (priorizo con web):'
+      : mode === 'hotels'
+        ? '🏨 Hoteles cerca (Web / Booking):'
+        : trip
+          ? `${trip.title} · cerca${tripStyleLine(trip) ? ` (${tripStyleLine(trip)})` : ''}:`
+          : 'Recomendaciones in situ:'
 
   const lines = [
     title,
-    ...merged.map(
-      (p, i) =>
-        `${i + 1}. ${p.name}${p.category ? ` (${p.category})` : ''} · ~${Math.round(haversineKm({ lat, lng }, p) * 1000)} m`,
-    ),
+    ...merged.map((p, i) => {
+      const m = Math.round(haversineKm({ lat, lng }, p) * 1000)
+      const flags = [
+        p.category,
+        p.website ? 'web' : null,
+        p.phone ? 'tel' : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+      return `${i + 1}. ${p.name}${flags ? ` (${flags})` : ''} · ~${m} m`
+    }),
     '',
-    'Tocad ➕ para marcar. Luego «Abrir en Google Maps».',
+    mode === 'food'
+      ? 'Tocad Web / Reservar (abre el sitio o Google). ➕ para marcar.'
+      : mode === 'hotels'
+        ? 'Tocad Web / Booking. ➕ para marcar.'
+        : 'Tocad ➕ para marcar. Luego «Abrir en Google Maps».',
   ]
 
-  const rows = merged.map((p, i) => [
-    { text: `➕ ${p.name.slice(0, 28)}`, callback_data: `sel:${i}` },
-  ])
-  rows.push([{ text: '🗺 Abrir en Google Maps', callback_data: 'maps' }])
+  // Hotel del viaje → Booking directo
+  if (mode === 'hotels' && trip?.logistics?.hotel?.name) {
+    const h = trip.logistics.hotel
+    const book = hotelBookingUrl(
+      { name: h.name, lat: h.lat ?? lat, lng: h.lng ?? lng },
+      city,
+    )
+    lines.push('', `Vuestro hotel: ${h.name}`, book)
+  }
 
   await tg('sendMessage', {
     chat_id: chatId,
     text: lines.join('\n'),
-    reply_markup: { inline_keyboard: rows },
+    reply_markup: { inline_keyboard: venueInlineRows(merged, mode, city) },
+    disable_web_page_preview: true,
   })
 
   for (const p of merged.slice(0, 1)) {
@@ -430,6 +588,8 @@ async function loadTrip(supabase: SupabaseClient, tripId: string | null): Promis
     places: data.places ?? [],
     preferences: data.preferences ?? null,
     route_style: data.route_style ?? null,
+    city: data.city ?? null,
+    logistics: data.logistics ?? null,
   }
 }
 
@@ -457,10 +617,9 @@ function tripStyleLine(trip: TripRow | null): string {
 }
 
 function modeFromTrip(trip: TripRow | null, asked: NearbyMode): NearbyMode {
-  if (asked !== 'all' && asked !== 'sights') return asked
-  if (trip?.route_style?.foodBudget === 'low' && asked === 'all') return 'all'
+  if (asked === 'food' || asked === 'hotels') return asked
   if (trip?.preferences?.street_food && !trip?.preferences?.restaurants) return 'food'
-  if (trip?.route_style?.explore === 'local') return 'all'
+  if (trip?.route_style?.explore === 'local') return asked === 'sights' ? 'all' : asked
   return asked
 }
 
@@ -470,7 +629,6 @@ function modeOf(s?: string): 'walking' | 'transit' | 'driving' {
   return 'transit'
 }
 
-/** Evita reprocesar el mismo update cuando Telegram reintenta el webhook. */
 const seenUpdateIds = new Set<number>()
 const SEEN_MAX = 200
 
@@ -485,14 +643,12 @@ function markSeen(updateId: number | undefined): boolean {
   return false
 }
 
-// Deno Deploy / Supabase: procesar en background tras responder 200
 declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void }
 
 async function handleUpdate(
   update: Record<string, unknown>,
   supabase: SupabaseClient,
 ): Promise<void> {
-  // Inline button: marcar / desmarcar sitio
   if (update.callback_query) {
     const cq = update.callback_query as {
       id: string
@@ -543,7 +699,7 @@ async function handleUpdate(
       const url = mapsDir(points, 'walking')
       await tg('sendMessage', {
         chat_id: chatId,
-        text: `Google Maps (ruta con vuestros pines):\n${url}\n\nPodéis guardar el mapa en My Maps si queréis conservarlo.`,
+        text: `Google Maps (ruta con vuestros pines):\n${url}`,
         reply_markup: mainMenu(),
       })
     }
@@ -579,7 +735,7 @@ async function handleUpdate(
       } else {
         await tg('sendMessage', {
           chat_id: chatId,
-          text: `Viaje enlazado ✓\nMandad ubicación y usad el menú.`,
+          text: `Viaje enlazado ✓\nMandad ubicación y usad 🍽 Restaurantes / 🏨 Hoteles / Ruta de hoy.`,
           reply_markup: mainMenu(),
         })
       }
@@ -593,7 +749,6 @@ async function handleUpdate(
     return
   }
 
-  // Ubicación → recomendaciones in situ (con o sin viaje)
   if (msg.location) {
     const lat = msg.location.latitude
     const lng = msg.location.longitude
@@ -633,7 +788,7 @@ async function handleUpdate(
       chat_id: chatId,
       text:
         picks.length === 0
-          ? 'No hay pines marcados. Mandad ubicación → Tocad ➕ en cercanos.'
+          ? 'No hay pines marcados. Mandad ubicación → Tocad ➕.'
           : `Marcados:\n${picks.map((p) => `• ${p.name}`).join('\n')}`,
       reply_markup: mainMenu(),
     })
@@ -653,26 +808,21 @@ async function handleUpdate(
     const url = mapsDir(points.length ? points : here ? [here] : [], mode)
     await tg('sendMessage', {
       chat_id: chatId,
-      text: [
-        'Ruta en Google Maps:',
-        url,
-        '',
-        'Google no permite que un bot guarde en vuestros “Guardados”.',
-        'Al abrir Maps: podéis anclar / compartir / importar en My Maps.',
-      ].join('\n'),
+      text: ['Ruta en Google Maps:', url].join('\n'),
       reply_markup: mainMenu(),
       disable_web_page_preview: false,
     })
     return
   }
 
-  // Modo in situ: cerca / recomienda / comer (con o sin viaje)
   if (
-    /cerca|monument|interes|zona|recomiend|suger|que hacer|que me|donde comer|comer|cena|restoran|cafe|✨|🍽/.test(
+    /cerca|monument|interes|zona|recomiend|suger|que hacer|que me|donde comer|comer|cena|restoran|cafe|hotel|aloj|hostel|hostal|booking|✨|🍽|🏨/.test(
       t,
     ) ||
     text === '✨ Recomiéndame' ||
+    text === '🍽 Restaurantes' ||
     text === '🍽 Dónde comer' ||
+    text === '🏨 Hoteles' ||
     text === '📍 Qué hay cerca'
   ) {
     if (!here) {
@@ -683,28 +833,35 @@ async function handleUpdate(
       })
       return
     }
-    // Cooldown corto: Telegram a veces reintenta el mismo toque → no spamear
     const nearby = (chat.last_nearby ?? []) as Place[]
     const updatedMs = chat.updated_at ? Date.parse(chat.updated_at) : 0
-    if (nearby.length > 0 && updatedMs && Date.now() - updatedMs < 20_000) {
+    const forceMode =
+      text === '🍽 Restaurantes' || text === '🍽 Dónde comer'
+        ? 'food'
+        : text === '🏨 Hoteles'
+          ? 'hotels'
+          : null
+    // Cooldown solo si pedís lo mismo genérico; botones dedicados siempre buscan
+    if (!forceMode && nearby.length > 0 && updatedMs && Date.now() - updatedMs < 20_000) {
       await tg('sendMessage', {
         chat_id: chatId,
         text: [
           'Ya os acabo de mandar recomendaciones ↑',
-          'Tocad ➕ o «Abrir en Google Maps».',
-          'Para buscar otra vez: esperad un momento o mandad 📍 ubicación de nuevo.',
+          'Tocad Web / Reservar / Booking o ➕.',
+          'O pedid 🍽 Restaurantes / 🏨 Hoteles.',
         ].join('\n'),
         reply_markup: mainMenu(),
       })
       return
     }
+    const asked = forceMode ?? detectNearbyMode(t + ' ' + text.toLowerCase())
     await sendNearbySuggestions({
       supabase,
       chatId,
       lat: here.lat,
       lng: here.lng,
       trip,
-      mode: modeFromTrip(trip, detectNearbyMode(t + ' ' + text.toLowerCase())),
+      mode: modeFromTrip(trip, asked),
       intro: trip
         ? `Según vuestro viaje (${tripStyleLine(trip) || trip.title})…`
         : undefined,
@@ -718,10 +875,10 @@ async function handleUpdate(
       text: [
         'Modo in situ (sin viaje enlazado):',
         '1) 📍 Enviar ubicación',
-        '2) «Recomiéndame» / «Dónde comer» / «Qué hay cerca»',
-        '3) Marcáis pines → Abrir en Google Maps',
+        '2) 🍽 Restaurantes / 🏨 Hoteles / Recomiéndame',
+        '3) Web · Reservar · Booking · pines → Maps',
         '',
-        'Si más adelante tenéis plan en RutaDos: Compartir → /start TOKEN.',
+        'Con plan en RutaDos: Compartir → /start TOKEN.',
       ].join('\n'),
       reply_markup: mainMenu(),
     })
@@ -753,16 +910,20 @@ async function handleUpdate(
       address: next.suggestedTime ? `~${next.suggestedTime}` : 'Siguiente',
     })
     const from = here ?? next
+    const links: string[] = [
+      `Ahora: ${next.name}`,
+      next.transitMode ? `Modo: ${next.transitMode}` : '',
+      next.transportReason || '',
+      mapsDir([from, next], modeOf(next.transitMode)),
+    ]
+    if (next.category === 'food' || next.category === 'cafe') {
+      links.push(
+        `Reservar: ${restaurantReserveUrl({ name: next.name, lat: next.lat, lng: next.lng, website: next.website }, trip.city?.name)}`,
+      )
+    }
     await tg('sendMessage', {
       chat_id: chatId,
-      text: [
-        `Ahora: ${next.name}`,
-        next.transitMode ? `Modo: ${next.transitMode}` : '',
-        next.transportReason || '',
-        mapsDir([from, next], modeOf(next.transitMode)),
-      ]
-        .filter(Boolean)
-        .join('\n'),
+      text: links.filter(Boolean).join('\n'),
       reply_markup: mainMenu(),
     })
     return
@@ -790,7 +951,6 @@ async function handleUpdate(
       text: [
         `Hacia: ${next.name}`,
         `Modo sugerido: ${next.transitMode || 'transporte'}`,
-        'Maps muestra la línea exacta de metro/bus:',
         mapsDir([here, next], modeOf(next.transitMode)),
       ].join('\n'),
       reply_markup: mainMenu(),
@@ -798,7 +958,6 @@ async function handleUpdate(
     return
   }
 
-  // Ruta por defecto
   const list = (pend.length ? pend : visits(day)).slice(0, 10)
   const points = [...(here ? [here] : []), ...list]
   await tg('sendMessage', {
@@ -843,7 +1002,6 @@ Deno.serve(async (req) => {
 
   const updateId = update.update_id as number | undefined
   if (markSeen(updateId)) {
-    // Telegram reintentó el mismo update → no volver a recomendar
     return new Response('ok')
   }
 

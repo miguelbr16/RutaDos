@@ -656,6 +656,18 @@ function elementToPlace(
     .filter(([k]) => ['tourism', 'historic', 'amenity', 'cuisine', 'shop'].includes(k))
     .map(([, v]) => v)
   if (tags.amenity === 'fast_food' || tags.amenity === 'food_court') tagsList.push('street_food')
+  const website =
+    tags.website || tags['contact:website'] || tags.url || tags['contact:url'] || undefined
+  const phone = tags.phone || tags['contact:phone'] || tags['contact:mobile'] || undefined
+  const webNorm = website
+    ? /^https?:\/\//i.test(website)
+      ? website
+      : `https://${website.replace(/^\/\//, '')}`
+    : undefined
+  // Bonus leve si tiene web (más fácil reservar / verificar)
+  let scoreAdj = score
+  if (webNorm) scoreAdj += 8
+  if (phone) scoreAdj += 3
   return {
     id: uid('place'),
     name,
@@ -665,9 +677,11 @@ function elementToPlace(
     tier,
     source: 'osm',
     tags: [...new Set(tagsList)].slice(0, 12),
-    score,
+    score: scoreAdj,
     bestSlot: bestSlotFor(category),
     notes: tags.description || undefined,
+    website: webNorm,
+    phone: phone || undefined,
   }
 }
 

@@ -29,6 +29,9 @@ import { createTripShareToken, shareUrlForToken } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { googleMapsDirectionsUrl } from '../lib/mapsUrl'
 import { prefsSummaryLine } from '../lib/prefPlan'
+import { hotelBookingUrl } from '../lib/bookingLinks'
+import { VenueFinder } from '../components/VenueFinder'
+import type { VenueKind } from '../lib/bookingLinks'
 import { openTelegramBot } from '../lib/copilot'
 
 const STYLE_KEYS: PreferenceKey[] = [
@@ -69,6 +72,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [draftExplore, setDraftExplore] = useState<RouteStyle['explore'] | null>(null)
   const [draftFood, setDraftFood] = useState<RouteStyle['foodBudget'] | null>(null)
   const [rediscover, setRediscover] = useState(true)
+  const [venueKind, setVenueKind] = useState<VenueKind | null>(null)
 
   if (!trip) {
     return (
@@ -199,6 +203,48 @@ export function TripPage({ tripId }: { tripId: string }) {
       </header>
 
       <TripMap stops={allStops.slice(0, 40)} height="220px" showLegend />
+
+      <div className="chaos-bar day-quick" style={{ marginTop: '0.75rem' }}>
+        <button
+          type="button"
+          className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
+          onClick={() => setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))}
+        >
+          Restaurantes
+        </button>
+        <button
+          type="button"
+          className={venueKind === 'hotel' ? 'chip on' : 'chip'}
+          onClick={() => setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))}
+        >
+          Hoteles
+        </button>
+        {trip.logistics?.hotel ? (
+          <a
+            className="chip"
+            href={hotelBookingUrl({
+              name: trip.logistics.hotel.name,
+              city: trip.city.name,
+              lat: trip.logistics.hotel.lat,
+              lng: trip.logistics.hotel.lng,
+            })}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Booking · {trip.logistics.hotel.name.slice(0, 18)}
+          </a>
+        ) : null}
+      </div>
+
+      {venueKind && (
+        <VenueFinder
+          kind={venueKind}
+          lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
+          lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
+          city={trip.city.name}
+          onClose={() => setVenueKind(null)}
+        />
+      )}
 
       <div className="budget-box" style={{ marginTop: '1rem' }}>
         <strong>Presupuesto orientativo</strong>

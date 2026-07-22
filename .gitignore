@@ -26,3 +26,5 @@ recovery-codes.txt
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

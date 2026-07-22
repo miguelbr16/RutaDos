@@ -1415,6 +1415,54 @@ code {
   margin-bottom: 0.75rem;
 }
 
+.venue-finder {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--deep) 6%, #fff);
+  border: 1px solid var(--line);
+}
+
+.venue-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.venue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.venue-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.venue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.hotel-book-row {
+  margin: 0 0 0.75rem;
+}
+
+.hotel-book-row a {
+  color: var(--sea);
+  font-weight: 600;
+}
+
 .flash-msg {
   background: color-mix(in srgb, var(--deep) 8%, transparent);
   border-radius: 10px;

@@ -25,6 +25,10 @@ import { fetchPlacePhotoUrls } from '../lib/placePhotos'
 import { hoursForPlace, evaluateOpeningHours, type PlaceHours } from '../lib/openingHours'
 import { loadOfflineDay, saveOfflineDay, type OfflineDayPack } from '../lib/offlineDay'
 import { fetchDayWeather, weatherSuggestsIndoor, type DayWeather } from '../lib/weather'
+import { VenueFinder } from '../components/VenueFinder'
+import type { VenueKind } from '../lib/bookingLinks'
+import type { NearbyVenue } from '../lib/nearbyVenues'
+import { hotelBookingUrl } from '../lib/bookingLinks'
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
@@ -66,6 +70,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const [offlinePack, setOfflinePack] = useState<OfflineDayPack | null>(() => loadOfflineDay())
   const [packPreview, setPackPreview] = useState(false)
   const [weather, setWeather] = useState<DayWeather | null>(null)
+  const [venueKind, setVenueKind] = useState<VenueKind | null>(null)
 
   const day = trip?.days.find((d) => d.id === dayId)
 
@@ -320,6 +325,20 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       <div className="chaos-bar day-quick">
         <button
           type="button"
+          className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
+          onClick={() => setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))}
+        >
+          Restaurantes
+        </button>
+        <button
+          type="button"
+          className={venueKind === 'hotel' ? 'chip on' : 'chip'}
+          onClick={() => setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))}
+        >
+          Hoteles
+        </button>
+        <button
+          type="button"
           className="chip"
           onClick={() => {
             chaosReplan(tripId, dayId, 'late')
@@ -361,6 +380,53 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           Offline
         </button>
       </div>
+
+      {venueKind && (
+        <VenueFinder
+          kind={venueKind}
+          lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
+          lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
+          city={trip.city.name}
+          onClose={() => setVenueKind(null)}
+          onAdd={(v: NearbyVenue) => {
+            const place: GeoPlace = {
+              id: v.id,
+              name: v.name,
+              lat: v.lat,
+              lng: v.lng,
+              category: v.kind === 'hotel' ? 'custom' : 'food',
+              tier: 'recommended',
+              source: 'osm',
+              score: 85,
+              website: v.website,
+              phone: v.phone,
+              listingKind: v.kind === 'hotel' ? 'hotel' : 'restaurant',
+              bestSlot: v.kind === 'hotel' ? 'morning' : 'lunch',
+            }
+            addSuggestedToDay(tripId, dayId, place)
+            setMsg(`Añadido: ${v.name}`)
+            setVenueKind(null)
+          }}
+        />
+      )}
+
+      {trip.logistics?.hotel && (
+        <p className="hotel-book-row muted tiny">
+          Hotel: <strong>{trip.logistics.hotel.name}</strong>{' '}
+          <a
+            href={hotelBookingUrl({
+              name: trip.logistics.hotel.name,
+              city: trip.city.name,
+              lat: trip.logistics.hotel.lat,
+              lng: trip.logistics.hotel.lng,
+            })}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Ver en Booking
+          </a>
+        </p>
+      )}
 
       {msg && <p className="flash-msg">{msg}</p>}
       {packPreview && offlinePack && <OfflinePackPreview pack={offlinePack} />}
