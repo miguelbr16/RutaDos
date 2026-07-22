@@ -13,6 +13,7 @@ import {
   hubSearchRadiusM,
   type AreaScale,
 } from './tripScale'
+import { fetchOtmRadius, getOpenTripMapKey } from './opentripmap'
 
 interface OverpassElement {
   type: string
@@ -595,51 +596,33 @@ function otmCategory(kinds: string): PlaceCategory {
 }
 
 async function fetchOpenTripMap(city: CityInfo, prefs: Preferences): Promise<GeoPlace[]> {
-  const key = import.meta.env.VITE_OPENTRIPMAP_KEY as string | undefined
-  if (!key) return []
+  if (!getOpenTripMapKey()) return []
 
-  const url = new URL('https://api.opentripmap.com/0.1/en/places/radius')
-  url.searchParams.set('radius', '25000')
-  url.searchParams.set('lon', String(city.lng))
-  url.searchParams.set('lat', String(city.lat))
-  url.searchParams.set('kinds', otmKinds(prefs))
-  url.searchParams.set('rate', '2')
-  url.searchParams.set('limit', '120')
-  url.searchParams.set('apikey', key)
+  const places = await fetchOtmRadius({
+    lat: city.lat,
+    lng: city.lng,
+    radiusM: 25000,
+    kinds: otmKinds(prefs),
+    limit: 120,
+    rateMin: 2,
+  })
 
-  const res = await fetch(url.toString())
-  if (!res.ok) return []
-  const data = (await res.json()) as {
-    features?: Array<{
-      properties?: { name?: string; kinds?: string; rate?: number }
-      geometry?: { coordinates?: [number, number] }
-    }>
-  }
-
-  const places: GeoPlace[] = []
-  for (const f of data.features ?? []) {
-    const name = f.properties?.name?.trim()
-    const coords = f.geometry?.coordinates
-    if (!name || !coords) continue
-    const [lng, lat] = coords
-    const kinds = f.properties?.kinds ?? ''
-    const category = otmCategory(kinds)
-    const rate = f.properties?.rate ?? 0
-    places.push({
+  return places.map((p) => {
+    const category = otmCategory(p.kinds)
+    return {
       id: uid('place'),
-      name,
-      lat,
-      lng,
+      name: p.name,
+      lat: p.lat,
+      lng: p.lng,
       category,
-      tier: rate >= 3 ? 'must' : rate >= 2 ? 'recommended' : 'optional',
-      source: 'osm',
-      score: 50 + rate * 12,
-      tags: kinds.split(',').slice(0, 8),
+      tier: p.rate >= 3 ? 'must' : p.rate >= 2 ? 'recommended' : 'optional',
+      source: 'otm' as const,
+      score: 52 + p.rate * 14,
+      tags: p.kinds.split(',').slice(0, 8),
       bestSlot: bestSlotFor(category),
       notes: 'OpenTripMap',
-    })
-  }
-  return places
+    }
+  })
 }
 
 function elementToPlace(

@@ -9,6 +9,7 @@ import {
   type VenueKind,
   type VenueLinkSet,
 } from './bookingLinks'
+import { fetchOtmRadius, isOpenTripMapEnabled, otmKindsForVenue, otmPreviewUrl } from './opentripmap'
 
 const OVERPASS_MIRRORS = [
   'https://overpass-api.de/api/interpreter',
@@ -29,6 +30,11 @@ export type NearbyVenue = {
   stars?: string
   distanceM: number
   links: VenueLinkSet
+  source: 'osm' | 'otm'
+  /** OpenTripMap rate 1–3 */
+  rating?: number
+  previewUrl?: string
+  kinds?: string
 }
 
 function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -88,6 +94,7 @@ export async function fetchNearbyVenues(opts: {
   const radiusM = opts.radiusM ?? (opts.kind === 'hotel' ? 4500 : 1800)
   const limit = opts.limit ?? 10
   const query = queryFor(opts.kind, opts.lat, opts.lng, radiusM)
+  let out: NearbyVenue[] = []
 
   for (const url of OVERPASS_MIRRORS) {
     try {
@@ -141,6 +148,7 @@ export async function fetchNearbyVenues(opts: {
             phone,
             city: opts.city,
           }),
+          source: 'osm',
         }
         raw.push(venue)
       }
@@ -164,18 +172,107 @@ export async function fetchNearbyVenues(opts: {
       })
 
       const seen = new Set<string>()
-      const out: NearbyVenue[] = []
+      const batch: NearbyVenue[] = []
       for (const v of raw) {
         const k = v.name.toLowerCase()
         if (seen.has(k)) continue
         seen.add(k)
-        out.push(v)
-        if (out.length >= limit) break
+        batch.push(v)
+        if (batch.length >= limit) break
       }
-      if (out.length) return out
+      if (batch.length) {
+        out = batch
+        break
+      }
     } catch {
       /* next mirror */
     }
   }
-  return []
+
+  const merged = await mergeOtmVenues(out, opts)
+  return merged.length ? merged : out
+}
+
+async function mergeOtmVenues(
+  osm: NearbyVenue[],
+  opts: {
+    kind: VenueKind
+    lat: number
+    lng: number
+    city?: string
+    radiusM?: number
+    limit?: number
+  },
+): Promise<NearbyVenue[]> {
+  if (!isOpenTripMapEnabled() || opts.kind === 'hotel') {
+    return osm
+  }
+
+  const radiusM = opts.radiusM ?? 1800
+  const limit = opts.limit ?? 10
+  const otmPlaces = await fetchOtmRadius({
+    lat: opts.lat,
+    lng: opts.lng,
+    radiusM,
+    kinds: otmKindsForVenue(opts.kind === 'cafe' ? 'cafe' : 'restaurant'),
+    limit: 25,
+    rateMin: 2,
+  })
+
+  const seen = new Set(osm.map((v) => v.name.toLowerCase()))
+  const extras: NearbyVenue[] = []
+
+  for (const p of otmPlaces) {
+    const key = p.name.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    const distanceM = Math.round(
+      haversineKm({ lat: opts.lat, lng: opts.lng }, { lat: p.lat, lng: p.lng }) * 1000,
+    )
+    const kind = opts.kind
+    extras.push({
+      id: `otm-${p.xid ?? `${p.lat}-${p.lng}`}`,
+      name: p.name,
+      lat: p.lat,
+      lng: p.lng,
+      kind,
+      category: kind === 'cafe' ? 'cafe' : 'restaurant',
+      distanceM,
+      kinds: p.kinds.split(',').slice(0, 4).join(' · '),
+      rating: p.rate,
+      previewUrl: p.xid ? otmPreviewUrl(p.xid, 160) : undefined,
+      links: venueLinks(kind, {
+        name: p.name,
+        lat: p.lat,
+        lng: p.lng,
+        city: opts.city,
+      }),
+      source: 'otm',
+    })
+  }
+
+  extras.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || a.distanceM - b.distanceM)
+
+  const combined = [...osm, ...extras]
+  combined.sort((a, b) => {
+    const ar = a.source === 'otm' ? (a.rating ?? 0) * 10 : 0
+    const br = b.source === 'otm' ? (b.rating ?? 0) * 10 : 0
+    const aw = a.website ? 5 : 0
+    const bw = b.website ? 5 : 0
+    const scoreA = ar + aw - a.distanceM / 500
+    const scoreB = br + bw - b.distanceM / 500
+    if (scoreA !== scoreB) return scoreB - scoreA
+    return a.distanceM - b.distanceM
+  })
+
+  const deduped: NearbyVenue[] = []
+  const names = new Set<string>()
+  for (const v of combined) {
+    const k = v.name.toLowerCase()
+    if (names.has(k)) continue
+    names.add(k)
+    deduped.push(v)
+    if (deduped.length >= limit) break
+  }
+  return deduped
 }

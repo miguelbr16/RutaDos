@@ -414,11 +414,27 @@ export function TripPage({ tripId }: { tripId: string }) {
           {trip.startDate} → {trip.endDate}
           {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
         </p>
+        <ul className="trip-stats" aria-label="Resumen del viaje">
+          <li>
+            <strong>{trip.days.length}</strong>
+            <span>{trip.days.length === 1 ? 'día' : 'días'}</span>
+          </li>
+          <li>
+            <strong>{visitStops.length}</strong>
+            <span>paradas</span>
+          </li>
+          <li>
+            <strong>
+              ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax}€
+            </strong>
+            <span>/ persona · día</span>
+          </li>
+        </ul>
       </header>
 
       <div className="trip-shell trip-shell-stack">
-        <div className="trip-map-col">
-          <TripMap stops={allStops.slice(0, 40)} height="220px" showLegend />
+        <div className="trip-map-col rd-surface trip-map-panel">
+          <TripMap stops={allStops.slice(0, 40)} height="240px" showLegend />
           {offlineForThisTrip ? (
             <div className="offline-banner ok compact">
               <strong>Offline · {offlineForThisTrip.dayLabel}</strong>
@@ -438,7 +454,7 @@ export function TripPage({ tripId }: { tripId: string }) {
             </div>
           ) : null}
 
-          <div className="trip-transit-strip" aria-label="Transporte local">
+          <div className="trip-transit-strip rd-pill-row" aria-label="Transporte local">
             <a
               className="btn ghost sm"
               href={guide.transportPlannerUrl}
@@ -507,7 +523,7 @@ export function TripPage({ tripId }: { tripId: string }) {
             </div>
           ) : null}
 
-          <div className="chaos-bar day-quick tight">
+          <div className="chaos-bar day-quick tight rd-segment">
             <button
               type="button"
               className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
@@ -575,7 +591,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           )}
         </div>
 
-        <section className="trip-days compact-summary">
+        <section className="trip-days compact-summary rd-surface">
           <h2>Días</h2>
           <p className="muted tiny section-lede">Resumen — abrí un día para el detalle y reservas.</p>
           <ul className="day-list compact-summary">
@@ -596,7 +612,7 @@ export function TripPage({ tripId }: { tripId: string }) {
               const extra = visits.length - 3
               return (
                 <li key={day.id}>
-                  <article className="day-summary">
+                  <article className="day-summary day-summary-v2">
                     <button
                       type="button"
                       className="day-summary-main"

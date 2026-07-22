@@ -1,5 +1,23 @@
 /** Enlaces útiles para reservar / web / alojamiento (sin APIs de pago). */
 
+/** Parámetros de afiliado Booking — activar solo tras aprobación (VITE_BOOKING_AID). */
+function bookingAffiliateParams(): URLSearchParams {
+  const params = new URLSearchParams()
+  const aid = import.meta.env.VITE_BOOKING_AID as string | undefined
+  if (aid?.trim()) {
+    params.set('aid', aid.trim())
+    params.set('label', 'rutados')
+  }
+  return params
+}
+
+function appendBookingParams(u: URL): string {
+  for (const [k, v] of bookingAffiliateParams()) {
+    u.searchParams.set(k, v)
+  }
+  return u.toString()
+}
+
 export function normalizeWebsite(raw?: string | null): string | undefined {
   if (!raw) return undefined
   const t = raw.trim()
@@ -75,7 +93,7 @@ export function hotelBookingUrl(opts: {
     u.searchParams.set('latitude', String(opts.lat))
     u.searchParams.set('longitude', String(opts.lng))
   }
-  return u.toString()
+  return appendBookingParams(u)
 }
 
 /** Buscar hoteles en la ciudad (con fechas del viaje si las hay). */
@@ -96,7 +114,7 @@ export function hotelCitySearchUrl(opts: {
   if (opts.checkout) u.searchParams.set('checkout', opts.checkout)
   u.searchParams.set('group_adults', '2')
   u.searchParams.set('no_rooms', '1')
-  return u.toString()
+  return appendBookingParams(u)
 }
 
 /** Google Hotels / Maps hoteles cerca. */

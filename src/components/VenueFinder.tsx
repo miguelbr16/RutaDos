@@ -5,6 +5,7 @@ import {
   hotelMapsSearchUrl,
   type VenueKind,
 } from '../lib/bookingLinks'
+import { isOpenTripMapEnabled } from '../lib/opentripmap'
 
 type Props = {
   kind: VenueKind
@@ -13,10 +14,32 @@ type Props = {
   city?: string
   checkin?: string
   checkout?: string
-  /** Contexto opcional (ej. «cerca de Buckingham Palace · comida») */
   nearLabel?: string
   onClose: () => void
   onAdd?: (v: NearbyVenue) => void
+}
+
+const KIND_META: Record<VenueKind, { title: string; icon: string; empty: string }> = {
+  hotel: {
+    title: 'Hoteles cerca',
+    icon: '🏨',
+    empty: 'Sin hoteles OSM aquí. Probá Booking o Maps abajo.',
+  },
+  restaurant: {
+    title: 'Restaurantes cerca',
+    icon: '🍽️',
+    empty: 'No encontré restaurantes con nombre cerca. Ampliá la zona o probá Maps.',
+  },
+  cafe: {
+    title: 'Cafés cerca',
+    icon: '☕',
+    empty: 'No encontré cafés cerca. Probá otra zona del mapa.',
+  },
+}
+
+function formatDistance(m: number): string {
+  if (m < 1000) return `${m} m`
+  return `${(m / 1000).toFixed(1)} km`
 }
 
 export function VenueFinder({
@@ -33,6 +56,7 @@ export function VenueFinder({
   const [items, setItems] = useState<NearbyVenue[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
+  const meta = KIND_META[kind]
 
   useEffect(() => {
     let cancelled = false
@@ -49,25 +73,12 @@ export function VenueFinder({
       if (cancelled) return
       setItems(list)
       setLoading(false)
-      if (!list.length) {
-        setErr(
-          kind === 'hotel'
-            ? 'OSM no trajo hoteles aquí. Usá Booking o Maps abajo.'
-            : 'No encontré sitios con nombre cerca. Probá otra zona.',
-        )
-      }
+      if (!list.length) setErr(meta.empty)
     })
     return () => {
       cancelled = true
     }
-  }, [kind, lat, lng, city])
-
-  const title =
-    kind === 'hotel'
-      ? 'Hoteles cerca'
-      : kind === 'cafe'
-        ? 'Cafés cerca'
-        : 'Restaurantes cerca'
+  }, [kind, lat, lng, city, meta.empty])
 
   const bookingCity =
     city && kind === 'hotel'
@@ -77,14 +88,21 @@ export function VenueFinder({
     city && kind === 'hotel' ? hotelMapsSearchUrl({ city, lat, lng }) : null
 
   return (
-    <section className="venue-finder" aria-label={title}>
-      <div className="section-head">
-        <h2>{title}</h2>
+    <section className="venue-finder rd-surface" aria-label={meta.title}>
+      <div className="venue-finder-head">
+        <div className="venue-finder-title">
+          <span className="venue-finder-icon" aria-hidden>
+            {meta.icon}
+          </span>
+          <div>
+            <h2>{meta.title}</h2>
+            {nearLabel ? <p className="muted tiny">{nearLabel}</p> : null}
+          </div>
+        </div>
         <button type="button" className="btn ghost sm" onClick={onClose}>
           Cerrar
         </button>
       </div>
-      {nearLabel ? <p className="muted tiny">{nearLabel}</p> : null}
 
       {kind === 'hotel' && (bookingCity || mapsHotels) ? (
         <div className="venue-fallbacks">
@@ -101,47 +119,80 @@ export function VenueFinder({
         </div>
       ) : null}
 
-      <p className="muted tiny">
+      <p className="venue-finder-note muted tiny">
         {kind === 'hotel'
-          ? 'Sugerencias OSM cerca de la ruta; Booking suele tener más disponibilidad.'
-          : 'Datos OpenStreetMap. Priorizamos sitios con web oficial.'}
+          ? 'Sugerencias OpenStreetMap cerca de la ruta.'
+          : `OpenStreetMap${isOpenTripMapEnabled() ? ' + OpenTripMap' : ''}. Priorizamos sitios con web o buena valoración.`}
       </p>
-      {loading && <p className="muted">Buscando…</p>}
-      {err && !loading && <p className="muted">{err}</p>}
+
+      {loading ? (
+        <div className="venue-loading">
+          <span className="venue-loading-dot" aria-hidden />
+          Buscando…
+        </div>
+      ) : null}
+      {err && !loading ? <p className="venue-empty-msg muted">{err}</p> : null}
+
       <ul className="venue-list">
         {items.map((v) => (
-          <li key={v.id} className="venue-card">
-            <div className="venue-main">
-              <strong>{v.name}</strong>
-              <span className="muted tiny">
+          <li key={v.id} className="venue-card-v2">
+            {v.previewUrl ? (
+              <img
+                className="venue-thumb"
+                src={v.previewUrl}
+                alt=""
+                width={72}
+                height={72}
+                loading="lazy"
+              />
+            ) : (
+              <div className="venue-thumb venue-thumb-fallback" aria-hidden>
+                {meta.icon}
+              </div>
+            )}
+            <div className="venue-card-body">
+              <div className="venue-card-top">
+                <strong>{v.name}</strong>
+                <span className="venue-dist">{formatDistance(v.distanceM)}</span>
+              </div>
+              <p className="venue-card-meta muted tiny">
                 {v.category}
                 {v.cuisine ? ` · ${v.cuisine}` : ''}
-                {v.stars ? ` · ${v.stars}★` : ''} · ~{v.distanceM} m
-                {v.links.hasOfficialWeb ? ' · web OSM' : ''}
-              </span>
-            </div>
-            <div className="venue-actions">
-              <a className="btn ghost sm" href={v.links.web} target="_blank" rel="noreferrer">
-                {v.links.hasOfficialWeb ? 'Web' : 'Maps'}
-              </a>
-              <a
-                className="btn primary sm"
-                href={v.links.reserveOrBook}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {v.links.reserveLabel}
-              </a>
-              {v.phone ? (
-                <a className="btn ghost sm" href={`tel:${v.phone.replace(/\s/g, '')}`}>
-                  Llamar
+                {v.stars ? ` · ${v.stars}★` : ''}
+                {v.rating ? ` · ★ ${v.rating}/3` : ''}
+              </p>
+              <div className="venue-badges">
+                <span className={`venue-badge ${v.source}`}>
+                  {v.source === 'otm' ? 'OpenTripMap' : 'OSM'}
+                </span>
+                {v.links.hasOfficialWeb ? (
+                  <span className="venue-badge ok">Web</span>
+                ) : null}
+                {v.kinds ? <span className="venue-badge muted">{v.kinds}</span> : null}
+              </div>
+              <div className="venue-actions">
+                <a className="btn ghost sm" href={v.links.maps} target="_blank" rel="noreferrer">
+                  Maps
                 </a>
-              ) : null}
-              {onAdd ? (
-                <button type="button" className="btn ghost sm" onClick={() => onAdd(v)}>
-                  {kind === 'hotel' ? 'Elegir' : '+ Plan'}
-                </button>
-              ) : null}
+                <a
+                  className="btn primary sm"
+                  href={v.links.reserveOrBook}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {v.links.reserveLabel}
+                </a>
+                {v.phone ? (
+                  <a className="btn ghost sm" href={`tel:${v.phone.replace(/\s/g, '')}`}>
+                    Llamar
+                  </a>
+                ) : null}
+                {onAdd ? (
+                  <button type="button" className="btn ghost sm" onClick={() => onAdd(v)}>
+                    {kind === 'hotel' ? 'Elegir' : '+ Plan'}
+                  </button>
+                ) : null}
+              </div>
             </div>
           </li>
         ))}

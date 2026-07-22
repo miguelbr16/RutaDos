@@ -12,103 +12,19 @@ import { useAppStore } from '../store'
 import { searchDestinations, searchHotels, searchCityPlaces, type PlaceSuggestion } from '../lib/geocode'
 import { TripDateFields } from '../components/TripDateFields'
 import { TripMap } from '../components/TripMap'
+import { DestinationGrid } from '../components/DestinationGrid'
 import { findAirportsForCity, type AirportOption } from '../lib/airports'
 import { estimateTripBudget } from '../lib/budget'
 import { isGoogleMapsUrl } from '../lib/importGmaps'
 import {
   AREA_SCALE_OPTIONS,
   detectAreaScale,
-  type AreaScale,
 } from '../lib/tripScale'
-
-const QUICK_DESTINATIONS: Array<{
-  label: string
-  name: string
-  displayName: string
-  lat: number
-  lng: number
-  hint?: string
-  scale?: AreaScale
-  mobility?: 'walk' | 'mixed' | 'transit' | 'drive'
-}> = [
-  {
-    label: 'Londres',
-    name: 'Londres',
-    displayName: 'London, England, United Kingdom',
-    lat: 51.5074,
-    lng: -0.1278,
-    scale: 'city',
-  },
-  {
-    label: 'Núremberg',
-    name: 'Núremberg',
-    displayName: 'Nuremberg, Bavaria, Germany',
-    lat: 49.4521,
-    lng: 11.0767,
-    hint: 'Navidad',
-    scale: 'city',
-  },
-  {
-    label: 'Japón',
-    name: 'Japón',
-    displayName: 'Japan',
-    lat: 36.2048,
-    lng: 138.2529,
-    scale: 'country',
-    mobility: 'transit',
-  },
-  {
-    label: 'Madrid',
-    name: 'Madrid',
-    displayName: 'Madrid, Comunidad de Madrid, España',
-    lat: 40.4168,
-    lng: -3.7038,
-    scale: 'city',
-  },
-  {
-    label: 'Roma',
-    name: 'Roma',
-    displayName: 'Rome, Lazio, Italy',
-    lat: 41.9028,
-    lng: 12.4964,
-    scale: 'city',
-  },
-  {
-    label: 'Dolomitas',
-    name: 'Dolomitas',
-    displayName: 'Dolomites, Italy',
-    lat: 46.4102,
-    lng: 11.844,
-    hint: 'ruta furgoneta',
-    scale: 'region',
-    mobility: 'drive',
-  },
-  {
-    label: 'Suiza',
-    name: 'Suiza',
-    displayName: 'Switzerland',
-    lat: 46.8182,
-    lng: 8.2275,
-    scale: 'country',
-    mobility: 'transit',
-  },
-  {
-    label: 'Boston',
-    name: 'Boston',
-    displayName: 'Boston, Massachusetts, United States',
-    lat: 42.3601,
-    lng: -71.0589,
-    scale: 'city',
-  },
-  {
-    label: 'San Diego',
-    name: 'San Diego',
-    displayName: 'San Diego, California, United States',
-    lat: 32.7157,
-    lng: -117.1611,
-    scale: 'city',
-  },
-]
+import {
+  FEATURED_DESTINATIONS,
+  buildQuickDestinationPatch,
+  type QuickDestination,
+} from '../lib/quickDestinations'
 
 const PREF_HINTS: Record<PreferenceKey, string> = {
   monuments: 'Plazas, iconos, imprescindibles',
@@ -334,6 +250,15 @@ function addDaysISO(iso: string, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+function sameAirport(
+  a: { lat: number; lng: number; code?: string },
+  pick: { lat: number; lng: number; code?: string } | null,
+): boolean {
+  if (!pick) return false
+  if (a.code && pick.code) return a.code === pick.code
+  return a.lat === pick.lat && a.lng === pick.lng
+}
+
 export function WizardPage() {
   const view = useAppStore((s) => s.view)
   const wizard = useAppStore((s) => s.wizard)
@@ -513,82 +438,65 @@ export function WizardPage() {
     patchWizard({ endDate: value })
   }
 
-  function pickQuickDestination(d: (typeof QUICK_DESTINATIONS)[number]) {
-    const scale =
-      d.scale ??
-      detectAreaScale(d.name, d.displayName, d.mobility ?? wizard.routeStyle.mobility ?? undefined)
-    patchWizard({
-      cityQuery: d.name,
-      cityPick: {
-        name: d.name,
-        displayName: d.displayName,
-        lat: d.lat,
-        lng: d.lng,
-      },
-      hotelPick: null,
-      hotelSkipped: false,
-      hotelQuery: '',
-      airportPick: null,
-      areaScale: scale,
-      // movilidad se elige en el paso de ritmo
-    })
+  function pickQuickDestination(d: QuickDestination) {
+    patchWizard(
+      buildQuickDestinationPatch(d, wizard.routeStyle.mobility),
+    )
     setCitySuggestions([])
   }
 
   return (
     <div className="page wizard-page">
-      <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'home' })}>
-        ← Inicio
-      </button>
-
-      <header className="wiz-header">
-        <p className="brand small">RutaDos</p>
-        <h1>Nuevo viaje</h1>
-      </header>
-
-      <nav className="wiz-progress" aria-label="Pasos del viaje">
-        {['Viaje', 'Estilo', 'Listo'].map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            className={
-              i === step ? 'wiz-step active' : i < step ? 'wiz-step done' : 'wiz-step'
-            }
-            onClick={() => {
-              if (i < step) go(i)
-            }}
-            aria-current={i === step ? 'step' : undefined}
-            aria-label={`Paso ${i + 1}: ${label}`}
-          >
-            <span className="wiz-step-num">{i + 1}</span>
-            <span className="wiz-step-label">{label}</span>
-          </button>
-        ))}
-      </nav>
+      <div className="wiz-top">
+        <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'home' })}>
+          ← Inicio
+        </button>
+        <nav className="wiz-track" aria-label="Progreso">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className={
+                i === step ? 'wiz-track-seg on' : i < step ? 'wiz-track-seg done' : 'wiz-track-seg'
+              }
+              aria-hidden
+            />
+          ))}
+        </nav>
+      </div>
 
       {step === 0 && (
         <section className="wiz-stage">
-          <h2 className="wiz-title">¿A dónde vais?</h2>
-          <p className="muted wiz-stage-lede">Elegí destino y fechas. El resto es opcional.</p>
+          <header className="wiz-stage-head">
+            <h2 className="wiz-title">¿A dónde vas?</h2>
+            <p className="muted">Destino y fechas. Lo demás es opcional.</p>
+          </header>
 
-          <label className="field">
-            <span>Destino</span>
-            <input
-              value={wizard.cityQuery}
-              onChange={(e) =>
-                patchWizard({
-                  cityQuery: e.target.value,
-                  cityPick: null,
-                  hotelPick: null,
-                })
-              }
-              placeholder="Londres, Madrid, Japón…"
-              autoFocus
-              autoComplete="off"
-            />
-          </label>
+          {!wizard.cityPick ? (
+            <>
+              <DestinationGrid
+                destinations={FEATURED_DESTINATIONS}
+                onPick={pickQuickDestination}
+                compact
+              />
+              <label className="dest-search field">
+                <span>Otro destino</span>
+                <input
+                  value={wizard.cityQuery}
+                  onChange={(e) =>
+                    patchWizard({
+                      cityQuery: e.target.value,
+                      cityPick: null,
+                      hotelPick: null,
+                    })
+                  }
+                  placeholder="Buscar ciudad, región o país…"
+                  autoComplete="off"
+                />
+              </label>
+            </>
+          ) : null}
 
-          {searchingCity && <p className="muted tiny">Buscando…</p>}
+          {searchingCity && !wizard.cityPick && <p className="muted tiny">Buscando…</p>}
 
           {citySuggestions.length > 0 && !wizard.cityPick && (
             <div className="dest-dropdown">
@@ -630,9 +538,11 @@ export function WizardPage() {
           )}
 
           {wizard.cityPick && (
-            <div className="hint-box dest-confirmed">
-              <strong>{wizard.cityPick.name}</strong>
-              <span className="muted tiny dest-confirmed-sub">{wizard.cityPick.displayName}</span>
+            <div className="dest-picked">
+              <div>
+                <strong>{wizard.cityPick.name}</strong>
+                <span className="muted tiny">{wizard.cityPick.displayName}</span>
+              </div>
               <button
                 type="button"
                 className="btn ghost sm"
@@ -640,22 +550,6 @@ export function WizardPage() {
               >
                 Cambiar
               </button>
-            </div>
-          )}
-
-          {!wizard.cityPick && (
-            <div className="quick-cities">
-              {QUICK_DESTINATIONS.map((d) => (
-                <button
-                  key={d.label}
-                  type="button"
-                  className={wizard.cityPick?.name === d.name ? 'chip on' : 'chip'}
-                  onClick={() => pickQuickDestination(d)}
-                  title={d.hint}
-                >
-                  {d.label}
-                </button>
-              ))}
             </div>
           )}
 
@@ -678,26 +572,23 @@ export function WizardPage() {
             </div>
           )}
 
-          <div className="wiz-block">
-            <h3 className="wiz-block-title">Fechas</h3>
-            <div className="grid-2 wiz-dates">
-              <TripDateFields
-                label="Llegada"
-                value={wizard.startDate}
-                onChange={setStartDate}
-              />
-              <TripDateFields
-                label="Salida"
-                value={wizard.endDate}
-                min={wizard.startDate}
-                onChange={setEndDate}
-              />
-            </div>
-            {nights > 0 && (
+          <div className="wiz-dates-card rd-surface">
+            <TripDateFields
+              label="Llegada"
+              value={wizard.startDate}
+              onChange={setStartDate}
+            />
+            <TripDateFields
+              label="Salida"
+              value={wizard.endDate}
+              min={wizard.startDate}
+              onChange={setEndDate}
+            />
+            {nights > 0 ? (
               <p className="muted tiny wiz-nights">
                 {nights === 1 ? '1 noche' : `${nights} noches`} · {nights + 1} días
               </p>
-            )}
+            ) : null}
           </div>
 
           <details className="wiz-more">
@@ -727,16 +618,15 @@ export function WizardPage() {
               <p className="wiz-section-label">Aeropuerto</p>
               {loadingAirports && <p className="muted tiny">Buscando aeropuertos…</p>}
               {airports.length > 0 ? (
-                <ul className="airport-chips">
+                <ul className="wiz-select-list">
                   {airports.map((a) => {
-                    const selected =
-                      wizard.airportPick?.name === a.name &&
-                      wizard.airportPick?.lat === a.lat
+                    const selected = sameAirport(a, wizard.airportPick)
                     return (
-                      <li key={a.code || a.name}>
+                      <li key={a.code || `${a.name}-${a.lat}`}>
                         <button
                           type="button"
-                          className={selected ? 'chip active' : 'chip'}
+                          className={selected ? 'wiz-select on' : 'wiz-select'}
+                          aria-pressed={selected}
                           onClick={() =>
                             patchWizard({
                               airportPick: selected
@@ -750,10 +640,16 @@ export function WizardPage() {
                             })
                           }
                         >
-                          <strong>
-                            {a.name}
-                            {a.code ? ` · ${a.code}` : ''}
-                          </strong>
+                          <span className="wiz-select-main">
+                            <strong>
+                              {a.name}
+                              {a.code ? ` · ${a.code}` : ''}
+                            </strong>
+                            {a.blurb ? <span className="muted tiny">{a.blurb}</span> : null}
+                          </span>
+                          <span className="wiz-select-check" aria-hidden>
+                            {selected ? '✓' : ''}
+                          </span>
                         </button>
                       </li>
                     )
@@ -764,6 +660,11 @@ export function WizardPage() {
                   <p className="muted tiny">Sin lista fija; podéis seguir sin aeropuerto.</p>
                 )
               )}
+              {wizard.airportPick ? (
+                <p className="wiz-pick-ok muted tiny">
+                  Aeropuerto: <strong>{wizard.airportPick.name}</strong>
+                </p>
+              ) : null}
             </div>
 
             <div className="wiz-more-section">
@@ -888,15 +789,17 @@ export function WizardPage() {
 
       {step === 1 && (
         <section className="wiz-stage">
-          <h2 className="wiz-title">¿Cómo lo vivís?</h2>
-          <p className="muted wiz-stage-lede">Un estilo, cómo moveros y listo.</p>
+          <header className="wiz-stage-head">
+            <h2 className="wiz-title">Tu estilo de viaje</h2>
+            <p className="muted">Elegí un perfil. Podés afinar después.</p>
+          </header>
 
-          <div className="wiz-hero-presets">
+          <div className="wiz-style-grid">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                className={selectedPreset === p.id ? 'wiz-hero-preset on' : 'wiz-hero-preset'}
+                className={selectedPreset === p.id ? 'wiz-style-card on' : 'wiz-style-card'}
                 onClick={() => {
                   setSelectedPreset(p.id)
                   patchWizard({
@@ -917,15 +820,15 @@ export function WizardPage() {
             ))}
           </div>
 
-          <div className="wiz-pill-block">
-            <p className="wiz-section-label">Cómo moveros</p>
-            <div className="wiz-pills wiz-pills-wrap">
+          <div className="wiz-choice-row rd-surface">
+            <p className="wiz-choice-label">Moverse</p>
+            <div className="wiz-choice-btns">
               {MOBILITY_OPTIONS.map((o) => (
                 <button
                   key={o.value}
                   type="button"
                   className={
-                    wizard.routeStyle.mobility === o.value ? 'wiz-pill on' : 'wiz-pill'
+                    wizard.routeStyle.mobility === o.value ? 'wiz-choice on' : 'wiz-choice'
                   }
                   onClick={() =>
                     patchWizard({ routeStyle: { ...wizard.routeStyle, mobility: o.value } })
@@ -937,15 +840,15 @@ export function WizardPage() {
             </div>
           </div>
 
-          <div className="wiz-pill-block">
-            <p className="wiz-section-label">Comida</p>
-            <div className="wiz-pills">
+          <div className="wiz-choice-row rd-surface">
+            <p className="wiz-choice-label">Comida</p>
+            <div className="wiz-choice-btns">
               {FOOD_OPTIONS.map((o) => (
                 <button
                   key={o.value}
                   type="button"
                   className={
-                    wizard.routeStyle.foodBudget === o.value ? 'wiz-pill on' : 'wiz-pill'
+                    wizard.routeStyle.foodBudget === o.value ? 'wiz-choice on' : 'wiz-choice'
                   }
                   onClick={() =>
                     patchWizard({
@@ -1092,10 +995,12 @@ export function WizardPage() {
 
       {step === 2 && (
         <section className="wiz-stage">
-          <h2 className="wiz-title">Así queda el viaje</h2>
-          <p className="muted">Revisad y generad. Podéis volver a cualquier paso.</p>
+          <header className="wiz-stage-head">
+            <h2 className="wiz-title">Listo para generar</h2>
+            <p className="muted">Revisá el resumen. Podés editar cualquier bloque.</p>
+          </header>
 
-          <ul className="wiz-summary">
+          <ul className="wiz-summary rd-surface">
             <li>
               <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
                 <span className="wiz-summary-k">Destino</span>

@@ -102,7 +102,7 @@ export interface GeoPlace {
   lng: number
   category: PlaceCategory
   tier: 'must' | 'recommended' | 'optional'
-  source: 'osm' | 'manual'
+  source: 'osm' | 'otm' | 'manual'
   notes?: string
   tags?: string[]
   score: number
