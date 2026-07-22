@@ -3,9 +3,11 @@ import {
   CATEGORY_LABELS,
   DEFAULT_PREFERENCES,
   PREFERENCE_LABELS,
+  TRANSIT_MODE_LABELS,
   type PreferenceKey,
   type Preferences,
   type RouteStyle,
+  type TransitMode,
 } from '../types'
 import { useAppStore } from '../store'
 import { TripMap } from '../components/TripMap'
@@ -22,7 +24,6 @@ import {
   safeFilename,
   tripToKml,
 } from '../lib/exportGmaps'
-import { getCityGuide, genericGuide } from '../lib/cityGuides'
 import { estimateFromTrip } from '../lib/budget'
 import { createTripShareToken, shareUrlForToken } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
@@ -81,8 +82,6 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   const allStops = trip.days.flatMap((d) => d.stops)
-  const guide =
-    getCityGuide(trip.city.name, trip.city.displayName) ?? genericGuide(trip.city.name)
   const budget = estimateFromTrip(trip)
 
   function exportTripJson() {
@@ -309,26 +308,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         </div>
       )}
 
-      <div className="panel tip-panel">
-        <h3>Cómo planificamos (estilo guía)</h3>
-        <ul className="howto">
-          <li>Horarios por franja y vuelta al hotel de noche (~22–00).</li>
-          <li>Transporte sugerido en cada tramo; «Ver línea en Maps» para la línea exacta.</li>
-          <li>Monumentos «de pasada» cerca de la ruta + tips de reserva cuando toca.</li>
-          <li>
-            {guide.transportTitle}: {guide.transportBlurb}
-          </li>
-        </ul>
-        <button
-          type="button"
-          className="btn ghost sm"
-          onClick={() => setView({ name: 'guides', tripId })}
-        >
-          Reservas y transportes
-        </button>
-      </div>
-
-      <div className="toolbar">
+      <div className="toolbar trip-toolbar">
         <button type="button" className="btn primary sm" onClick={exportToGoogleMaps}>
           Llevar a Google Maps
         </button>
@@ -340,59 +320,22 @@ export function TripPage({ tripId }: { tripId: string }) {
         >
           {shareBusy ? 'Compartiendo…' : 'Compartir'}
         </button>
-        <button
-          type="button"
-          className="btn ghost sm"
-          onClick={() => setView({ name: 'copilot', tripId })}
-        >
-          Copiloto
-        </button>
-        <button
-          type="button"
-          className="btn ghost sm"
-          onClick={() => setView({ name: 'build', tripId })}
-        >
-          Armar ruta nosotros
-        </button>
-        <button
-          type="button"
-          className="btn ghost sm"
-          onClick={() => setView({ name: 'guides', tripId })}
-        >
-          Links útiles
-        </button>
         <button type="button" className="btn ghost sm" onClick={() => setImportOpen((v) => !v)}>
-          Importar enlaces
+          Importar
         </button>
       </div>
       {shareMsg && <p className="muted tiny">{shareMsg}</p>}
-      <p className="muted tiny">
-        Compartir: link web para la pareja. También genera un token de Telegram:{' '}
-        <code>/start TOKEN</code> en el bot enlaza el plan (ruta de hoy / qué toca). Sin viaje
-        enlazado, el bot sigue recomendando in situ con vuestra ubicación.
-      </p>
 
       {exportOpen && (
         <div className="panel">
           <h3>Sitios en tu Google Maps</h3>
           <p className="muted">
-            Se descargó un archivo <strong>.kml</strong> con todos los días y la wishlist. Google no
-            deja meter sitios en “Guardados” desde fuera, pero sí en{' '}
-            <strong>My Maps</strong> (aparece en la app de Maps).
+            Se descargó un <strong>.kml</strong>. Importalo en{' '}
+            <a href={GOOGLE_MY_MAPS_URL} target="_blank" rel="noreferrer">
+              My Maps
+            </a>
+            .
           </p>
-          <ol className="howto">
-            <li>
-              Abrí{' '}
-              <a href={GOOGLE_MY_MAPS_URL} target="_blank" rel="noreferrer">
-                Google My Maps
-              </a>{' '}
-              (con tu cuenta).
-            </li>
-            <li>Crear mapa → Importar → elegí el .kml descargado.</li>
-            <li>
-              En el móvil: Google Maps → Guardados → Mapas → verás este mapa con todos los pines.
-            </li>
-          </ol>
           <button type="button" className="btn ghost sm" onClick={() => setExportOpen(false)}>
             Entendido
           </button>
@@ -441,68 +384,92 @@ export function TripPage({ tripId }: { tripId: string }) {
 
       <section className="section">
         <h2>Días</h2>
-        <ul className="day-list">
-          {trip.days.map((day) => (
-            <li key={day.id}>
-              <div className="day-card-wrap">
-                <button
-                  type="button"
-                  className="day-card"
-                  onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
-                >
-                  <span className="day-label">{day.label}</span>
-                  <span className="muted">
-                    {day.stops.length} paradas
-                    {day.intensity === 'arrival'
-                      ? ' · llegada suave'
-                      : day.intensity === 'departure'
-                        ? ' · salida'
-                        : ''}
-                  </span>
-                  {day.note && <span className="day-preview">{day.note}</span>}
-                  <span className="day-preview">
-                    {day.stops
-                      .slice(0, 3)
-                      .map((s) => s.name)
-                      .join(' · ')}
-                    {day.stops.length > 3 ? '…' : ''}
-                  </span>
-                </button>
-                <div className="day-card-actions">
-                  <a
-                    className="btn ghost sm"
-                    href={googleMapsDirectionsUrl(day.stops)}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Maps
-                  </a>
+        <ul className="day-list visual">
+          {trip.days.map((day) => {
+            const visits = day.stops.filter((s) => !s.isHotel)
+            const tag =
+              day.intensity === 'arrival'
+                ? 'Llegada'
+                : day.intensity === 'departure'
+                  ? 'Salida'
+                  : null
+            return (
+              <li key={day.id}>
+                <article className="day-card-v">
                   <button
                     type="button"
-                    className="btn ghost sm"
-                    onClick={() => setView({ name: 'onroute', tripId: trip.id, dayId: day.id })}
+                    className="day-card-v-main"
+                    onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
                   >
-                    Check-in
+                    <div className="day-card-v-head">
+                      <strong className="day-label">{day.label}</strong>
+                      <span className="day-count">
+                        {visits.length} sitio{visits.length === 1 ? '' : 's'}
+                        {tag ? ` · ${tag}` : ''}
+                      </span>
+                    </div>
+                    <div className="day-route-flow" aria-label="Ruta del día">
+                      {visits.length === 0 ? (
+                        <span className="muted tiny">Sin paradas aún</span>
+                      ) : (
+                        visits.slice(0, 5).map((s, i) => {
+                          const next = visits[i + 1]
+                          const mode = (s.transitMode || 'walk') as TransitMode
+                          const short = s.name.replace(/\s*\/.*$/, '').slice(0, 22)
+                          return (
+                            <span key={s.id} className="day-flow-item">
+                              <span className="day-flow-stop">
+                                {s.suggestedTime ? (
+                                  <em>{s.suggestedTime}</em>
+                                ) : null}
+                                {short}
+                              </span>
+                              {next && i < 4 ? (
+                                <span className="day-flow-mode" title={TRANSIT_MODE_LABELS[mode]}>
+                                  → {TRANSIT_MODE_LABELS[mode]}
+                                  {s.minutesToNext != null ? ` ${s.minutesToNext}'` : ''} →
+                                </span>
+                              ) : null}
+                            </span>
+                          )
+                        })
+                      )}
+                      {visits.length > 5 ? (
+                        <span className="muted tiny">+{visits.length - 5}</span>
+                      ) : null}
+                    </div>
                   </button>
-                </div>
-              </div>
-            </li>
-          ))}
+                  <div className="day-card-v-actions">
+                    <a
+                      className="btn ghost sm"
+                      href={googleMapsDirectionsUrl(day.stops)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Maps
+                    </a>
+                    <button
+                      type="button"
+                      className="btn primary sm"
+                      onClick={() => setView({ name: 'onroute', tripId: trip.id, dayId: day.id })}
+                    >
+                      En ruta
+                    </button>
+                  </div>
+                </article>
+              </li>
+            )
+          })}
         </ul>
       </section>
 
       <section className="section">
-        <h2>Todas las recomendaciones</h2>
-        <p className="muted">
-          Generamos una lista amplia. En cada día puedes añadir, quitar y reordenar.
-        </p>
+        <h2>Wishlist</h2>
         <ul className="place-grid">
-          {trip.places.slice(0, 80).map((p) => (
+          {trip.places.slice(0, 40).map((p) => (
             <li key={p.id} className="place-pill">
               <span className="cat">{CATEGORY_LABELS[p.category]}</span>
               <strong>{p.name}</strong>
-              <span className="tier">{p.tier}</span>
             </li>
           ))}
         </ul>

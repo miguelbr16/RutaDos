@@ -48,16 +48,13 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const setDayFocus = useAppStore((s) => s.setDayFocus)
   const setStopTransitMode = useAppStore((s) => s.setStopTransitMode)
   const setStopUserNotes = useAppStore((s) => s.setStopUserNotes)
-  const setStopReaction = useAppStore((s) => s.setStopReaction)
   const deferStopToLater = useAppStore((s) => s.deferStopToLater)
   const addDeferredToDay = useAppStore((s) => s.addDeferredToDay)
   const chaosReplan = useAppStore((s) => s.chaosReplan)
 
   const [route, setRoute] = useState<{ lat: number; lng: number }[] | null>(null)
-  const [manualOpen, setManualOpen] = useState(false)
   const [manualName, setManualName] = useState('')
   const [manualQuery, setManualQuery] = useState('')
-  const [manualNotes, setManualNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [photoByStop, setPhotoByStop] = useState<Record<string, string[]>>({})
@@ -66,7 +63,6 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   )
   const [offlinePack, setOfflinePack] = useState<OfflineDayPack | null>(() => loadOfflineDay())
-  const [toolsOpen, setToolsOpen] = useState(false)
   const [packPreview, setPackPreview] = useState(false)
 
   const day = trip?.days.find((d) => d.id === dayId)
@@ -227,13 +223,10 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         name: manualName.trim(),
         lat: geo.lat,
         lng: geo.lng,
-        notes: manualNotes.trim() || undefined,
       })
-      setManualOpen(false)
       setManualName('')
       setManualQuery('')
-      setManualNotes('')
-      setMsg('Sitio añadido. Pulsá «Optimizar orden» para reordenar y actualizar horas.')
+      setMsg('Añadido al plan.')
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'No se pudo geocodificar')
     } finally {
@@ -287,20 +280,6 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         >
           En ruta
         </button>
-        <button
-          type="button"
-          className="btn ghost"
-          onClick={() => {
-            if (trip && day) {
-              const pack = saveOfflineDay(trip, day)
-              setOfflinePack(pack)
-              setPackPreview(true)
-              setMsg('Pack offline actualizado: transportes, horas y tramos.')
-            }
-          }}
-        >
-          Guardar offline
-        </button>
       </div>
 
       <div className="chaos-bar day-quick">
@@ -329,7 +308,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           className="chip"
           onClick={() => {
             chaosReplan(tripId, dayId, 'shorter')
-            setMsg('Replan: día más corto / cansados.')
+            setMsg('Replan: cansados / más corto.')
           }}
         >
           Cansados
@@ -337,25 +316,25 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         <button
           type="button"
           className="chip"
-          onClick={() => setView({ name: 'copilot', tripId, dayId })}
+          onClick={() => {
+            if (trip && day) {
+              setOfflinePack(saveOfflineDay(trip, day))
+              setPackPreview((v) => !v)
+            }
+          }}
         >
-          Copiloto
+          Offline
         </button>
       </div>
 
       {msg && <p className="flash-msg">{msg}</p>}
-
-      {packPreview && offlinePack && (
-        <OfflinePackPreview pack={offlinePack} />
-      )}
+      {packPreview && offlinePack && <OfflinePackPreview pack={offlinePack} />}
 
       <section className="section day-plan-section">
-        <div className="section-head">
-          <h2>Plan</h2>
-          <button type="button" className="btn ghost sm" onClick={() => setToolsOpen((v) => !v)}>
-            {toolsOpen ? 'Ocultar opciones' : 'Más opciones'}
-          </button>
-        </div>
+        <h2>Ruta del día</h2>
+        <p className="muted tiny">
+          Camino sugerido con transporte. Cambiá el modo en cada tramo y se recalcula.
+        </p>
 
         <DayTimeline
           stops={ordered}
@@ -365,14 +344,6 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           onMove={(stopId, dir) => moveDayStop(tripId, dayId, stopId, dir)}
           onRemove={(stopId) => removeDayStop(tripId, dayId, stopId)}
           onNotes={(stopId, notes) => setStopUserNotes(tripId, dayId, stopId, notes)}
-          onLike={(stopId) => {
-            const s = ordered.find((x) => x.id === stopId)
-            setStopReaction(tripId, dayId, stopId, s?.reaction === 'like' ? null : 'like')
-          }}
-          onDislike={(stopId) => {
-            const s = ordered.find((x) => x.id === stopId)
-            setStopReaction(tripId, dayId, stopId, s?.reaction === 'dislike' ? null : 'dislike')
-          }}
           onDefer={(stopId) => {
             const s = ordered.find((x) => x.id === stopId)
             deferStopToLater(tripId, dayId, stopId)
@@ -381,109 +352,84 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         />
       </section>
 
-      {toolsOpen && (
-        <div className="day-tools panel">
-          <div className="field">
-            <span>Enfoque</span>
-            <div className="chips">
-              {(['central', 'mixed', 'outskirts'] as DayFocus[]).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  className={(day.focus ?? 'central') === f ? 'chip on' : 'chip'}
-                  onClick={() => setDayFocus(tripId, dayId, f)}
-                >
-                  {DAY_FOCUS_LABELS[f]}
-                </button>
-              ))}
-            </div>
-          </div>
+      <form className="add-bar" onSubmit={(e) => void submitManual(e)}>
+        <input
+          value={manualName}
+          onChange={(e) => {
+            setManualName(e.target.value)
+            setManualQuery(e.target.value)
+          }}
+          placeholder="Añadir sitio (nombre)…"
+          aria-label="Añadir sitio"
+        />
+        <button type="submit" className="btn primary sm" disabled={busy || !manualName.trim()}>
+          {busy ? '…' : 'Añadir'}
+        </button>
+      </form>
 
-          <div className="toolbar">
-            <button type="button" className="btn ghost sm" onClick={() => optimizeDay(tripId, dayId)}>
-              Optimizar orden
-            </button>
-            <button
-              type="button"
-              className="btn ghost sm"
-              onClick={() => setView({ name: 'build', tripId, dayId })}
-            >
-              Armar nosotros
-            </button>
-            <button type="button" className="btn ghost sm" onClick={() => setManualOpen((v) => !v)}>
-              + Sitio manual
-            </button>
-            <button
-              type="button"
-              className="btn ghost sm"
-              onClick={() => {
-                downloadTextFile(
-                  `${safeFilename(trip.title)}_${safeFilename(day.label)}.kml`,
-                  dayToKml(trip.title, day.label, ordered),
-                  'application/vnd.google-earth.kml+xml',
-                )
-                setMsg(`KML descargado · My Maps: ${GOOGLE_MY_MAPS_URL.replace('https://', '')}`)
-              }}
-            >
-              KML / My Maps
-            </button>
-          </div>
-
-          {manualOpen && (
-            <form className="panel nested" onSubmit={(e) => void submitManual(e)}>
-              <h3>Sitio manual</h3>
-              <label className="field">
-                <span>Nombre</span>
-                <input value={manualName} onChange={(e) => setManualName(e.target.value)} required />
-              </label>
-              <label className="field">
-                <span>Buscar</span>
-                <input
-                  value={manualQuery}
-                  onChange={(e) => setManualQuery(e.target.value)}
-                  placeholder={`Ej. museo, ${trip.city.name}`}
-                />
-              </label>
-              <label className="field">
-                <span>Notas</span>
-                <input value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} />
-              </label>
-              <button type="submit" className="btn primary" disabled={busy}>
-                {busy ? 'Buscando…' : 'Añadir'}
-              </button>
-            </form>
-          )}
-
-          <section className="section">
-            <h3>Más sitios</h3>
-            <ul className="suggest-list">
-              {suggestions.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    className="suggest-item"
-                    onClick={() => {
-                      if (p.deferred) addDeferredToDay(tripId, dayId, p.id)
-                      else addSuggestedToDay(tripId, dayId, p)
-                      setMsg(p.deferred ? 'Recuperado.' : 'Añadido al día.')
-                    }}
-                  >
-                    <span className="cat">{CATEGORY_LABELS[p.category]}</span>
-                    <strong>
-                      {p.deferred ? '↻ ' : ''}
-                      {p.name}
-                    </strong>
-                    <span className="add">{p.deferred ? 'Recuperar' : 'Añadir'}</span>
-                  </button>
-                </li>
-              ))}
-              {!suggestions.length && (
-                <p className="muted">No quedan sugerencias libres.</p>
-              )}
-            </ul>
-          </section>
+      <section className="section">
+        <div className="section-head">
+          <h2>Sugerencias</h2>
+          <button type="button" className="btn ghost sm" onClick={() => optimizeDay(tripId, dayId)}>
+            Optimizar
+          </button>
         </div>
-      )}
+        <p className="muted tiny">Tocá para subir al plan.</p>
+        <ul className="suggest-list">
+          {suggestions.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                className="suggest-item"
+                onClick={() => {
+                  if (p.deferred) addDeferredToDay(tripId, dayId, p.id)
+                  else addSuggestedToDay(tripId, dayId, p)
+                  setMsg(`Añadido: ${p.name}`)
+                }}
+              >
+                <span className="cat">{CATEGORY_LABELS[p.category]}</span>
+                <strong>
+                  {p.deferred ? '↻ ' : ''}
+                  {p.name}
+                </strong>
+                <span className="add">↑</span>
+              </button>
+            </li>
+          ))}
+          {!suggestions.length && <p className="muted">No hay más sugerencias cerca.</p>}
+        </ul>
+
+        <details className="day-more">
+          <summary>Más (enfoque / Maps KML)</summary>
+          <div className="chips" style={{ marginTop: '0.5rem' }}>
+            {(['central', 'mixed', 'outskirts'] as DayFocus[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={(day.focus ?? 'central') === f ? 'chip on' : 'chip'}
+                onClick={() => setDayFocus(tripId, dayId, f)}
+              >
+                {DAY_FOCUS_LABELS[f]}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="btn ghost sm"
+            style={{ marginTop: '0.5rem' }}
+            onClick={() => {
+              downloadTextFile(
+                `${safeFilename(trip.title)}_${safeFilename(day.label)}.kml`,
+                dayToKml(trip.title, day.label, ordered),
+                'application/vnd.google-earth.kml+xml',
+              )
+              setMsg(`KML · ${GOOGLE_MY_MAPS_URL.replace('https://', '')}`)
+            }}
+          >
+            Exportar KML
+          </button>
+        </details>
+      </section>
     </div>
   )
 }

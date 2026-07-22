@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CATEGORY_LABELS,
   TRANSIT_MODE_LABELS,
@@ -7,6 +7,7 @@ import {
 } from '../types'
 import { googleMapsPlaceUrl, googleMapsTransitLegUrl, travelModeForTransit } from '../lib/mapsUrl'
 import type { PlaceHours } from '../lib/openingHours'
+import { fetchPlaceBlurb, type PlaceBlurb } from '../lib/placeWiki'
 
 type Props = {
   stops: Stop[]
@@ -16,8 +17,6 @@ type Props = {
   onMove: (stopId: string, dir: -1 | 1) => void
   onRemove: (stopId: string) => void
   onNotes: (stopId: string, notes: string) => void
-  onLike: (stopId: string) => void
-  onDislike: (stopId: string) => void
   onDefer: (stopId: string) => void
 }
 
@@ -29,11 +28,32 @@ export function DayTimeline({
   onMove,
   onRemove,
   onNotes,
-  onLike,
-  onDislike,
   onDefer,
 }: Props) {
   const [openId, setOpenId] = useState<string | null>(null)
+  const [blurb, setBlurb] = useState<PlaceBlurb | null>(null)
+  const [blurbLoading, setBlurbLoading] = useState(false)
+
+  const openStop = stops.find((s) => s.id === openId) ?? null
+
+  useEffect(() => {
+    if (!openStop || openStop.isHotel) {
+      setBlurb(null)
+      return
+    }
+    let cancelled = false
+    setBlurbLoading(true)
+    setBlurb(null)
+    void fetchPlaceBlurb(openStop.name, openStop.lat, openStop.lng).then((b) => {
+      if (!cancelled) {
+        setBlurb(b)
+        setBlurbLoading(false)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [openStop?.id])
 
   return (
     <ol className="day-timeline">
@@ -83,13 +103,24 @@ export function DayTimeline({
                 <span className="tl-chevron">{open ? '▾' : '▸'}</span>
               </button>
 
-              {next && !stop.isHotel && (
+              {next && (
                 <div className="tl-leg">
-                  <span className="tl-leg-mode">
-                    {stop.transitMode
-                      ? TRANSIT_MODE_LABELS[stop.transitMode]
-                      : 'Transporte'}
-                    {stop.minutesToNext != null ? ` · ~${stop.minutesToNext} min` : ''}
+                  <label className="tl-leg-select">
+                    <span className="sr-only">Transporte</span>
+                    <select
+                      value={stop.transitMode || 'walk'}
+                      onChange={(e) => onModeChange(stop.id, e.target.value as TransitMode)}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {(Object.keys(TRANSIT_MODE_LABELS) as TransitMode[]).map((m) => (
+                        <option key={m} value={m}>
+                          {TRANSIT_MODE_LABELS[m]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="tl-leg-mins">
+                    {stop.minutesToNext != null ? `~${stop.minutesToNext} min` : 'tramo'}
                   </span>
                   <a
                     className="tl-leg-link"
@@ -109,9 +140,23 @@ export function DayTimeline({
 
               {open && (
                 <div className="tl-details">
-                  {stop.notes && stop.notes !== 'start' && stop.notes !== 'end' ? (
-                    <p className="stop-tip">{stop.notes}</p>
-                  ) : null}
+                  {!stop.isHotel && (
+                    <div className="place-blurb">
+                      {blurbLoading && <p className="muted tiny">Cargando qué es…</p>}
+                      {!blurbLoading && blurb && (
+                        <>
+                          <p>{blurb.extract}</p>
+                          <a href={blurb.url} target="_blank" rel="noreferrer" className="muted tiny">
+                            Más en Wikipedia
+                          </a>
+                        </>
+                      )}
+                      {!blurbLoading && !blurb && (
+                        <p className="muted tiny">Sin ficha breve disponible ahora.</p>
+                      )}
+                    </div>
+                  )}
+
                   {stop.transportReason ? (
                     <p className="muted tiny">{stop.transportReason}</p>
                   ) : null}
@@ -121,26 +166,9 @@ export function DayTimeline({
                       <span className="muted tiny">Nota / reserva</span>
                       <input
                         value={stop.userNotes ?? ''}
-                        placeholder="Reserva 14:00, tip…"
+                        placeholder="Reserva 14:00…"
                         onChange={(e) => onNotes(stop.id, e.target.value)}
                       />
-                    </label>
-                  )}
-
-                  {next && (
-                    <label className="field compact">
-                      <span className="muted tiny">Modo al siguiente</span>
-                      <select
-                        className="mode-select"
-                        value={stop.transitMode || 'walk'}
-                        onChange={(e) => onModeChange(stop.id, e.target.value as TransitMode)}
-                      >
-                        {(Object.keys(TRANSIT_MODE_LABELS) as TransitMode[]).map((m) => (
-                          <option key={m} value={m}>
-                            {TRANSIT_MODE_LABELS[m]}
-                          </option>
-                        ))}
-                      </select>
                     </label>
                   )}
 
@@ -161,16 +189,6 @@ export function DayTimeline({
                     </button>
                     {!stop.isHotel && (
                       <>
-                        <button type="button" className="btn ghost sm" onClick={() => onLike(stop.id)}>
-                          Me gusta
-                        </button>
-                        <button
-                          type="button"
-                          className="btn ghost sm"
-                          onClick={() => onDislike(stop.id)}
-                        >
-                          No
-                        </button>
                         <button type="button" className="btn ghost sm" onClick={() => onDefer(stop.id)}>
                           Otro día
                         </button>

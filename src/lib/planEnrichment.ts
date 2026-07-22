@@ -119,18 +119,18 @@ export function enrichDayStops(
   })
 
   const visits = withTransitCopy.filter((s) => !s.isHotel)
-  const arc =
-    visits.length >= 2
-      ? `Arco del día: ${visits
-          .slice(0, 4)
-          .map((s) => s.name.replace(/\s*\(.*?\)\s*/g, '').slice(0, 28))
-          .join(' → ')}${visits.length > 4 ? '…' : ''}.`
-      : ''
-
-  const hotelBack = intensity === 'departure' ? '' : ' Vuelta al hotel de noche (~22–00).'
+  // Nota corta: sin muro de “Arco del día…”
+  const dayNoteExtra =
+    intensity === 'arrival'
+      ? 'Día de llegada'
+      : intensity === 'departure'
+        ? 'Día de salida'
+        : visits.length
+          ? `${visits.length} paradas`
+          : ''
 
   return {
     stops: withTransitCopy,
-    dayNoteExtra: [arc, hotelBack].filter(Boolean).join(''),
+    dayNoteExtra,
   }
 }

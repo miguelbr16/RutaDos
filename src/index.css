@@ -575,7 +575,174 @@ a {
 
 .trip-list,
 .day-list,
-.stop-list,
+.stop-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.day-list.visual {
+  gap: 0.75rem;
+}
+
+.day-card-v {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent);
+}
+
+.day-card-v-main {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0.9rem 0.95rem 0.55rem;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.day-card-v-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.day-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--deep);
+  white-space: nowrap;
+}
+
+.day-route-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.15rem;
+}
+
+.day-flow-item {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.day-flow-stop {
+  display: inline-flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--deep) 8%, #fff);
+  border-radius: 10px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  max-width: 8.5rem;
+  line-height: 1.2;
+}
+
+.day-flow-stop em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: var(--deep);
+  font-weight: 700;
+}
+
+.day-flow-mode {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 0 0.1rem;
+}
+
+.day-card-v-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.add-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  margin: 0.85rem 0 1rem;
+  position: sticky;
+  bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  padding: 0.35rem;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+
+.add-bar input {
+  border: 0;
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.7rem 0.75rem;
+  font: inherit;
+}
+
+.day-more {
+  margin-top: 0.85rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.day-more summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.place-blurb {
+  background: color-mix(in srgb, var(--deep) 5%, #fff);
+  border-radius: 12px;
+  padding: 0.65rem 0.7rem;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.place-blurb p {
+  margin: 0 0 0.35rem;
+}
+
+.tl-leg-select select {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  color: var(--deep);
+  max-width: 7.5rem;
+}
+
+.tl-leg-mins {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.trip-toolbar {
+  margin-bottom: 0.75rem;
+}
 .suggest-list,
 .place-grid {
   list-style: none;
