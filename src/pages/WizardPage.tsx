@@ -544,7 +544,6 @@ export function WizardPage() {
       <header className="wiz-header">
         <p className="brand small">RutaDos</p>
         <h1>Nuevo viaje</h1>
-        <p className="muted wiz-lede">Tres pasos. Lo podéis cambiar después.</p>
       </header>
 
       <nav className="wiz-progress" aria-label="Pasos del viaje">
@@ -559,6 +558,7 @@ export function WizardPage() {
               if (i < step) go(i)
             }}
             aria-current={i === step ? 'step' : undefined}
+            aria-label={`Paso ${i + 1}: ${label}`}
           >
             <span className="wiz-step-num">{i + 1}</span>
             <span className="wiz-step-label">{label}</span>
@@ -569,13 +569,10 @@ export function WizardPage() {
       {step === 0 && (
         <section className="wiz-stage">
           <h2 className="wiz-title">¿A dónde vais?</h2>
-          <p className="muted">
-            Escribe ciudad, región o país y <strong>elige una opción de la lista</strong> para
-            confirmar el destino exacto.
-          </p>
+          <p className="muted wiz-stage-lede">Elegí destino y fechas. El resto es opcional.</p>
 
           <label className="field">
-            <span>Buscar destino</span>
+            <span>Destino</span>
             <input
               value={wizard.cityQuery}
               onChange={(e) =>
@@ -585,17 +582,17 @@ export function WizardPage() {
                   hotelPick: null,
                 })
               }
-              placeholder="Londres, Gran Londres, Japón…"
+              placeholder="Londres, Madrid, Japón…"
               autoFocus
               autoComplete="off"
             />
           </label>
 
-          {searchingCity && <p className="muted tiny">Buscando coincidencias…</p>}
+          {searchingCity && <p className="muted tiny">Buscando…</p>}
 
           {citySuggestions.length > 0 && !wizard.cityPick && (
             <div className="dest-dropdown">
-              <p className="dest-dropdown-label">Selecciona el destino reconocido</p>
+              <p className="dest-dropdown-label">Elegí una opción</p>
               <ul className="suggest-cities">
                 {citySuggestions.map((s) => (
                   <li key={s.label}>
@@ -619,7 +616,6 @@ export function WizardPage() {
                           hotelPick: null,
                           airportPick: null,
                           areaScale: scale,
-                          // No premarcar movilidad: la eligen en el paso de estilo
                         })
                         setCitySuggestions([])
                       }}
@@ -635,11 +631,11 @@ export function WizardPage() {
 
           {wizard.cityPick && (
             <div className="hint-box dest-confirmed">
-              <strong>Destino confirmado:</strong> {wizard.cityPick.displayName}
+              <strong>{wizard.cityPick.name}</strong>
+              <span className="muted tiny dest-confirmed-sub">{wizard.cityPick.displayName}</span>
               <button
                 type="button"
                 className="btn ghost sm"
-                style={{ marginLeft: '0.5rem' }}
                 onClick={() => patchWizard({ cityPick: null })}
               >
                 Cambiar
@@ -647,110 +643,88 @@ export function WizardPage() {
             </div>
           )}
 
+          {!wizard.cityPick && (
+            <div className="quick-cities">
+              {QUICK_DESTINATIONS.map((d) => (
+                <button
+                  key={d.label}
+                  type="button"
+                  className={wizard.cityPick?.name === d.name ? 'chip on' : 'chip'}
+                  onClick={() => pickQuickDestination(d)}
+                  title={d.hint}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {wizard.cityPick && (
-            <div className="field">
-              <span>Alcance del viaje</span>
-              <p className="muted tiny">
-                Ciudad + afueras = centro, barrios, afueras y pueblos cercanos. Región = varios
-                pueblos en furgoneta. País = varias ciudades.
-              </p>
-              <div className="option-cards compact">
+            <div className="wiz-pill-block">
+              <p className="wiz-section-label">Alcance</p>
+              <div className="wiz-pills">
                 {AREA_SCALE_OPTIONS.map((o) => (
                   <button
                     key={o.value}
                     type="button"
-                    className={
-                      wizard.areaScale === o.value ? 'option-card on' : 'option-card'
-                    }
-                    onClick={() => {
-                      patchWizard({
-                        areaScale: o.value,
-                        // No premarcar movilidad aquí
-                      })
-                    }}
+                    className={wizard.areaScale === o.value ? 'wiz-pill on' : 'wiz-pill'}
+                    onClick={() => patchWizard({ areaScale: o.value })}
+                    title={o.desc}
                   >
-                    <strong>{o.title}</strong>
-                    <span className="muted tiny">{o.desc}</span>
+                    {o.value === 'city' ? 'Ciudad' : o.value === 'region' ? 'Región' : 'País'}
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {!wizard.cityPick && wizard.cityQuery.trim().length >= 2 && !searchingCity && (
-            <p className="muted tiny">Elige una fila de la lista para continuar.</p>
-          )}
-
-          <div className="quick-cities">
-            <p className="dest-dropdown-label" style={{ width: '100%', marginBottom: 0 }}>
-              Próximos viajes (un toque)
-            </p>
-            {QUICK_DESTINATIONS.map((d) => (
-              <button
-                key={d.label}
-                type="button"
-                className={wizard.cityPick?.name === d.name ? 'chip on' : 'chip'}
-                onClick={() => pickQuickDestination(d)}
-                title={d.hint}
-              >
-                {d.label}
-                {d.hint ? ` · ${d.hint}` : ''}
-              </button>
-            ))}
-          </div>
-
           <div className="wiz-block">
             <h3 className="wiz-block-title">Fechas</h3>
-            <div className="grid-2">
+            <div className="grid-2 wiz-dates">
               <TripDateFields
-                label="Día de llegada"
+                label="Llegada"
                 value={wizard.startDate}
                 onChange={setStartDate}
               />
               <TripDateFields
-                label="Día de salida"
+                label="Salida"
                 value={wizard.endDate}
                 min={wizard.startDate}
                 onChange={setEndDate}
               />
             </div>
             {nights > 0 && (
-              <p className="hint-box">
-                {nights === 1 ? '1 noche' : `${nights} noches`} · {nights + 1} días de plan
+              <p className="muted tiny wiz-nights">
+                {nights === 1 ? '1 noche' : `${nights} noches`} · {nights + 1} días
               </p>
             )}
           </div>
 
-          <div className="wiz-block wiz-logistics">
-            <h3 className="wiz-block-title">Llegada y dónde dormís</h3>
-            <p className="muted tiny">
-              Horarios, aeropuerto y hotel o barrio. Podéis seguir sin hotel si aún no lo sabéis.
-            </p>
+          <details className="wiz-more">
+            <summary>Horarios, aeropuerto y hotel</summary>
+            <p className="muted tiny">Opcional. Podéis dejarlo y seguir sin hotel.</p>
 
-            <div className="wiz-block nested">
-              <h3 className="wiz-block-title">Horarios de vuelo</h3>
-              <div className="grid-2">
-                <label className="field">
-                  <span>Hora del vuelo de llegada</span>
-                  <input
-                    type="time"
-                    value={wizard.arrivalTime}
-                    onChange={(e) => patchWizard({ arrivalTime: e.target.value })}
-                  />
-                </label>
-                <label className="field">
-                  <span>Hora del vuelo de salida</span>
-                  <input
-                    type="time"
-                    value={wizard.departureTime}
-                    onChange={(e) => patchWizard({ departureTime: e.target.value })}
-                  />
-                </label>
-              </div>
+            <div className="grid-2">
+              <label className="field">
+                <span>Vuelo llegada</span>
+                <input
+                  type="time"
+                  value={wizard.arrivalTime}
+                  onChange={(e) => patchWizard({ arrivalTime: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span>Vuelo salida</span>
+                <input
+                  type="time"
+                  value={wizard.departureTime}
+                  onChange={(e) => patchWizard({ departureTime: e.target.value })}
+                />
+              </label>
             </div>
 
-            <div className="wiz-block nested">
-              <h3 className="wiz-block-title">Aeropuerto</h3>
+            <div className="wiz-more-section">
+              <p className="wiz-section-label">Aeropuerto</p>
               {loadingAirports && <p className="muted tiny">Buscando aeropuertos…</p>}
               {airports.length > 0 ? (
                 <ul className="airport-chips">
@@ -780,7 +754,6 @@ export function WizardPage() {
                             {a.name}
                             {a.code ? ` · ${a.code}` : ''}
                           </strong>
-                          {a.blurb && <span className="muted tiny">{a.blurb}</span>}
                         </button>
                       </li>
                     )
@@ -788,20 +761,13 @@ export function WizardPage() {
                 </ul>
               ) : (
                 !loadingAirports && (
-                  <p className="muted tiny">
-                    No hay lista fija para este destino; podéis seguir sin aeropuerto.
-                  </p>
+                  <p className="muted tiny">Sin lista fija; podéis seguir sin aeropuerto.</p>
                 )
-              )}
-              {wizard.airportPick && (
-                <p className="hint-box dest-confirmed">
-                  <strong>Aeropuerto:</strong> {wizard.airportPick.name}
-                </p>
               )}
             </div>
 
-            <div className="wiz-block nested">
-              <h3 className="wiz-block-title">Hotel o barrio</h3>
+            <div className="wiz-more-section">
+              <p className="wiz-section-label">Hotel o barrio</p>
               <label className="field">
                 <span>Buscar o pegar enlace de Maps</span>
                 <input
@@ -813,20 +779,13 @@ export function WizardPage() {
                       hotelSkipped: false,
                     })
                   }
-                  placeholder={`Nombre, o pegá un enlace de Maps (maps.app.goo.gl/…)`}
+                  placeholder="Nombre o enlace Maps…"
                   autoComplete="off"
                 />
               </label>
-              {searchingHotel && (
-                <p className="muted tiny">
-                  {isGoogleMapsUrl(wizard.hotelQuery)
-                    ? 'Abriendo enlace de Google Maps…'
-                    : 'Buscando en mapas…'}
-                </p>
-              )}
+              {searchingHotel && <p className="muted tiny">Buscando…</p>}
               {hotelSuggestions.length > 0 && !wizard.hotelPick && (
                 <div className="dest-dropdown">
-                  <p className="dest-dropdown-label">Selecciona para confirmar</p>
                   <ul className="suggest-cities">
                     {hotelSuggestions.map((s) => (
                       <li key={s.label + s.lat}>
@@ -853,7 +812,7 @@ export function WizardPage() {
               {wizard.hotelPick && (
                 <>
                   <div className="hint-box dest-confirmed">
-                    <strong>Hotel confirmado:</strong> {wizard.hotelPick.name}
+                    <strong>{wizard.hotelPick.name}</strong>
                     <button
                       type="button"
                       className="btn ghost sm"
@@ -888,7 +847,7 @@ export function WizardPage() {
                         isHotel: true,
                       },
                     ]}
-                    height="180px"
+                    height="160px"
                     showLegs={Boolean(wizard.airportPick)}
                     showLegend={false}
                     defaultCenter={{ lat: wizard.hotelPick.lat, lng: wizard.hotelPick.lng }}
@@ -897,12 +856,8 @@ export function WizardPage() {
               )}
 
               {wizard.hotelSkipped && !wizard.hotelPick && (
-                <p className="hint-box">Seguiréis sin hotel fijado (se puede añadir luego).</p>
+                <p className="muted tiny">Sin hotel fijado — se puede añadir luego.</p>
               )}
-
-              <p className="muted tiny">
-                Tip: pegá cualquier enlace de Google Maps y lo confirmamos solo.
-              </p>
 
               {!wizard.hotelPick && (
                 <button
@@ -916,7 +871,7 @@ export function WizardPage() {
                 </button>
               )}
             </div>
-          </div>
+          </details>
 
           <div className="wiz-actions">
             <button
@@ -933,8 +888,8 @@ export function WizardPage() {
 
       {step === 1 && (
         <section className="wiz-stage">
-          <h2 className="wiz-title">Qué te apetece y cómo viajar</h2>
-          <p className="muted">Elegí un estilo o armá con las categorías, luego el ritmo para moverte.</p>
+          <h2 className="wiz-title">¿Cómo lo vivís?</h2>
+          <p className="muted wiz-stage-lede">Un estilo, cómo moveros y listo.</p>
 
           <div className="wiz-hero-presets">
             {PRESETS.map((p) => (
@@ -962,81 +917,9 @@ export function WizardPage() {
             ))}
           </div>
 
-          <p className="wiz-section-label">O tocá categorías</p>
-          <div className="vibe-grid">
-            {VIBE_BUCKETS.map((b) => {
-              const on = bucketIsOn(wizard.preferences, b.keys)
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  className={on ? 'vibe-card on' : 'vibe-card'}
-                  onClick={() => {
-                    setSelectedPreset(null)
-                    patchWizard({ preferences: toggleBucketPrefs(wizard.preferences, b.keys) })
-                  }}
-                >
-                  <strong>{b.label}</strong>
-                  <span>{b.hint}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          <details className="wiz-fine">
-            <summary>Afinar gustos uno a uno</summary>
-            <div className="wiz-fine-chips">
-              {FINE_PREF_KEYS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={wizard.preferences[key] ? 'chip on' : 'chip'}
-                  title={PREF_HINTS[key]}
-                  onClick={() => {
-                    setSelectedPreset(null)
-                    togglePref(key)
-                  }}
-                >
-                  {PREFERENCE_LABELS[key]}
-                </button>
-              ))}
-            </div>
-          </details>
-
-          <p className="hint-box">
-            Activo: {activePrefs.map((k) => PREFERENCE_LABELS[k]).join(', ') || 'nada aún'}
-          </p>
-
-          <div className="style-pack-grid">
-            {STYLE_PACKS.map((pack) => {
-              const on =
-                wizard.routeStyle.pace === pack.pace &&
-                wizard.routeStyle.explore === pack.explore
-              return (
-                <button
-                  key={pack.id}
-                  type="button"
-                  className={on ? 'style-pack on' : 'style-pack'}
-                  onClick={() =>
-                    patchWizard({
-                      routeStyle: {
-                        ...wizard.routeStyle,
-                        pace: pack.pace,
-                        explore: pack.explore,
-                      },
-                    })
-                  }
-                >
-                  <strong>{pack.title}</strong>
-                  <span>{pack.desc}</span>
-                </button>
-              )
-            })}
-          </div>
-
           <div className="wiz-pill-block">
-            <p className="wiz-section-label">Cómo moverte</p>
-            <div className="wiz-pills">
+            <p className="wiz-section-label">Cómo moveros</p>
+            <div className="wiz-pills wiz-pills-wrap">
               {MOBILITY_OPTIONS.map((o) => (
                 <button
                   key={o.value}
@@ -1076,8 +959,77 @@ export function WizardPage() {
             </div>
           </div>
 
-          <details className="wiz-fine">
-            <summary>Opciones avanzadas</summary>
+          <details className="wiz-more">
+            <summary>Afinar más</summary>
+            <p className="muted tiny">Categorías, ritmo y opciones extra.</p>
+
+            <div className="vibe-grid">
+              {VIBE_BUCKETS.map((b) => {
+                const on = bucketIsOn(wizard.preferences, b.keys)
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className={on ? 'vibe-card on' : 'vibe-card'}
+                    onClick={() => {
+                      setSelectedPreset(null)
+                      patchWizard({ preferences: toggleBucketPrefs(wizard.preferences, b.keys) })
+                    }}
+                  >
+                    <strong>{b.label}</strong>
+                    <span>{b.hint}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="style-pack-grid">
+              {STYLE_PACKS.map((pack) => {
+                const on =
+                  wizard.routeStyle.pace === pack.pace &&
+                  wizard.routeStyle.explore === pack.explore
+                return (
+                  <button
+                    key={pack.id}
+                    type="button"
+                    className={on ? 'style-pack on' : 'style-pack'}
+                    onClick={() =>
+                      patchWizard({
+                        routeStyle: {
+                          ...wizard.routeStyle,
+                          pace: pack.pace,
+                          explore: pack.explore,
+                        },
+                      })
+                    }
+                  >
+                    <strong>{pack.title}</strong>
+                    <span>{pack.desc}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <details className="wiz-fine">
+              <summary>Gustos uno a uno</summary>
+              <div className="wiz-fine-chips">
+                {FINE_PREF_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={wizard.preferences[key] ? 'chip on' : 'chip'}
+                    title={PREF_HINTS[key]}
+                    onClick={() => {
+                      setSelectedPreset(null)
+                      togglePref(key)
+                    }}
+                  >
+                    {PREFERENCE_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            </details>
+
             <label className="check">
               <input
                 type="checkbox"
@@ -1091,7 +1043,7 @@ export function WizardPage() {
                   })
                 }
               />
-              Priorizar centro en el plan sugerido
+              Priorizar centro
             </label>
             <label className="check">
               <input
@@ -1118,14 +1070,9 @@ export function WizardPage() {
                   })
                 }
               />
-              Proponer paradas extra entre sitios
+              Paradas extra entre sitios
             </label>
           </details>
-
-          <p className="hint-box">
-            Resumen: {preview}
-            {!styleReady ? ' · Falta ritmo, movilidad o comida.' : ''}
-          </p>
 
           <div className="wiz-actions">
             <button type="button" className="btn ghost" onClick={() => go(0)}>
