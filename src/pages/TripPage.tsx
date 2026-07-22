@@ -222,6 +222,48 @@ export function TripPage({ tripId }: { tripId: string }) {
           </div>
         ) : null}
 
+        <div className="chaos-bar day-quick">
+          <button
+            type="button"
+            className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
+            onClick={() => setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))}
+          >
+            Restaurantes
+          </button>
+          <button
+            type="button"
+            className={venueKind === 'hotel' ? 'chip on' : 'chip'}
+            onClick={() => setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))}
+          >
+            Hoteles
+          </button>
+          {trip.logistics?.hotel ? (
+            <a
+              className="chip"
+              href={hotelBookingUrl({
+                name: trip.logistics.hotel.name,
+                city: trip.city.name,
+                lat: trip.logistics.hotel.lat,
+                lng: trip.logistics.hotel.lng,
+              })}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Booking · {trip.logistics.hotel.name.slice(0, 18)}
+            </a>
+          ) : null}
+        </div>
+
+        {venueKind && (
+          <VenueFinder
+            kind={venueKind}
+            lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
+            lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
+            city={trip.city.name}
+            onClose={() => setVenueKind(null)}
+          />
+        )}
+
         <section className="section trip-days">
           <h2>Días</h2>
           <ul className="day-list visual">
@@ -318,49 +360,7 @@ export function TripPage({ tripId }: { tripId: string }) {
       <details className="more-panel">
         <summary>Más</summary>
 
-        <div className="chaos-bar day-quick" style={{ marginTop: '0.5rem' }}>
-          <button
-            type="button"
-            className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
-            onClick={() => setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))}
-          >
-            Restaurantes
-          </button>
-          <button
-            type="button"
-            className={venueKind === 'hotel' ? 'chip on' : 'chip'}
-            onClick={() => setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))}
-          >
-            Hoteles
-          </button>
-          {trip.logistics?.hotel ? (
-            <a
-              className="chip"
-              href={hotelBookingUrl({
-                name: trip.logistics.hotel.name,
-                city: trip.city.name,
-                lat: trip.logistics.hotel.lat,
-                lng: trip.logistics.hotel.lng,
-              })}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Booking · {trip.logistics.hotel.name.slice(0, 18)}
-            </a>
-          ) : null}
-        </div>
-
-        {venueKind && (
-          <VenueFinder
-            kind={venueKind}
-            lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
-            lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
-            city={trip.city.name}
-            onClose={() => setVenueKind(null)}
-          />
-        )}
-
-        <div className="budget-box" style={{ marginTop: '1rem' }}>
+        <div className="budget-box" style={{ marginTop: '0.5rem' }}>
           <strong>Presupuesto orientativo</strong>
           <p>
             ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/persona/día · total ~{' '}

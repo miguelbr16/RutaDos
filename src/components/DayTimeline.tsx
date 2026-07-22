@@ -139,6 +139,90 @@ export function DayTimeline({
                 </div>
               )}
 
+              {!stop.isHotel && (
+                <div className="tl-quick-actions">
+                  <a
+                    className="btn ghost sm"
+                    href={googleMapsPlaceUrl(stop.lat, stop.lng, stop.name)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Maps
+                  </a>
+                  {stop.listingKind === 'hotel' ? (
+                    <a
+                      className="btn primary sm"
+                      href={hotelBookingUrl({
+                        name: stop.name,
+                        lat: stop.lat,
+                        lng: stop.lng,
+                      })}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Booking
+                    </a>
+                  ) : null}
+                  {(stop.category === 'food' ||
+                    stop.category === 'cafe' ||
+                    stop.listingKind === 'restaurant') && (
+                    <a
+                      className="btn primary sm"
+                      href={restaurantReserveUrl({
+                        name: stop.name,
+                        lat: stop.lat,
+                        lng: stop.lng,
+                        website: stop.website,
+                      })}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Reservar
+                    </a>
+                  )}
+                  {(stop.category === 'museum' ||
+                    stop.category === 'monument' ||
+                    stop.category === 'must_see' ||
+                    stop.category === 'show') && (
+                    <a
+                      className="btn ghost sm"
+                      href={restaurantWebUrl({
+                        name: stop.name,
+                        lat: stop.lat,
+                        lng: stop.lng,
+                        website: stop.website,
+                      })}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {stop.website ? 'Web / entradas' : 'Info'}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {stop.isHotel && (
+                <div className="tl-quick-actions">
+                  <a
+                    className="btn primary sm"
+                    href={hotelBookingUrl({
+                      name: stop.name,
+                      lat: stop.lat,
+                      lng: stop.lng,
+                    })}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Booking
+                  </a>
+                </div>
+              )}
+
               {open && (
                 <div className="tl-details">
                   {!stop.isHotel && (

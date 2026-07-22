@@ -721,10 +721,13 @@ export function WizardPage() {
             )}
           </div>
 
-          <details className="wiz-optional">
-            <summary>Llegada y dónde dormís (opcional)</summary>
+          <div className="wiz-block wiz-logistics">
+            <h3 className="wiz-block-title">Llegada y dónde dormís</h3>
+            <p className="muted tiny">
+              Horarios, aeropuerto y hotel o barrio. Podéis seguir sin hotel si aún no lo sabéis.
+            </p>
 
-            <div className="wiz-block">
+            <div className="wiz-block nested">
               <h3 className="wiz-block-title">Horarios de vuelo</h3>
               <div className="grid-2">
                 <label className="field">
@@ -746,7 +749,7 @@ export function WizardPage() {
               </div>
             </div>
 
-            <div className="wiz-block">
+            <div className="wiz-block nested">
               <h3 className="wiz-block-title">Aeropuerto</h3>
               {loadingAirports && <p className="muted tiny">Buscando aeropuertos…</p>}
               {airports.length > 0 ? (
@@ -797,7 +800,7 @@ export function WizardPage() {
               )}
             </div>
 
-            <div className="wiz-block">
+            <div className="wiz-block nested">
               <h3 className="wiz-block-title">Hotel o barrio</h3>
               <label className="field">
                 <span>Buscar o pegar enlace de Maps</span>
@@ -907,14 +910,13 @@ export function WizardPage() {
                   className="btn ghost sm"
                   onClick={() => {
                     patchWizard({ hotelSkipped: true, hotelPick: null })
-                    go(1)
                   }}
                 >
                   Seguir sin hotel
                 </button>
               )}
             </div>
-          </details>
+          </div>
 
           <div className="wiz-actions">
             <button

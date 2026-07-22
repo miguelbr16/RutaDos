@@ -66,12 +66,34 @@ export function HomePage() {
         </p>
       )}
 
-      <header className="hero home-hero simple">
+      <header className="hero home-hero">
+        <div className="hero-plane" aria-hidden>
+          <svg className="hero-route" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#2a8f7a" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#e08a3c" stopOpacity="0.75" />
+              </linearGradient>
+            </defs>
+            <path
+              className="hero-path"
+              d="M40 320 C120 280 160 200 260 190 C360 180 400 260 480 240 C580 215 620 120 720 90"
+              fill="none"
+              stroke="url(#routeGrad)"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+            />
+            <circle className="hero-pin hero-pin-a" cx="40" cy="320" r="7" />
+            <circle className="hero-pin hero-pin-b" cx="480" cy="240" r="7" />
+            <circle className="hero-pin hero-pin-c" cx="720" cy="90" r="9" />
+          </svg>
+        </div>
+
         <div className="hero-copy">
           <p className="brand">RutaDos</p>
-          <h1>Tu viaje, a tu ritmo</h1>
+          <h1>Planifica el viaje. Vive el día.</h1>
           <p className="lede">
-            Elegí destino y gustos. Te armamos un plan por días, claro y fácil de seguir.
+            Destino, gustos y un plan por días con mapa, metro, reservas y ruta lista para salir.
           </p>
           <div className="hero-cta">
             <button type="button" className="btn primary" onClick={startWizard}>
