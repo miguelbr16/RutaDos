@@ -91,6 +91,8 @@ export interface TripLogistics {
     lat: number
     lng: number
   } | null
+  /** Usuario pulsó «Seguir sin hotel» en el wizard */
+  hotelSkipped?: boolean
 }
 
 export interface GeoPlace {

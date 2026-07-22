@@ -72,6 +72,12 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const [packPreview, setPackPreview] = useState(false)
   const [weather, setWeather] = useState<DayWeather | null>(null)
   const [venueKind, setVenueKind] = useState<VenueKind | null>(null)
+  const [mealNear, setMealNear] = useState<{
+    lat: number
+    lng: number
+    meal: 'lunch' | 'dinner'
+    nearName: string
+  } | null>(null)
   const [tiredOpen, setTiredOpen] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
 
@@ -340,9 +346,10 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       <div className="chaos-bar day-quick">
         <button
           type="button"
-          className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
+          className={venueKind === 'restaurant' && !mealNear ? 'chip on' : 'chip'}
           onClick={() => {
             setTiredOpen(false)
+            setMealNear(null)
             setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))
           }}
         >
@@ -353,6 +360,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           className={venueKind === 'hotel' ? 'chip on' : 'chip'}
           onClick={() => {
             setTiredOpen(false)
+            setMealNear(null)
             setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))
           }}
         >
@@ -414,13 +422,21 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         />
       )}
 
-      {venueKind && (
+      {(venueKind || mealNear) && (
         <VenueFinder
-          kind={venueKind}
-          lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
-          lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
+          kind={venueKind ?? 'restaurant'}
+          lat={mealNear?.lat ?? trip.logistics?.hotel?.lat ?? trip.city.lat}
+          lng={mealNear?.lng ?? trip.logistics?.hotel?.lng ?? trip.city.lng}
           city={trip.city.name}
-          onClose={() => setVenueKind(null)}
+          nearLabel={
+            mealNear
+              ? `${mealNear.meal === 'lunch' ? 'Comida' : 'Cena'} cerca de ${mealNear.nearName}`
+              : undefined
+          }
+          onClose={() => {
+            setVenueKind(null)
+            setMealNear(null)
+          }}
           onAdd={(v: NearbyVenue) => {
             const place: GeoPlace = {
               id: v.id,
@@ -434,11 +450,17 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
               website: v.website,
               phone: v.phone,
               listingKind: v.kind === 'hotel' ? 'hotel' : 'restaurant',
-              bestSlot: v.kind === 'hotel' ? 'morning' : 'lunch',
+              bestSlot:
+                v.kind === 'hotel'
+                  ? 'morning'
+                  : mealNear?.meal === 'dinner'
+                    ? 'evening'
+                    : 'lunch',
             }
             addSuggestedToDay(tripId, dayId, place)
             setMsg(`Añadido: ${v.name}`)
             setVenueKind(null)
+            setMealNear(null)
           }}
         />
       )}
@@ -553,6 +575,16 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
             const s = ordered.find((x) => x.id === stopId)
             deferStopToLater(tripId, dayId, stopId)
             if (s) setMsg(`“${s.name}” para otro día.`)
+          }}
+          onFindMeals={({ lat, lng, meal, nearName }) => {
+            setTiredOpen(false)
+            setVenueKind('restaurant')
+            setMealNear({ lat, lng, meal, nearName })
+            setMsg(
+              meal === 'lunch'
+                ? `Comida cerca de ${nearName.slice(0, 28)}`
+                : `Cena cerca de ${nearName.slice(0, 28)}`,
+            )
           }}
         />
       </section>

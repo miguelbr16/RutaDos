@@ -633,8 +633,12 @@ a {
   gap: 0.85rem;
 }
 
+.trip-shell-stack {
+  grid-template-columns: 1fr;
+}
+
 @media (min-width: 900px) {
-  .trip-shell {
+  .trip-shell:not(.trip-shell-stack) {
     grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.2fr);
     gap: 1rem;
     align-items: start;
@@ -645,6 +649,116 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+}
+
+.trip-transit-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.trip-transit-hint {
+  margin: -0.15rem 0 0;
+}
+
+.hotel-suggest-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--sand) 45%, var(--line));
+  background: color-mix(in srgb, var(--sand) 18%, #fff);
+}
+
+.hotel-suggest-banner p {
+  margin: 0.2rem 0 0;
+}
+
+.hotel-suggest-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.trip-days.compact-summary h2 {
+  margin-bottom: 0.15rem;
+}
+
+.trip-days .section-lede {
+  margin: 0 0 0.65rem;
+}
+
+.day-list.compact-summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.day-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.day-summary-main {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.day-summary-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+}
+
+.day-summary-top strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.day-summary-names {
+  margin: 0.2rem 0 0;
+  line-height: 1.35;
+}
+
+.day-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+  .day-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .day-summary-actions {
+    justify-content: stretch;
+  }
+
+  .day-summary-actions .btn {
+    flex: 1;
+  }
 }
 
 .chaos-bar.tight {

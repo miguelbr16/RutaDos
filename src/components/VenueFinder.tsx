@@ -7,11 +7,13 @@ type Props = {
   lat: number
   lng: number
   city?: string
+  /** Contexto opcional (ej. «cerca de Buckingham Palace · comida») */
+  nearLabel?: string
   onClose: () => void
   onAdd?: (v: NearbyVenue) => void
 }
 
-export function VenueFinder({ kind, lat, lng, city, onClose, onAdd }: Props) {
+export function VenueFinder({ kind, lat, lng, city, nearLabel, onClose, onAdd }: Props) {
   const [items, setItems] = useState<NearbyVenue[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
@@ -32,7 +34,11 @@ export function VenueFinder({ kind, lat, lng, city, onClose, onAdd }: Props) {
   }, [kind, lat, lng, city])
 
   const title =
-    kind === 'hotel' ? 'Hoteles cerca' : kind === 'cafe' ? 'Cafés cerca' : 'Restaurantes cerca'
+    kind === 'hotel'
+      ? 'Hoteles cerca'
+      : kind === 'cafe'
+        ? 'Cafés cerca'
+        : 'Restaurantes cerca'
 
   return (
     <section className="venue-finder" aria-label={title}>
@@ -42,6 +48,7 @@ export function VenueFinder({ kind, lat, lng, city, onClose, onAdd }: Props) {
           Cerrar
         </button>
       </div>
+      {nearLabel ? <p className="muted tiny">{nearLabel}</p> : null}
       <p className="muted tiny">
         Datos OpenStreetMap. Priorizamos sitios con web oficial; reserva vía su web o búsqueda
         {kind === 'hotel' ? ' en Booking' : ' “reservar mesa”'}.
@@ -79,7 +86,7 @@ export function VenueFinder({ kind, lat, lng, city, onClose, onAdd }: Props) {
               ) : null}
               {onAdd ? (
                 <button type="button" className="btn ghost sm" onClick={() => onAdd(v)}>
-                  + Plan
+                  {kind === 'hotel' ? 'Elegir' : '+ Plan'}
                 </button>
               ) : null}
             </div>

@@ -202,6 +202,12 @@ interface AppState {
     patch: { preferences?: Preferences; routeStyle?: Partial<RouteStyle> },
     opts?: { rediscover?: boolean },
   ) => Promise<void>
+  /** Fijar hotel del viaje (p.ej. tras «Seguir sin hotel»). */
+  setTripHotel: (
+    tripId: string,
+    hotel: { name: string; lat: number; lng: number; query?: string } | null,
+    opts?: { clearSkipped?: boolean },
+  ) => void
 }
 
 function todayISO() {
@@ -378,6 +384,7 @@ export const useAppStore = create<AppState>()(
                   lng: wizard.airportPick.lng,
                 }
               : null,
+            hotelSkipped: Boolean(wizard.hotelSkipped && !wizard.hotelPick),
           }
 
           if (wizard.hotelPick) {
@@ -389,6 +396,7 @@ export const useAppStore = create<AppState>()(
                 lat: wizard.hotelPick.lat,
                 lng: wizard.hotelPick.lng,
               },
+              hotelSkipped: false,
             }
           } else if (wizard.hotelQuery.trim()) {
             const hotelGeo = await geocodeHotel(wizard.hotelQuery.trim(), city.name)
@@ -400,6 +408,7 @@ export const useAppStore = create<AppState>()(
                 lat: hotelGeo.lat,
                 lng: hotelGeo.lng,
               },
+              hotelSkipped: false,
             }
           }
 
@@ -887,6 +896,31 @@ export const useAppStore = create<AppState>()(
             error: err instanceof Error ? err.message : 'No se pudo rearmar el plan',
           })
         }
+      },
+
+      setTripHotel: (tripId, hotel, opts) => {
+        const trip = get().trips.find((t) => t.id === tripId)
+        if (!trip) return
+        const next: Trip = {
+          ...trip,
+          logistics: {
+            ...(trip.logistics ?? DEFAULT_LOGISTICS),
+            hotel: hotel
+              ? {
+                  name: hotel.name,
+                  query: hotel.query ?? hotel.name,
+                  lat: hotel.lat,
+                  lng: hotel.lng,
+                }
+              : null,
+            hotelSkipped: hotel || opts?.clearSkipped ? false : trip.logistics?.hotelSkipped,
+          },
+          updatedAt: new Date().toISOString(),
+        }
+        set((s) => ({
+          trips: s.trips.map((t) => (t.id === tripId ? next : t)),
+        }))
+        scheduleSync(next)
       },
 
       importTrips: (trips) =>

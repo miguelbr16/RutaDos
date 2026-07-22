@@ -1,13 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  CATEGORY_LABELS,
   DEFAULT_PREFERENCES,
   PREFERENCE_LABELS,
-  TRANSIT_MODE_LABELS,
   type PreferenceKey,
   type Preferences,
   type RouteStyle,
-  type TransitMode,
 } from '../types'
 import { useAppStore } from '../store'
 import { TripMap } from '../components/TripMap'
@@ -29,11 +26,12 @@ import { createTripShareToken, shareUrlForToken } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { googleMapsDirectionsUrl } from '../lib/mapsUrl'
 import { prefsSummaryLine } from '../lib/prefPlan'
-import { hotelBookingUrl, placeQuickLinks } from '../lib/bookingLinks'
+import { hotelBookingUrl } from '../lib/bookingLinks'
 import { VenueFinder } from '../components/VenueFinder'
 import type { VenueKind } from '../lib/bookingLinks'
 import { openTelegramBot } from '../lib/copilot'
 import { loadOfflineDay } from '../lib/offlineDay'
+import { genericGuide, getCityGuide } from '../lib/cityGuides'
 
 const STYLE_KEYS: PreferenceKey[] = [
   'museums',
@@ -58,6 +56,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   const setView = useAppStore((s) => s.setView)
   const mergePlacesIntoTrip = useAppStore((s) => s.mergePlacesIntoTrip)
   const replanTripStyle = useAppStore((s) => s.replanTripStyle)
+  const setTripHotel = useAppStore((s) => s.setTripHotel)
   const generating = useAppStore((s) => s.generating)
 
   const [importOpen, setImportOpen] = useState(false)
@@ -74,6 +73,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [draftFood, setDraftFood] = useState<RouteStyle['foodBudget'] | null>(null)
   const [rediscover, setRediscover] = useState(true)
   const [venueKind, setVenueKind] = useState<VenueKind | null>(null)
+  const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
 
   if (!trip) {
@@ -91,6 +91,16 @@ export function TripPage({ tripId }: { tripId: string }) {
   const budget = estimateFromTrip(trip)
   const offlinePack = loadOfflineDay()
   const offlineForThisTrip = offlinePack?.tripId === trip.id ? offlinePack : null
+  const guide = getCityGuide(trip.city.name, trip.city.displayName) ?? genericGuide(trip.city.name)
+  const showHotelSuggest =
+    Boolean(trip.logistics?.hotelSkipped) && !trip.logistics?.hotel && !hotelBannerDismissed
+
+  useEffect(() => {
+    if (trip.logistics?.hotelSkipped && !trip.logistics?.hotel) {
+      setVenueKind('hotel')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip.id, trip.logistics?.hotelSkipped, trip.logistics?.hotel])
 
   function exportTripJson() {
     const blob = new Blob([JSON.stringify(trip, null, 2)], { type: 'application/json' })
@@ -394,9 +404,9 @@ export function TripPage({ tripId }: { tripId: string }) {
         </p>
       </header>
 
-      <div className="trip-shell">
+      <div className="trip-shell trip-shell-stack">
         <div className="trip-map-col">
-          <TripMap stops={allStops.slice(0, 40)} height="180px" showLegend />
+          <TripMap stops={allStops.slice(0, 40)} height="220px" showLegend />
           {offlineForThisTrip ? (
             <div className="offline-banner ok compact">
               <strong>Offline · {offlineForThisTrip.dayLabel}</strong>
@@ -415,6 +425,84 @@ export function TripPage({ tripId }: { tripId: string }) {
               </button>
             </div>
           ) : null}
+
+          <div className="trip-transit-strip" aria-label="Transporte">
+            <a
+              className="btn ghost sm"
+              href={googleMapsDirectionsUrl(allStops.slice(0, 10), { mode: 'transit' })}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Metro / bus
+            </a>
+            <a
+              className="btn ghost sm"
+              href={googleMapsDirectionsUrl(allStops.slice(0, 10), { mode: 'driving' })}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Taxi / coche
+            </a>
+            <a
+              className="btn ghost sm"
+              href={guide.transportTicketUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Billetes
+            </a>
+            {guide.transportMapUrl ? (
+              <a
+                className="btn ghost sm"
+                href={guide.transportMapUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Mapa red
+              </a>
+            ) : null}
+            <a
+              className="btn ghost sm"
+              href={googleMapsDirectionsUrl(allStops.slice(0, 10), { mode: 'walking' })}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Andando
+            </a>
+          </div>
+          <p className="muted tiny trip-transit-hint">{guide.transportTitle}</p>
+
+          {showHotelSuggest ? (
+            <div className="hotel-suggest-banner">
+              <div>
+                <strong>¿Dónde dormir?</strong>
+                <p className="muted tiny">
+                  Generaste el viaje sin hotel. Te sugerimos sitios cerca del centro de la ruta.
+                </p>
+              </div>
+              <div className="hotel-suggest-actions">
+                <button
+                  type="button"
+                  className="btn primary sm"
+                  onClick={() => setVenueKind('hotel')}
+                >
+                  Ver hoteles
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => {
+                    setHotelBannerDismissed(true)
+                    setTripHotel(trip.id, null, { clearSkipped: true })
+                    if (venueKind === 'hotel') setVenueKind(null)
+                  }}
+                >
+                  Ahora no
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="chaos-bar day-quick tight">
             <button
               type="button"
@@ -453,13 +541,27 @@ export function TripPage({ tripId }: { tripId: string }) {
               lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
               city={trip.city.name}
               onClose={() => setVenueKind(null)}
+              onAdd={
+                venueKind === 'hotel'
+                  ? (v) => {
+                      setTripHotel(trip.id, {
+                        name: v.name,
+                        lat: v.lat,
+                        lng: v.lng,
+                      })
+                      setHotelBannerDismissed(true)
+                      setVenueKind(null)
+                    }
+                  : undefined
+              }
             />
           )}
         </div>
 
-        <section className="trip-days dense">
+        <section className="trip-days compact-summary">
           <h2>Días</h2>
-          <ul className="day-list dense">
+          <p className="muted tiny section-lede">Resumen — abrí un día para el detalle y reservas.</p>
+          <ul className="day-list compact-summary">
             {trip.days.map((day) => {
               const visits = [...day.stops]
                 .filter((s) => !s.isHotel)
@@ -470,106 +572,62 @@ export function TripPage({ tripId }: { tripId: string }) {
                   : day.intensity === 'departure'
                     ? 'Salida'
                     : null
-              const preview = visits.slice(0, 4)
-              const extra = visits.length - preview.length
+              const names = visits
+                .slice(0, 3)
+                .map((s) => s.name.replace(/\s*\/.*$/, '').slice(0, 22))
+                .join(' · ')
+              const extra = visits.length - 3
               return (
                 <li key={day.id}>
-                  <article className="day-row">
+                  <article className="day-summary">
                     <button
                       type="button"
-                      className="day-row-head"
+                      className="day-summary-main"
                       onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
                     >
-                      <div className="day-row-title">
+                      <div className="day-summary-top">
                         <strong>{day.label}</strong>
                         <span className="day-meta-pills">
                           {tag ? <span className="day-pill tag">{tag}</span> : null}
                           <span className="day-pill count">
                             {visits.length} sitio{visits.length === 1 ? '' : 's'}
                           </span>
-                          {extra > 0 ? (
-                            <span className="day-pill more">+{extra} más</span>
-                          ) : null}
                         </span>
                       </div>
-                      <span className="day-row-open">Abrir →</span>
+                      {names ? (
+                        <p className="day-summary-names muted tiny">
+                          {names}
+                          {extra > 0 ? ` · +${extra}` : ''}
+                        </p>
+                      ) : (
+                        <p className="day-summary-names muted tiny">Sin paradas</p>
+                      )}
                     </button>
-
-                    {preview.length === 0 ? (
-                      <p className="muted tiny day-row-empty">Sin paradas — tocá Abrir</p>
-                    ) : (
-                      <ul className="day-stop-lines">
-                        {preview.map((s, i) => {
-                          const mode = (s.transitMode || 'walk') as TransitMode
-                          const short = s.name.replace(/\s*\/.*$/, '').slice(0, 32)
-                          const links = placeQuickLinks({
-                            name: s.name,
-                            lat: s.lat,
-                            lng: s.lng,
-                            category: s.category,
-                            listingKind: s.listingKind,
-                            website: s.website,
-                            isHotel: s.isHotel,
-                            city: trip.city.name,
-                          })
-                          return (
-                            <li key={s.id} className="day-stop-line">
-                              <span className="day-stop-n">{i + 1}</span>
-                              <div className="day-stop-info">
-                                <strong>{short}</strong>
-                                <span className="muted tiny">
-                                  {s.suggestedTime ? `${s.suggestedTime}` : ''}
-                                  {s.suggestedTime ? ' · ' : ''}
-                                  {CATEGORY_LABELS[s.category]}
-                                  {i < preview.length - 1
-                                    ? ` · ${TRANSIT_MODE_LABELS[mode]}${
-                                        s.minutesToNext != null ? ` ${s.minutesToNext}'` : ''
-                                      }`
-                                    : ''}
-                                </span>
-                                <span className="day-stop-links">
-                                  {links.map((l) => (
-                                    <a
-                                      key={l.label}
-                                      href={l.href}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className={l.primary ? 'link-pri' : 'link-sec'}
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {l.label}
-                                    </a>
-                                  ))}
-                                </span>
-                              </div>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    )}
-
-                    <div className="day-row-actions">
+                    <div className="day-summary-actions">
                       <a
                         className="btn ghost sm"
-                        href={googleMapsDirectionsUrl(day.stops)}
+                        href={googleMapsDirectionsUrl(day.stops, { mode: 'transit' })}
                         target="_blank"
                         rel="noreferrer"
+                        title="Ruta en transporte público"
                       >
-                        Maps
+                        Metro
+                      </a>
+                      <a
+                        className="btn ghost sm"
+                        href={googleMapsDirectionsUrl(day.stops, { mode: 'driving' })}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Taxi o coche"
+                      >
+                        Taxi
                       </a>
                       <button
                         type="button"
                         className="btn primary sm"
-                        onClick={() => setView({ name: 'onroute', tripId: trip.id, dayId: day.id })}
-                      >
-                        En ruta
-                      </button>
-                      <button
-                        type="button"
-                        className="btn ghost sm"
                         onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
                       >
-                        Ver día
+                        Abrir
                       </button>
                     </div>
                   </article>

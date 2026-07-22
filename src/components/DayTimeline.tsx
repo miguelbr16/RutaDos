@@ -19,6 +19,7 @@ type Props = {
   onRemove: (stopId: string) => void
   onNotes: (stopId: string, notes: string) => void
   onDefer: (stopId: string) => void
+  onFindMeals?: (opts: { lat: number; lng: number; meal: 'lunch' | 'dinner'; nearName: string }) => void
 }
 
 export function DayTimeline({
@@ -30,12 +31,34 @@ export function DayTimeline({
   onRemove,
   onNotes,
   onDefer,
+  onFindMeals,
 }: Props) {
   const [openId, setOpenId] = useState<string | null>(null)
   const [blurb, setBlurb] = useState<PlaceBlurb | null>(null)
   const [blurbLoading, setBlurbLoading] = useState(false)
 
   const openStop = stops.find((s) => s.id === openId) ?? null
+
+  function mealWindow(stop: Stop): 'lunch' | 'dinner' | null {
+    if (stop.isHotel) return null
+    if (stop.slot === 'lunch') return 'lunch'
+    if (stop.slot === 'evening' || stop.slot === 'night') return 'dinner'
+    const t = stop.suggestedTime
+    if (!t) return null
+    const h = Number(t.split(':')[0])
+    if (Number.isFinite(h) && h >= 12 && h < 16) return 'lunch'
+    if (Number.isFinite(h) && h >= 19 && h <= 23) return 'dinner'
+    return null
+  }
+
+  // Una sugerencia de comida/cena por franja (primera parada de esa franja)
+  const mealStopId = new Map<'lunch' | 'dinner', string>()
+  for (const s of stops) {
+    const m = mealWindow(s)
+    if (!m || mealStopId.has(m)) continue
+    if (s.category === 'food' || s.category === 'cafe') continue
+    mealStopId.set(m, s.id)
+  }
 
   useEffect(() => {
     if (!openStop || openStop.isHotel) {
@@ -161,6 +184,40 @@ export function DayTimeline({
                       {l.label}
                     </a>
                   ))}
+                  {onFindMeals && mealStopId.get('lunch') === stop.id ? (
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onFindMeals({
+                          lat: stop.lat,
+                          lng: stop.lng,
+                          meal: 'lunch',
+                          nearName: stop.name,
+                        })
+                      }}
+                    >
+                      Comer cerca
+                    </button>
+                  ) : null}
+                  {onFindMeals && mealStopId.get('dinner') === stop.id ? (
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onFindMeals({
+                          lat: stop.lat,
+                          lng: stop.lng,
+                          meal: 'dinner',
+                          nearName: stop.name,
+                        })
+                      }}
+                    >
+                      Cenar cerca
+                    </button>
+                  ) : null}
                 </div>
               )}
 
