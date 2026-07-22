@@ -1152,6 +1152,306 @@ code {
   margin-bottom: 0.75rem;
 }
 
+.offline-banner strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.offline-banner p {
+  margin: 0;
+  opacity: 0.92;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.offline-banner.ok {
+  background: #1f4d3a;
+}
+
+.offline-banner.warn {
+  background: #5c3a1a;
+}
+
+.offline-pack {
+  margin: 0.75rem 0 1rem;
+}
+
+.offline-pack-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.offline-pack-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.day-hero {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.day-hero h1 {
+  margin: 0.15rem 0;
+  font-size: clamp(1.45rem, 5vw, 1.85rem);
+}
+
+.day-hero.compact h1 {
+  font-size: 1.35rem;
+}
+
+.day-map-wrap {
+  margin: 0 -0.25rem 0.85rem;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.day-primary-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+}
+
+.day-primary-actions .btn:last-child {
+  grid-column: 1 / -1;
+}
+
+.day-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.flash-msg {
+  background: color-mix(in srgb, var(--deep) 8%, transparent);
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-head h2 {
+  margin: 0;
+}
+
+.day-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tl-card {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.tl-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 1.1rem;
+}
+
+.tl-dot {
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  background: var(--deep);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.tl-line {
+  width: 2px;
+  flex: 1;
+  min-height: 1.25rem;
+  background: color-mix(in srgb, var(--deep) 25%, transparent);
+  margin: 0.25rem 0 0;
+}
+
+.tl-body {
+  padding: 0.35rem 0 0.85rem;
+  min-width: 0;
+}
+
+.tl-main {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  gap: 0.65rem;
+  align-items: center;
+  text-align: left;
+  border: 0;
+  background: #fff;
+  border-radius: 14px;
+  padding: 0.45rem;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
+  cursor: pointer;
+}
+
+.tl-photo {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: 11px;
+  display: block;
+}
+
+.tl-photo.placeholder {
+  background: linear-gradient(145deg, #d7e4e0, #bfd2cc);
+}
+
+.tl-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.tl-time-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.tl-time {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--deep);
+}
+
+.tl-name {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.tl-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.tl-chevron {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding-right: 0.25rem;
+}
+
+.tl-leg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0.45rem 0.2rem 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--deep) 6%, #fff);
+  font-size: 0.8rem;
+}
+
+.tl-leg-mode {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tl-leg-link {
+  color: var(--deep);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tl-details {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.45rem 0.2rem;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.tl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tl-card.done .tl-name {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.tl-card.skipped {
+  opacity: 0.55;
+}
+
+.field.compact {
+  margin: 0;
+}
+
+.danger-text {
+  color: #9b2226 !important;
+}
+
+.day-tools {
+  margin-top: 1rem;
+}
+
+.day-tools .panel.nested {
+  margin-top: 0.75rem;
+  box-shadow: none;
+  border: 1px solid var(--line);
+}
+
+.now-card.big {
+  padding: 1rem 1rem 1.1rem;
+}
+
+.onroute-cta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.onroute-cta .btn:first-child {
+  grid-column: 1 / -1;
+}
+
+.onroute-leg {
+  margin-top: 0.75rem;
+}
+
+.checkin-list.compact {
+  margin-top: 0.85rem;
+}
+
 .hours-line {
   margin: 0.2rem 0 0;
   font-size: 0.82rem;

@@ -1,28 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CATEGORY_LABELS, TRANSPORT_LABELS, TRANSIT_MODE_LABELS } from '../types'
+import { CATEGORY_LABELS, TRANSIT_MODE_LABELS } from '../types'
 import { useAppStore } from '../store'
 import { TripMap } from '../components/TripMap'
+import { OfflineStatusBanner } from '../components/OfflineBanner'
 import {
-  dominantTravelMode,
   googleMapsDirectionsUrl,
   googleMapsPlaceUrl,
   googleMapsTransitLegUrl,
   travelModeForTransit,
 } from '../lib/mapsUrl'
-import { saveOfflineDay } from '../lib/offlineDay'
+import { loadOfflineDay, saveOfflineDay, type OfflineDayPack } from '../lib/offlineDay'
 import { hoursForPlace, type PlaceHours } from '../lib/openingHours'
 
 export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const trip = useAppStore((s) => s.trips.find((t) => t.id === tripId))
   const setView = useAppStore((s) => s.setView)
   const setStopVisitStatus = useAppStore((s) => s.setStopVisitStatus)
-  const setStopReaction = useAppStore((s) => s.setStopReaction)
   const deferStopToLater = useAppStore((s) => s.deferStopToLater)
   const chaosReplan = useAppStore((s) => s.chaosReplan)
   const [hours, setHours] = useState<PlaceHours | null>(null)
   const [online, setOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   )
+  const [pack, setPack] = useState<OfflineDayPack | null>(() => loadOfflineDay())
 
   const day = trip?.days.find((d) => d.id === dayId)
 
@@ -38,7 +38,7 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
   }, [])
 
   useEffect(() => {
-    if (trip && day) saveOfflineDay(trip, day)
+    if (trip && day) setPack(saveOfflineDay(trip, day))
   }, [trip, day])
 
   const ordered = useMemo(
@@ -53,6 +53,8 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
   }, [visits])
 
   const current = visits[currentIndex]
+  const next = visits[currentIndex + 1]
+  const doneCount = visits.filter((s) => s.visitStatus === 'done').length
 
   useEffect(() => {
     if (!current || !online) {
@@ -67,17 +69,6 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
       cancelled = true
     }
   }, [current?.id, online])
-  const next = visits[currentIndex + 1]
-  const remaining = current
-    ? ordered.filter((s) => {
-        if (s.isHotel && s.notes === 'end') return true
-        if (s.isHotel) return false
-        const st = s.visitStatus ?? 'pending'
-        return st === 'pending' || s.id === current.id
-      })
-    : []
-  const doneCount = visits.filter((s) => s.visitStatus === 'done').length
-  const deferredCount = trip?.places.filter((p) => p.deferred).length ?? 0
 
   if (!trip || !day) {
     return (
@@ -90,158 +81,66 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
     )
   }
 
-  const mapsMode = dominantTravelMode(ordered)
+  const remaining = current
+    ? ordered.filter((s) => {
+        if (s.isHotel && s.notes === 'end') return true
+        if (s.isHotel) return false
+        const st = s.visitStatus ?? 'pending'
+        return st === 'pending' || s.id === current.id
+      })
+    : []
   const dayDone = !current && visits.length > 0
 
   return (
     <div className="page onroute">
-      {!online && (
-        <p className="offline-banner">
-          Sin conexión — usáis la copia del día guardada en el móvil.
-        </p>
-      )}
+      <OfflineStatusBanner online={online} pack={pack} />
+
       <button
         type="button"
         className="btn ghost sm back"
         onClick={() => setView({ name: 'day', tripId, dayId })}
       >
-        ← Editar día
+        ← Plan del día
       </button>
 
-      <p className="brand small">Check-in · {trip.title}</p>
-      <h1>{day.label}</h1>
-      <p className="muted tiny">
-        {doneCount}/{visits.length} hechas
-        {deferredCount > 0 ? ` · ${deferredCount} para otro día` : ''}
-      </p>
-
-      <div className="toolbar" style={{ marginBottom: '0.75rem' }}>
-        <a
-          className="btn primary sm"
-          href={googleMapsDirectionsUrl(remaining.length ? remaining : ordered)}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Abrir en Maps ({mapsMode === 'transit' ? 'transporte' : mapsMode === 'driving' ? 'coche' : 'a pie'})
-        </a>
-        <button type="button" className="btn ghost sm" onClick={() => chaosReplan(tripId, dayId, 'late')}>
-          Vamos tarde
-        </button>
-        <button type="button" className="btn ghost sm" onClick={() => chaosReplan(tripId, dayId, 'rain')}>
-          Llueve
-        </button>
-        <button
-          type="button"
-          className="btn ghost sm"
-          onClick={() => setView({ name: 'copilot', tripId, dayId })}
-        >
-          Copiloto
-        </button>
-      </div>
+      <header className="day-hero compact">
+        <h1>{day.label}</h1>
+        <p className="muted">
+          {doneCount}/{visits.length} hechas
+        </p>
+      </header>
 
       {dayDone ? (
         <div className="now-card">
-          <h2>Día completado</h2>
-          <p className="muted">
-            Todo lo pendiente está hecho o pospuesto. Los sitios «para otro día» aparecen primero en
-            las recomendaciones de los próximos días.
-          </p>
+          <h2>Listo por hoy</h2>
           <button
             type="button"
             className="btn primary"
             onClick={() => setView({ name: 'day', tripId, dayId })}
           >
-            Volver al día
+            Volver al plan
           </button>
         </div>
       ) : current ? (
         <>
-          <div className="now-card">
-            <span className="muted">
-              Ahora · parada {currentIndex + 1} de {visits.length}
-              {current.suggestedTime ? ` · ~${current.suggestedTime}` : ''}
-            </span>
+          <div className="now-card big">
+            {current.suggestedTime ? (
+              <span className="tl-time">{current.suggestedTime}</span>
+            ) : (
+              <span className="muted tiny">Ahora</span>
+            )}
             <h2>{current.name}</h2>
             <p className="muted">{CATEGORY_LABELS[current.category]}</p>
             {hours && <p className={`hours-line ${hours.status}`}>{hours.label}</p>}
             {current.userNotes && <p className="stop-tip">{current.userNotes}</p>}
+
             {next && (
-              <p className="leg">
-                Siguiente: {next.name}
-                {current.transitMode
-                  ? ` · ${TRANSIT_MODE_LABELS[current.transitMode]}`
-                  : current.transportToNext
-                    ? ` · ${TRANSPORT_LABELS[current.transportToNext]}`
-                    : ''}
-                {current.minutesToNext != null ? ` · ~${current.minutesToNext} min` : ''}
-              </p>
-            )}
-
-            <div className="row gap wrap" style={{ marginTop: '0.75rem' }}>
-              <button
-                type="button"
-                className="btn primary"
-                onClick={() => setStopVisitStatus(tripId, dayId, current.id, 'done')}
-              >
-                Hecho
-              </button>
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => deferStopToLater(tripId, dayId, current.id)}
-              >
-                Para otro día
-              </button>
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => setStopVisitStatus(tripId, dayId, current.id, 'skipped')}
-              >
-                Saltar
-              </button>
-            </div>
-
-            <div className="row gap wrap" style={{ marginTop: '0.5rem' }}>
-              <button
-                type="button"
-                className={`chip ${current.reaction === 'like' ? 'on' : ''}`}
-                onClick={() =>
-                  setStopReaction(
-                    tripId,
-                    dayId,
-                    current.id,
-                    current.reaction === 'like' ? null : 'like',
-                  )
-                }
-              >
-                Me gusta
-              </button>
-              <button
-                type="button"
-                className={`chip ${current.reaction === 'dislike' ? 'on' : ''}`}
-                onClick={() =>
-                  setStopReaction(
-                    tripId,
-                    dayId,
-                    current.id,
-                    current.reaction === 'dislike' ? null : 'dislike',
-                  )
-                }
-              >
-                No quiero
-              </button>
-            </div>
-
-            <div className="row gap wrap" style={{ marginTop: '0.75rem' }}>
-              <a
-                className="btn ghost sm"
-                href={googleMapsPlaceUrl(current.lat, current.lng, current.name)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Navegar aquí
-              </a>
-              {next && (
+              <div className="tl-leg onroute-leg">
+                <span>
+                  Siguiente: {next.name}
+                  {current.transitMode ? ` · ${TRANSIT_MODE_LABELS[current.transitMode]}` : ''}
+                  {current.minutesToNext != null ? ` · ~${current.minutesToNext} min` : ''}
+                </span>
                 <a
                   className="btn ghost sm"
                   href={googleMapsTransitLegUrl(
@@ -252,13 +151,77 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Tramo a siguiente
+                  Cómo llego
                 </a>
-              )}
+              </div>
+            )}
+
+            <div className="onroute-cta">
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => setStopVisitStatus(tripId, dayId, current.id, 'done')}
+              >
+                Hecho
+              </button>
+              <a
+                className="btn ghost"
+                href={googleMapsPlaceUrl(current.lat, current.lng, current.name)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Maps
+              </a>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => deferStopToLater(tripId, dayId, current.id)}
+              >
+                Otro día
+              </button>
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => setStopVisitStatus(tripId, dayId, current.id, 'skipped')}
+              >
+                Saltar
+              </button>
             </div>
           </div>
 
-          <ol className="checkin-list">
+          <div className="chaos-bar day-quick">
+            <button
+              type="button"
+              className="chip"
+              onClick={() => chaosReplan(tripId, dayId, 'late')}
+            >
+              Vamos tarde
+            </button>
+            <button
+              type="button"
+              className="chip"
+              onClick={() => chaosReplan(tripId, dayId, 'rain')}
+            >
+              Llueve
+            </button>
+            <button
+              type="button"
+              className="chip"
+              onClick={() => chaosReplan(tripId, dayId, 'shorter')}
+            >
+              Cansados
+            </button>
+            <a
+              className="chip"
+              href={googleMapsDirectionsUrl(remaining.length ? remaining : ordered)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Resto en Maps
+            </a>
+          </div>
+
+          <ol className="checkin-list compact">
             {visits.map((s) => {
               const st = s.visitStatus ?? 'pending'
               return (
@@ -278,7 +241,7 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
             })}
           </ol>
 
-          <TripMap stops={remaining.length ? remaining : [current]} height="220px" showLegs />
+          <TripMap stops={remaining.length ? remaining : [current]} height="200px" showLegs />
         </>
       ) : (
         <p>No hay paradas en este día.</p>

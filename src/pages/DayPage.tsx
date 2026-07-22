@@ -2,22 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   CATEGORY_LABELS,
   DAY_FOCUS_LABELS,
-  SLOT_LABELS,
-  TRANSIT_MODE_LABELS,
   type DayFocus,
   type GeoPlace,
-  type TimeSlot,
-  type TransitMode,
 } from '../types'
 import { useAppStore } from '../store'
 import { TripMap } from '../components/TripMap'
+import { DayTimeline } from '../components/DayTimeline'
+import { OfflinePackPreview, OfflineStatusBanner } from '../components/OfflineBanner'
 import { filterAlongRoute } from '../lib/discover'
 import {
   fetchWalkingRoute,
   googleMapsDirectionsUrl,
-  googleMapsPlaceUrl,
-  googleMapsTransitLegUrl,
-  travelModeForTransit,
 } from '../lib/mapsUrl'
 import { geocodeCity } from '../lib/geocode'
 import {
@@ -28,7 +23,7 @@ import {
 } from '../lib/exportGmaps'
 import { fetchPlacePhotoUrls } from '../lib/placePhotos'
 import { hoursForPlace, evaluateOpeningHours, type PlaceHours } from '../lib/openingHours'
-import { saveOfflineDay } from '../lib/offlineDay'
+import { loadOfflineDay, saveOfflineDay, type OfflineDayPack } from '../lib/offlineDay'
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
@@ -70,6 +65,9 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const [online, setOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   )
+  const [offlinePack, setOfflinePack] = useState<OfflineDayPack | null>(() => loadOfflineDay())
+  const [toolsOpen, setToolsOpen] = useState(false)
+  const [packPreview, setPackPreview] = useState(false)
 
   const day = trip?.days.find((d) => d.id === dayId)
 
@@ -85,7 +83,10 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   }, [])
 
   useEffect(() => {
-    if (trip && day) saveOfflineDay(trip, day)
+    if (trip && day) {
+      const pack = saveOfflineDay(trip, day)
+      setOfflinePack(pack)
+    }
   }, [trip, day])
 
   useEffect(() => {
@@ -240,15 +241,10 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
     }
   }
 
-  let lastSlot: TimeSlot | undefined
-
   return (
-    <div className="page">
-      {!online && (
-        <p className="offline-banner">
-          Sin conexión — este día está guardado en el móvil para consultarlo offline.
-        </p>
-      )}
+    <div className="page day-page">
+      <OfflineStatusBanner online={online} pack={offlinePack} />
+
       <button
         type="button"
         className="btn ghost sm back"
@@ -257,395 +253,237 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         ← {trip.title}
       </button>
 
-      <header className="trip-hero">
+      <header className="day-hero">
+        <p className="brand small">RutaDos</p>
         <h1>{day.label}</h1>
         <p className="muted">
-          {ordered.length} paradas
+          {ordered.filter((s) => !s.isHotel).length} paradas
           {day.intensity === 'arrival'
             ? ' · llegada'
             : day.intensity === 'departure'
               ? ' · salida'
-              : ' · día completo'}
+              : ''}
+          {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
         </p>
-        {day.note && <p className="day-note">{day.note}</p>}
-        {trip.logistics?.hotel && <p className="muted">Base: {trip.logistics.hotel.name} (ida y vuelta)</p>}
       </header>
 
-      <TripMap stops={mapStops} route={route} height="220px" showLegend showLegs />
-
-      <div className="field" style={{ marginTop: '0.75rem' }}>
-        <span>Enfoque del día</span>
-        <div className="chips">
-          {(['central', 'mixed', 'outskirts'] as DayFocus[]).map((f) => (
-            <button
-              key={f}
-              type="button"
-              className={(day.focus ?? 'central') === f ? 'chip on' : 'chip'}
-              onClick={() => setDayFocus(tripId, dayId, f)}
-            >
-              {DAY_FOCUS_LABELS[f]}
-            </button>
-          ))}
-        </div>
-        <p className="muted tiny">
-          Al cambiar el enfoque se rehace el plan del día (centro vs afueras). Las notas vuestras se
-          pierden en paradas que se sustituyen.
-        </p>
+      <div className="day-map-wrap">
+        <TripMap stops={mapStops} route={route} height="240px" showLegend showLegs />
       </div>
 
-      <div className="toolbar">
+      <div className="day-primary-actions">
         <a
-          className="btn primary sm"
+          className="btn primary"
           href={googleMapsDirectionsUrl(ordered)}
           target="_blank"
           rel="noreferrer"
         >
-          Abrir día en Maps
+          Día en Maps
         </a>
         <button
           type="button"
-          className="btn primary sm"
+          className="btn primary"
           onClick={() => setView({ name: 'onroute', tripId, dayId })}
         >
-          Check-in / En ruta
+          En ruta
         </button>
         <button
           type="button"
-          className="btn ghost sm"
-          onClick={() => setView({ name: 'copilot', tripId, dayId })}
-        >
-          Copiloto
-        </button>
-        <button type="button" className="btn ghost sm" onClick={() => optimizeDay(tripId, dayId)}>
-          Optimizar orden
-        </button>
-        <button
-          type="button"
-          className="btn ghost sm"
-          onClick={() => setView({ name: 'build', tripId, dayId })}
-        >
-          Armar nosotros
-        </button>
-        <button type="button" className="btn ghost sm" onClick={() => setManualOpen((v) => !v)}>
-          + Sitio manual
-        </button>
-        <button
-          type="button"
-          className="btn ghost sm"
+          className="btn ghost"
           onClick={() => {
-            downloadTextFile(
-              `${safeFilename(trip.title)}_${safeFilename(day.label)}.kml`,
-              dayToKml(trip.title, day.label, ordered),
-              'application/vnd.google-earth.kml+xml',
-            )
-            setMsg(
-              `KML del día descargado. Importalo en My Maps (${GOOGLE_MY_MAPS_URL.replace('https://', '')}).`,
-            )
+            if (trip && day) {
+              const pack = saveOfflineDay(trip, day)
+              setOfflinePack(pack)
+              setPackPreview(true)
+              setMsg('Pack offline actualizado: transportes, horas y tramos.')
+            }
           }}
         >
-          Este día → My Maps
+          Guardar offline
         </button>
       </div>
 
-      <div className="chaos-bar">
-        <span className="muted tiny">Si el plan se tuerce:</span>
+      <div className="chaos-bar day-quick">
         <button
           type="button"
-          className="btn ghost sm"
+          className="chip"
           onClick={() => {
             chaosReplan(tripId, dayId, 'late')
-            setMsg('Replan: vais tarde — menos paradas desde media tarde.')
+            setMsg('Replan: vais tarde.')
           }}
         >
           Vamos tarde
         </button>
         <button
           type="button"
-          className="btn ghost sm"
+          className="chip"
           onClick={() => {
             chaosReplan(tripId, dayId, 'rain')
-            setMsg('Replan: lluvia — priorizamos sitios cubiertos.')
+            setMsg('Replan: lluvia.')
           }}
         >
           Llueve
         </button>
         <button
           type="button"
-          className="btn ghost sm"
+          className="chip"
           onClick={() => {
             chaosReplan(tripId, dayId, 'shorter')
-            setMsg('Replan: día más ligero.')
+            setMsg('Replan: día más corto / cansados.')
           }}
         >
-          Día más corto
+          Cansados
+        </button>
+        <button
+          type="button"
+          className="chip"
+          onClick={() => setView({ name: 'copilot', tripId, dayId })}
+        >
+          Copiloto
         </button>
       </div>
-      <p className="muted tiny">
-        «Abrir día en Maps» lleva la ruta ordenada. Check-in marca hecho / para otro día. El replan
-        conserva lo ya marcado como hecho.
-      </p>
 
-      {manualOpen && (
-        <form className="panel" onSubmit={(e) => void submitManual(e)}>
-          <h3>Añadir sitio manual</h3>
-          <label className="field">
-            <span>Nombre</span>
-            <input value={manualName} onChange={(e) => setManualName(e.target.value)} required />
-          </label>
-          <label className="field">
-            <span>Buscar en el mapa</span>
-            <input
-              value={manualQuery}
-              onChange={(e) => setManualQuery(e.target.value)}
-              placeholder={`Ej. British Museum, ${trip.city.name}`}
-            />
-          </label>
-          <label className="field">
-            <span>Notas</span>
-            <input value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} />
-          </label>
-          <button type="submit" className="btn primary" disabled={busy}>
-            {busy ? 'Buscando…' : 'Añadir a este día'}
-          </button>
-        </form>
+      {msg && <p className="flash-msg">{msg}</p>}
+
+      {packPreview && offlinePack && (
+        <OfflinePackPreview pack={offlinePack} />
       )}
 
-      {msg && <p className="muted">{msg}</p>}
+      <section className="section day-plan-section">
+        <div className="section-head">
+          <h2>Plan</h2>
+          <button type="button" className="btn ghost sm" onClick={() => setToolsOpen((v) => !v)}>
+            {toolsOpen ? 'Ocultar opciones' : 'Más opciones'}
+          </button>
+        </div>
 
-      <section className="section">
-        <h2>Plan del día</h2>
-        <ol className="stop-list">
-          {ordered.map((stop, i) => {
-            const showSlot = stop.slot && stop.slot !== lastSlot
-            if (stop.slot) lastSlot = stop.slot
-            const next = ordered[i + 1]
-            return (
-              <li key={stop.id} className="stop-item">
-                {showSlot && stop.slot && (
-                  <div className="slot-banner">{SLOT_LABELS[stop.slot]}</div>
-                )}
-                <div className="stop-row">
-                  <div className="stop-main">
-                    {photoByStop[stop.id]?.[0] || stop.photoUrl ? (
-                      <img
-                        className="stop-photo"
-                        src={photoByStop[stop.id]?.[0] || stop.photoUrl}
-                        alt=""
-                        loading="lazy"
-                      />
-                    ) : (
-                      <span className="num">{i + 1}</span>
-                    )}
-                    <div>
-                      <strong>
-                        {stop.suggestedTime ? `${stop.suggestedTime} · ` : ''}
-                        {stop.name}
-                      </strong>
-                      <div className="muted">
-                        {stop.isHotel ? 'Hotel' : CATEGORY_LABELS[stop.category]}
-                        {stop.sponsored ? ' · partner' : ''}
-                      </div>
-                      {hoursByStop[stop.id] && !stop.isHotel && (
-                        <p
-                          className={`hours-line ${hoursByStop[stop.id].status}`}
-                        >
-                          {hoursByStop[stop.id].label}
-                        </p>
-                      )}
-                      {stop.notes && stop.notes !== 'start' && stop.notes !== 'end' ? (
-                        <p className="stop-tip">{stop.notes}</p>
-                      ) : null}
-                      {!stop.isHotel && (
-                        <label className="stop-user-notes">
-                          <span className="muted tiny">Vuestra nota</span>
-                          <input
-                            value={stop.userNotes ?? ''}
-                            placeholder="Reserva, tip, cerrado…"
-                            onChange={(e) =>
-                              setStopUserNotes(tripId, dayId, stop.id, e.target.value)
-                            }
-                          />
-                        </label>
-                      )}
-                      {!stop.isHotel && (
-                        <div className="row gap wrap" style={{ marginTop: '0.35rem' }}>
-                          <button
-                            type="button"
-                            className={`chip ${stop.reaction === 'like' ? 'on' : ''}`}
-                            onClick={() =>
-                              setStopReaction(
-                                tripId,
-                                dayId,
-                                stop.id,
-                                stop.reaction === 'like' ? null : 'like',
-                              )
-                            }
-                          >
-                            Me gusta
-                          </button>
-                          <button
-                            type="button"
-                            className={`chip ${stop.reaction === 'dislike' ? 'on' : ''}`}
-                            onClick={() =>
-                              setStopReaction(
-                                tripId,
-                                dayId,
-                                stop.id,
-                                stop.reaction === 'dislike' ? null : 'dislike',
-                              )
-                            }
-                          >
-                            No quiero
-                          </button>
-                          <button
-                            type="button"
-                            className="chip"
-                            onClick={() => {
-                              deferStopToLater(tripId, dayId, stop.id)
-                              setMsg(`“${stop.name}” queda para otro día.`)
-                            }}
-                          >
-                            Otro día
-                          </button>
-                          {(stop.visitStatus === 'done' || stop.visitStatus === 'skipped') && (
-                            <span className="muted tiny">
-                              {stop.visitStatus === 'done' ? 'Hecho' : 'Saltado'}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {next && (
-                        <div className="leg">
-                          <div className="mode-row">
-                            <span>→</span>
-                            <select
-                              className="mode-select"
-                              value={stop.transitMode || 'walk'}
-                              onChange={(e) =>
-                                setStopTransitMode(
-                                  tripId,
-                                  dayId,
-                                  stop.id,
-                                  e.target.value as TransitMode,
-                                )
-                              }
-                              aria-label="Modo de transporte"
-                            >
-                              {(Object.keys(TRANSIT_MODE_LABELS) as TransitMode[]).map((m) => (
-                                <option key={m} value={m}>
-                                  {TRANSIT_MODE_LABELS[m]}
-                                </option>
-                              ))}
-                            </select>
-                            {stop.minutesToNext != null ? (
-                              <span className="muted">~{stop.minutesToNext} min</span>
-                            ) : null}
-                          </div>
-                          {stop.transportReason ? (
-                            <span className="reason">{stop.transportReason}</span>
-                          ) : null}
-                          {(stop.transitMode === 'metro' ||
-                            stop.transitMode === 'bus' ||
-                            stop.transitMode === 'train' ||
-                            stop.transportToNext === 'transit') && (
-                            <div>
-                              <a
-                                className="transit-link"
-                                href={googleMapsTransitLegUrl(
-                                  stop,
-                                  next,
-                                  travelModeForTransit(stop.transitMode),
-                                )}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Ver línea / horario en Maps
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="stop-actions">
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      aria-label="Subir"
-                      onClick={() => moveDayStop(tripId, dayId, stop.id, -1)}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      aria-label="Bajar"
-                      onClick={() => moveDayStop(tripId, dayId, stop.id, 1)}
-                    >
-                      ↓
-                    </button>
-                    <a
-                      className="icon-btn"
-                      href={googleMapsPlaceUrl(stop.lat, stop.lng, stop.name)}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="Maps"
-                    >
-                      ↗
-                    </a>
-                    <button
-                      type="button"
-                      className="icon-btn danger"
-                      aria-label="Quitar"
-                      onClick={() => removeDayStop(tripId, dayId, stop.id)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-        </ol>
+        <DayTimeline
+          stops={ordered}
+          photoByStop={photoByStop}
+          hoursByStop={hoursByStop}
+          onModeChange={(stopId, mode) => setStopTransitMode(tripId, dayId, stopId, mode)}
+          onMove={(stopId, dir) => moveDayStop(tripId, dayId, stopId, dir)}
+          onRemove={(stopId) => removeDayStop(tripId, dayId, stopId)}
+          onNotes={(stopId, notes) => setStopUserNotes(tripId, dayId, stopId, notes)}
+          onLike={(stopId) => {
+            const s = ordered.find((x) => x.id === stopId)
+            setStopReaction(tripId, dayId, stopId, s?.reaction === 'like' ? null : 'like')
+          }}
+          onDislike={(stopId) => {
+            const s = ordered.find((x) => x.id === stopId)
+            setStopReaction(tripId, dayId, stopId, s?.reaction === 'dislike' ? null : 'dislike')
+          }}
+          onDefer={(stopId) => {
+            const s = ordered.find((x) => x.id === stopId)
+            deferStopToLater(tripId, dayId, stopId)
+            if (s) setMsg(`“${s.name}” para otro día.`)
+          }}
+        />
       </section>
 
-      <section className="section">
-        <h2>Más recomendaciones</h2>
-        <p className="muted">
-          Primero salen sitios pospuestos de otro día. Tocá para añadir.
-        </p>
-        <ul className="suggest-list">
-          {suggestions.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                className="suggest-item"
-                onClick={() => {
-                  if (p.deferred) addDeferredToDay(tripId, dayId, p.id)
-                  else addSuggestedToDay(tripId, dayId, p)
-                  setMsg(
-                    p.deferred
-                      ? 'Añadido el sitio que habíais dejado para otro día.'
-                      : 'Añadido. Podés optimizar el orden para actualizar horas.',
-                  )
-                }}
-              >
-                <span className="cat">{CATEGORY_LABELS[p.category]}</span>
-                <strong>
-                  {p.deferred ? '↻ ' : ''}
-                  {p.name}
-                </strong>
-                <span className="add">{p.deferred ? 'Recuperar' : 'Añadir'}</span>
+      {toolsOpen && (
+        <div className="day-tools panel">
+          <div className="field">
+            <span>Enfoque</span>
+            <div className="chips">
+              {(['central', 'mixed', 'outskirts'] as DayFocus[]).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={(day.focus ?? 'central') === f ? 'chip on' : 'chip'}
+                  onClick={() => setDayFocus(tripId, dayId, f)}
+                >
+                  {DAY_FOCUS_LABELS[f]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="toolbar">
+            <button type="button" className="btn ghost sm" onClick={() => optimizeDay(tripId, dayId)}>
+              Optimizar orden
+            </button>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => setView({ name: 'build', tripId, dayId })}
+            >
+              Armar nosotros
+            </button>
+            <button type="button" className="btn ghost sm" onClick={() => setManualOpen((v) => !v)}>
+              + Sitio manual
+            </button>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => {
+                downloadTextFile(
+                  `${safeFilename(trip.title)}_${safeFilename(day.label)}.kml`,
+                  dayToKml(trip.title, day.label, ordered),
+                  'application/vnd.google-earth.kml+xml',
+                )
+                setMsg(`KML descargado · My Maps: ${GOOGLE_MY_MAPS_URL.replace('https://', '')}`)
+              }}
+            >
+              KML / My Maps
+            </button>
+          </div>
+
+          {manualOpen && (
+            <form className="panel nested" onSubmit={(e) => void submitManual(e)}>
+              <h3>Sitio manual</h3>
+              <label className="field">
+                <span>Nombre</span>
+                <input value={manualName} onChange={(e) => setManualName(e.target.value)} required />
+              </label>
+              <label className="field">
+                <span>Buscar</span>
+                <input
+                  value={manualQuery}
+                  onChange={(e) => setManualQuery(e.target.value)}
+                  placeholder={`Ej. museo, ${trip.city.name}`}
+                />
+              </label>
+              <label className="field">
+                <span>Notas</span>
+                <input value={manualNotes} onChange={(e) => setManualNotes(e.target.value)} />
+              </label>
+              <button type="submit" className="btn primary" disabled={busy}>
+                {busy ? 'Buscando…' : 'Añadir'}
               </button>
-            </li>
-          ))}
-          {!suggestions.length && (
-            <p className="muted">
-              No quedan sugerencias libres en la wishlist. Importá sitios o añadí uno manual.
-            </p>
+            </form>
           )}
-        </ul>
-      </section>
+
+          <section className="section">
+            <h3>Más sitios</h3>
+            <ul className="suggest-list">
+              {suggestions.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    className="suggest-item"
+                    onClick={() => {
+                      if (p.deferred) addDeferredToDay(tripId, dayId, p.id)
+                      else addSuggestedToDay(tripId, dayId, p)
+                      setMsg(p.deferred ? 'Recuperado.' : 'Añadido al día.')
+                    }}
+                  >
+                    <span className="cat">{CATEGORY_LABELS[p.category]}</span>
+                    <strong>
+                      {p.deferred ? '↻ ' : ''}
+                      {p.name}
+                    </strong>
+                    <span className="add">{p.deferred ? 'Recuperar' : 'Añadir'}</span>
+                  </button>
+                </li>
+              ))}
+              {!suggestions.length && (
+                <p className="muted">No quedan sugerencias libres.</p>
+              )}
+            </ul>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
