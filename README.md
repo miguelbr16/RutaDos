@@ -1,6 +1,8 @@
 # RutaDos
 
-PWA gratuita tipo Itinio para planificar viajes en pareja: destino + preferencias + estilo de exploración → plan automático, rutas editables, sitios manuales, import Google Maps, sync opcional con Supabase ($0).
+PWA mobile-first para planificar un viaje **solo o con alguien**: destino + gustos + ritmo → plan por días, mapa, transporte, offline del día y copiloto in situ (app + Telegram).
+
+**Repo:** https://github.com/miguelbr16/RutaDos
 
 ## Arrancar en local
 
@@ -11,58 +13,57 @@ npm run dev
 
 Abre `http://localhost:5173`. En el móvil (misma Wi‑Fi): la URL Network que muestre Vite.
 
+Copia `.env.example` → `.env` (Supabase + username del bot Telegram, sin token).
+
 ## Funciones
 
-1. **Wizard** — destino, fechas, preferencias (comida, museos, monumentos, miradores, noche, joyas ocultas, parques), ritmo, exploración, movilidad, detours
-2. **Descubrimiento** — OpenStreetMap/Overpass (+ OpenTripMap si configuras API key gratis)
-3. **Días y rutas** — orden optimizable, transporte estimado, editar/quitar/añadir
-4. **Sitios manuales** y **recomendaciones de camino**
-5. **En ruta** + abrir en Google Maps
-6. **Import Google Maps** — KML / GeoJSON / pegar enlaces o nombres
-7. **Sync pareja** — Supabase free (auth + RLS + realtime) o Exportar/Importar JSON
+1. **Wizard** — destino, fechas, hotel; gustos con presets/categorías; ritmo en packs visuales
+2. **Descubrimiento** — OpenStreetMap/Overpass (+ OpenTripMap opcional)
+3. **Días** — fichas con mini timeline; editar paradas; Maps / En ruta
+4. **Cansados** — acorta el día y sugiere cafés cerca
+5. **Restaurantes / Hoteles** — listados OSM con Web, Reservar o Booking
+6. **Offline** — pack del día activo (paradas, transporte, Maps)
+7. **Meteo** — Open-Meteo del día + adaptar a lluvia
+8. **Import Google Maps** — KML / GeoJSON / enlaces
+9. **Sync opcional** — Supabase (auth + RLS) o Exportar/Importar JSON
+10. **Telegram** — [@RutaDosGuia_bot](https://t.me/RutaDosGuia_bot); ver [`docs/COPILOTO_TELEGRAM.md`](docs/COPILOTO_TELEGRAM.md)
 
-## Supabase (sync entre los dos móviles, gratis)
+## Documentación
 
-1. Crea un proyecto en [supabase.com](https://supabase.com) (free)
-2. SQL Editor → pega y ejecuta [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql)
-3. Authentication → Providers → Email (activado)
-4. Copia `.env.example` → `.env` con URL y `anon` key
-5. `npm run dev` de nuevo
-6. En la app: **Pareja / sync** → registraros → uno crea el espacio y comparte el código
+| Doc | Contenido |
+|-----|-----------|
+| [`docs/PUNTO_SITUACION.md`](docs/PUNTO_SITUACION.md) | Estado del producto, backlog, backups, entorno |
+| [`docs/COPILOTO_TELEGRAM.md`](docs/COPILOTO_TELEGRAM.md) | Setup del bot |
 
-Sin Supabase la app funciona igual en un solo dispositivo; usad Exportar/Importar para pasar viajes.
+## Supabase (sync opcional)
 
-## Deploy gratis
+1. Proyecto en [supabase.com](https://supabase.com)
+2. SQL: migraciones en `supabase/migrations/`
+3. Auth email; variables `VITE_SUPABASE_*` en `.env`
+4. En la app: Settings → sync (opcional)
+
+Sin Supabase la app funciona en un solo dispositivo; usad Exportar/Importar para pasar viajes.
+
+## Deploy
 
 ### Vercel
 
-```bash
-npm i -g vercel
-vercel
-```
+Conectar repo `miguelbr16/RutaDos`. Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TELEGRAM_BOT`.  
+Si la UI no cambia tras un push: **Redeploy** en el dashboard (caché / PWA).
 
-En el dashboard de Vercel añade las env `VITE_SUPABASE_*` (y opcional OpenTripMap) y redespliega.
+### Bot Telegram
 
-### Cloudflare Pages
-
-```bash
-npm run build
-npx wrangler pages deploy dist --project-name=rutados
-```
-
-O conecta el repo en Cloudflare Pages: build `npm run build`, output `dist`.
+Edge Function en Supabase (`telegram-bot`), siempre con **`verify_jwt: false`**. Token solo en Secrets, nunca en el front.
 
 ## Añadir a pantalla de inicio (PWA)
 
-1. Abre la URL desplegada (HTTPS) en el móvil
-2. **iPhone / Safari:** Compartir → Añadir a pantalla de inicio  
-3. **Android / Chrome:** menú ⋮ → Instalar aplicación / Añadir a pantalla de inicio
+1. URL HTTPS en el móvil  
+2. **iPhone:** Compartir → Añadir a pantalla de inicio  
+3. **Android:** menú → Instalar aplicación  
 
-## Stack $0
+## Stack
 
-- Vite + React + TypeScript + PWA
-- Leaflet + OpenStreetMap
-- Overpass + OSRM + Nominatim
-- Supabase free (opcional)
-- Hosting Vercel / Cloudflare Pages free
-- Copiloto in-app + compartir consejo por WhatsApp/Telegram; bot Telegram opcional (gratis) — ver [`docs/COPILOTO_TELEGRAM.md`](docs/COPILOTO_TELEGRAM.md)
+- Vite + React + TypeScript + PWA  
+- Leaflet + OpenStreetMap · Overpass · OSRM · Nominatim/Photon · Wikipedia · Open-Meteo  
+- Supabase free (opcional) · Vercel  
+- Telegram Bot API (gratis)
