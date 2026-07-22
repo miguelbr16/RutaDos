@@ -78,6 +78,7 @@ function scorePlace(
   city: CityInfo,
   lat: number,
   lng: number,
+  foodBudget: RouteStyle['foodBudget'] = 'mid',
 ): { score: number; tier: GeoPlace['tier'] } {
   let score = 40
 
@@ -87,6 +88,19 @@ function scorePlace(
   if (tags.historic === 'monument' || tags.historic === 'castle') score += 22
   if (tags.tourism === 'viewpoint') score += 12
   if (category === 'food' || category === 'cafe') score += 5
+
+  const streetish =
+    tags.amenity === 'fast_food' ||
+    tags.amenity === 'food_court' ||
+    tags.cuisine === 'street_food' ||
+    /street|takeaway/i.test(tags.cuisine || '')
+
+  if (category === 'food' || category === 'market') {
+    if (foodBudget === 'low' && streetish) score += 22
+    if (foodBudget === 'high' && tags.amenity === 'restaurant' && !streetish) score += 18
+    if (foodBudget === 'high' && streetish) score -= 12
+    if (streetish) score += 8
+  }
 
   const dist = haversineKm(city.lat, city.lng, lat, lng)
   if (explore === 'icons') {
@@ -261,6 +275,32 @@ function buildAroundQueries(
   }
   if (prefs.cafes) {
     out.push(mk([`["amenity"="cafe"]["name"]`], 'cafe', 14, foodCenters, foodR))
+  }
+  if (prefs.street_food) {
+    out.push(
+      mk(
+        [
+          `["amenity"="fast_food"]["name"]`,
+          `["amenity"="food_court"]["name"]`,
+          `["cuisine"="street_food"]["name"]`,
+        ],
+        'food',
+        18,
+        foodCenters,
+        foodR,
+      ),
+    )
+  }
+  if (prefs.shopping) {
+    out.push(
+      mk(
+        [`["shop"="mall"]["name"]`, `["shop"="department_store"]["name"]`, `["tourism"="yes"]["shop"]["name"]`],
+        'shopping',
+        12,
+        foodCenters,
+        Math.min(foodR, 12000),
+      ),
+    )
   }
 
   if (!out.length) {
@@ -519,6 +559,7 @@ function otmKinds(prefs: Preferences): string {
   if (prefs.parks) kinds.push('natural', 'gardens_and_parks')
   if (prefs.restaurants) kinds.push('restaurants')
   if (prefs.cafes) kinds.push('cafes')
+  if (prefs.street_food) kinds.push('foods')
   if (prefs.nightlife) kinds.push('bars', 'pubs')
   if (prefs.hidden) kinds.push('architecture', 'cultural')
   if (prefs.architecture) kinds.push('architecture', 'churches')
@@ -602,7 +643,19 @@ function elementToPlace(
   const c = coordsOf(el)
   if (!c) return null
   const category = classify(tags, hint)
-  const { score, tier } = scorePlace(tags, category, style.explore, city, c.lat, c.lng)
+  const { score, tier } = scorePlace(
+    tags,
+    category,
+    style.explore,
+    city,
+    c.lat,
+    c.lng,
+    style.foodBudget,
+  )
+  const tagsList = Object.entries(tags)
+    .filter(([k]) => ['tourism', 'historic', 'amenity', 'cuisine', 'shop'].includes(k))
+    .map(([, v]) => v)
+  if (tags.amenity === 'fast_food' || tags.amenity === 'food_court') tagsList.push('street_food')
   return {
     id: uid('place'),
     name,
@@ -611,7 +664,7 @@ function elementToPlace(
     category,
     tier,
     source: 'osm',
-    tags: Object.keys(tags).slice(0, 12),
+    tags: [...new Set(tagsList)].slice(0, 12),
     score,
     bestSlot: bestSlotFor(category),
     notes: tags.description || undefined,

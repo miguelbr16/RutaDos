@@ -40,6 +40,13 @@ type TripRow = {
     }>
   }>
   places: Place[]
+  preferences?: Record<string, boolean> | null
+  route_style?: {
+    pace?: string
+    explore?: string
+    foodBudget?: string
+    mobility?: string
+  } | null
 }
 
 type ChatRow = {
@@ -306,6 +313,19 @@ async function sendNearbySuggestions(opts: {
   })
 
   const fromTrip = (trip?.places ?? [])
+    .filter((p) => {
+      if (!trip?.preferences) return true
+      const cat = (p as Place & { category?: string }).category
+      if (!cat) return true
+      const prefs = trip.preferences
+      if (cat === 'museum') return prefs.museums !== false
+      if (cat === 'park') return prefs.parks !== false
+      if (cat === 'nightlife') return !!prefs.nightlife
+      if (cat === 'food' || cat === 'cafe') {
+        return prefs.restaurants !== false || prefs.cafes !== false || !!prefs.street_food
+      }
+      return true
+    })
     .map((p) => ({ ...p, km: haversineKm({ lat, lng }, p) }))
     .filter((p) => p.km <= 1.8)
     .sort((a, b) => a.km - b.km)
@@ -343,7 +363,7 @@ async function sendNearbySuggestions(opts: {
     mode === 'food'
       ? 'Para comer cerca:'
       : trip
-        ? `${trip.title} · cerca de vosotros:`
+        ? `${trip.title} · cerca${tripStyleLine(trip) ? ` (${tripStyleLine(trip)})` : ''}:`
         : 'Recomendaciones in situ:'
 
   const lines = [
@@ -407,7 +427,40 @@ async function loadTrip(supabase: SupabaseClient, tripId: string | null): Promis
     title: data.title,
     days: data.days ?? [],
     places: data.places ?? [],
+    preferences: data.preferences ?? null,
+    route_style: data.route_style ?? null,
   }
+}
+
+function tripStyleLine(trip: TripRow | null): string {
+  if (!trip?.route_style && !trip?.preferences) return ''
+  const pace =
+    trip.route_style?.pace === 'intense'
+      ? 'ritmo intenso'
+      : trip.route_style?.pace === 'relaxed'
+        ? 'ritmo tranquilo'
+        : 'ritmo normal'
+  const food =
+    trip.route_style?.foodBudget === 'low'
+      ? 'comida económica'
+      : trip.route_style?.foodBudget === 'high'
+        ? 'comida especial'
+        : 'comida media'
+  const explore =
+    trip.route_style?.explore === 'icons'
+      ? 'iconos'
+      : trip.route_style?.explore === 'local'
+        ? 'local'
+        : 'mixto'
+  return `${pace} · ${food} · ${explore}`
+}
+
+function modeFromTrip(trip: TripRow | null, asked: NearbyMode): NearbyMode {
+  if (asked !== 'all' && asked !== 'sights') return asked
+  if (trip?.route_style?.foodBudget === 'low' && asked === 'all') return 'all'
+  if (trip?.preferences?.street_food && !trip?.preferences?.restaurants) return 'food'
+  if (trip?.route_style?.explore === 'local') return 'all'
+  return asked
 }
 
 function modeOf(s?: string): 'walking' | 'transit' | 'driving' {
@@ -611,7 +664,10 @@ Deno.serve(async (req) => {
       lat: here.lat,
       lng: here.lng,
       trip,
-      mode: detectNearbyMode(t + ' ' + text.toLowerCase()),
+      mode: modeFromTrip(trip, detectNearbyMode(t + ' ' + text.toLowerCase())),
+      intro: trip
+        ? `Según vuestro viaje (${tripStyleLine(trip) || trip.title})…`
+        : undefined,
     })
     return new Response('ok')
   }

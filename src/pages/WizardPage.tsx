@@ -1268,6 +1268,7 @@ export function WizardPage() {
               startDate: wizard.startDate,
               endDate: wizard.endDate,
               foodBudget: wizard.routeStyle.foodBudget,
+              pace: wizard.routeStyle.pace,
             })
             return (
               <div className="budget-box">

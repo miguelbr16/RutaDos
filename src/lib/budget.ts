@@ -59,6 +59,18 @@ function foodMult(budget: RouteStyle['foodBudget']): number {
   return 1
 }
 
+function paceTicketMult(pace: RouteStyle['pace']): number {
+  if (pace === 'relaxed') return 0.85
+  if (pace === 'intense') return 1.35
+  return 1
+}
+
+function paceTransitMult(pace: RouteStyle['pace']): number {
+  if (pace === 'relaxed') return 0.9
+  if (pace === 'intense') return 1.2
+  return 1
+}
+
 /** Estimación orientativa €/persona (comida + transporte + entradas). Sin hotel. */
 export function estimateTripBudget(input: {
   cityName: string
@@ -66,6 +78,7 @@ export function estimateTripBudget(input: {
   startDate: string
   endDate: string
   foodBudget?: RouteStyle['foodBudget']
+  pace?: RouteStyle['pace']
   dayCount?: number
 }): BudgetEstimate {
   const start = new Date(input.startDate + 'T12:00:00')
@@ -75,12 +88,20 @@ export function estimateTripBudget(input: {
   const band = cityBand(input.cityName, input.displayName)
   const b = BANDS[band]
   const fm = foodMult(input.foodBudget ?? 'mid')
+  const tm = paceTicketMult(input.pace ?? 'normal')
+  const tr = paceTransitMult(input.pace ?? 'normal')
 
-  const perMin = Math.round(b.food[0] * fm + b.transit[0] + b.tickets[0])
-  const perMax = Math.round(b.food[1] * fm + b.transit[1] + b.tickets[1])
+  const perMin = Math.round(b.food[0] * fm + b.transit[0] * tr + b.tickets[0] * tm)
+  const perMax = Math.round(b.food[1] * fm + b.transit[1] * tr + b.tickets[1] * tm)
 
   const bandLabel =
     band === 'high' ? 'destino caro' : band === 'low' ? 'destino asequible' : 'rango medio'
+  const paceLabel =
+    input.pace === 'intense'
+      ? 'ritmo intenso (más entradas/transporte)'
+      : input.pace === 'relaxed'
+        ? 'ritmo tranquilo'
+        : 'ritmo normal'
 
   return {
     perPersonPerDayMin: perMin,
@@ -91,7 +112,7 @@ export function estimateTripBudget(input: {
     nights,
     currency: 'EUR',
     band,
-    blurb: `Orientativo · ${bandLabel} · comida + transporte + entradas · sin hotel ni vuelos.`,
+    blurb: `Orientativo · ${bandLabel} · ${paceLabel} · comida + transporte + entradas · sin hotel ni vuelos.`,
   }
 }
 
@@ -102,6 +123,7 @@ export function estimateFromTrip(trip: Trip): BudgetEstimate {
     startDate: trip.startDate,
     endDate: trip.endDate,
     foodBudget: trip.routeStyle.foodBudget,
+    pace: trip.routeStyle.pace,
     dayCount: trip.days.length || undefined,
   })
 }

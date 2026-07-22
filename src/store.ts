@@ -185,6 +185,12 @@ interface AppState {
   chaosReplan: (tripId: string, dayId: string, mode: ChaosMode) => void
   setCustomDayPlaces: (tripId: string, dayId: string, places: GeoPlace[]) => void
   importTrips: (trips: Trip[]) => void
+  /** Cambiar gustos/ritmo y rearmar días (opcionalmente rediscover sitios). */
+  replanTripStyle: (
+    tripId: string,
+    patch: { preferences?: Preferences; routeStyle?: Partial<RouteStyle> },
+    opts?: { rediscover?: boolean },
+  ) => Promise<void>
 }
 
 function todayISO() {
@@ -385,6 +391,7 @@ export const useAppStore = create<AppState>()(
             },
             logistics,
             { lat: city.lat, lng: city.lng },
+            normalizePreferences(wizard.preferences),
           )
 
           const trip: Trip = {
@@ -476,6 +483,7 @@ export const useAppStore = create<AppState>()(
             t.logistics ?? DEFAULT_LOGISTICS,
             { lat: t.city.lat, lng: t.city.lng },
             reserved,
+            normalizePreferences(t.preferences),
           )
         })
       },
@@ -766,14 +774,76 @@ export const useAppStore = create<AppState>()(
         })
       },
 
+      replanTripStyle: async (tripId, patch, opts) => {
+        const trip = get().trips.find((t) => t.id === tripId)
+        if (!trip) return
+        set({ generating: true, error: null })
+        try {
+          const preferences = normalizePreferences({
+            ...trip.preferences,
+            ...(patch.preferences ?? {}),
+          })
+          const routeStyle: RouteStyle = {
+            ...trip.routeStyle,
+            ...(patch.routeStyle ?? {}),
+            preferCentral:
+              (patch.routeStyle?.preferCentral ?? trip.routeStyle.preferCentral) !== false,
+          }
+
+          let places = trip.places
+          if (opts?.rediscover) {
+            const dayCount = Math.max(1, trip.days.length)
+            const raw = await discoverPlaces(trip.city, preferences, routeStyle, dayCount)
+            const mustKeep = trip.places.filter(
+              (p) => p.tier === 'must' || p.source === 'manual' || p.tags?.includes('must_visit'),
+            )
+            places = boostSponsoredPlaces(
+              mergeLandmarks(
+                [...mustKeep, ...raw],
+                landmarksForDestination(trip.city.name, trip.city.displayName),
+              ),
+            )
+            if (!places.length) places = trip.places
+          }
+
+          const days = buildDayPlans(
+            places,
+            trip.startDate,
+            trip.endDate,
+            routeStyle,
+            trip.logistics ?? DEFAULT_LOGISTICS,
+            { lat: trip.city.lat, lng: trip.city.lng },
+            preferences,
+          )
+
+          const next: Trip = {
+            ...trip,
+            preferences,
+            routeStyle,
+            places,
+            days,
+            updatedAt: new Date().toISOString(),
+          }
+          set((s) => ({
+            trips: s.trips.map((t) => (t.id === tripId ? next : t)),
+            generating: false,
+          }))
+          scheduleSync(next)
+        } catch (err) {
+          set({
+            generating: false,
+            error: err instanceof Error ? err.message : 'No se pudo rearmar el plan',
+          })
+        }
+      },
+
       importTrips: (trips) =>
         set((s) => {
-          const normalized = trips.map(normalizeTrip)
           const next = [
-            ...normalized,
-            ...s.trips.filter((t) => !normalized.some((x) => x.id === t.id)),
+            ...trips.map(normalizeTrip),
+            ...s.trips.filter((t) => !trips.some((x) => x.id === t.id)),
           ]
-          for (const t of normalized) scheduleSync(t)
+          for (const t of trips.map(normalizeTrip)) scheduleSync(t)
           return { trips: next }
         }),
     }),

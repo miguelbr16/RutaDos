@@ -6,6 +6,7 @@ import {
   travelModeForTransit,
 } from './mapsUrl'
 import { CATEGORY_LABELS, TRANSIT_MODE_LABELS } from '../types'
+import { placeAllowedByPrefs, prefsSummaryLine } from './prefPlan'
 
 export type CopilotMsg = {
   id: string
@@ -141,6 +142,7 @@ function replyRoute(trip: Trip, day: DayPlan, here?: CopilotHere): CopilotMsg {
   const pending = visits.filter((s) => (s.visitStatus ?? 'pending') === 'pending')
   const lines: string[] = [
     `📍 ${trip.title} · ${day.label}`,
+    prefsSummaryLine(trip.preferences, trip.routeStyle),
     pending.length
       ? `Os quedan ${pending.length} paradas pendientes:`
       : 'No hay pendientes (todas hechas o saltadas).',
@@ -265,6 +267,7 @@ async function replyNearby(
   here: CopilotHere,
 ): Promise<CopilotMsg> {
   const fromWishlist = trip.places
+    .filter((p) => placeAllowedByPrefs(p, trip.preferences))
     .map((p) => ({
       name: p.name,
       kind: CATEGORY_LABELS[p.category],
@@ -277,7 +280,11 @@ async function replyNearby(
     .slice(0, 5)
 
   const osm = await fetchNearbySights(here.lat, here.lng, 1000)
-  const lines = [`Sitios de interés cerca de vosotros (~1 km):`, '']
+  const lines = [
+    `Según vuestro estilo (${prefsSummaryLine(trip.preferences, trip.routeStyle)}):`,
+    `Sitios cerca (~1 km):`,
+    '',
+  ]
 
   if (fromWishlist.length) {
     lines.push('Del viaje:')
@@ -338,14 +345,19 @@ function detectIntent(raw: string): 'route' | 'next' | 'howto' | 'nearby' | 'hel
   return 'help'
 }
 
-export function copilotHelpText(): string {
+export function copilotHelpText(trip?: Trip): string {
   return [
     'Soy vuestro copiloto (todo dentro de la app). Elegid:',
     '• Qué toca ahora · Ruta de hoy · Cómo llego · Qué hay cerca',
     '• Está cerrado · Hay mucha cola · Vamos tarde (ajuste fino)',
     '',
-    'Ubicación: GPS o link de Google Maps / Apple Maps.',
-  ].join('\n')
+    trip
+      ? `Estilo del viaje: ${prefsSummaryLine(trip.preferences, trip.routeStyle)}`
+      : 'Ubicación: GPS o link de Google Maps / Apple Maps.',
+    trip ? 'Ubicación: GPS o link de Maps.' : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 export async function answerCopilot(
@@ -370,7 +382,7 @@ export async function answerCopilot(
     return {
       id: `a-${Date.now()}`,
       role: 'assistant',
-      text: copilotHelpText(),
+      text: copilotHelpText(trip),
       at: new Date().toISOString(),
     }
   }

@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { CATEGORY_LABELS } from '../types'
+import {
+  CATEGORY_LABELS,
+  DEFAULT_PREFERENCES,
+  PREFERENCE_LABELS,
+  type PreferenceKey,
+  type Preferences,
+  type RouteStyle,
+} from '../types'
 import { useAppStore } from '../store'
 import { TripMap } from '../components/TripMap'
 import {
@@ -20,19 +27,47 @@ import { estimateFromTrip } from '../lib/budget'
 import { createTripShareToken, shareUrlForToken } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { googleMapsDirectionsUrl } from '../lib/mapsUrl'
+import { prefsSummaryLine } from '../lib/prefPlan'
+import { openTelegramBot } from '../lib/copilot'
+
+const STYLE_KEYS: PreferenceKey[] = [
+  'museums',
+  'monuments',
+  'parks',
+  'viewpoints',
+  'restaurants',
+  'cafes',
+  'street_food',
+  'markets',
+  'hidden',
+  'neighborhoods',
+  'nightlife',
+  'shopping',
+  'shows',
+  'architecture',
+  'night_walks',
+]
 
 export function TripPage({ tripId }: { tripId: string }) {
   const trip = useAppStore((s) => s.trips.find((t) => t.id === tripId))
   const setView = useAppStore((s) => s.setView)
   const mergePlacesIntoTrip = useAppStore((s) => s.mergePlacesIntoTrip)
+  const replanTripStyle = useAppStore((s) => s.replanTripStyle)
+  const generating = useAppStore((s) => s.generating)
 
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [styleOpen, setStyleOpen] = useState(false)
   const [paste, setPaste] = useState('')
   const [importMsg, setImportMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [shareMsg, setShareMsg] = useState<string | null>(null)
   const [shareBusy, setShareBusy] = useState(false)
+  const [draftPrefs, setDraftPrefs] = useState<Preferences | null>(null)
+  const [draftPace, setDraftPace] = useState<RouteStyle['pace'] | null>(null)
+  const [draftExplore, setDraftExplore] = useState<RouteStyle['explore'] | null>(null)
+  const [draftFood, setDraftFood] = useState<RouteStyle['foodBudget'] | null>(null)
+  const [rediscover, setRediscover] = useState(true)
 
   if (!trip) {
     return (
@@ -73,12 +108,15 @@ export function TripPage({ tripId }: { tripId: string }) {
       }
       const token = await createTripShareToken(trip!)
       const url = shareUrlForToken(token)
+      const tgHint = `Telegram: abrí el bot y enviad /start ${token}`
       try {
         await navigator.clipboard.writeText(url)
-        setShareMsg(`Link copiado: ${url}`)
+        setShareMsg(`Link copiado: ${url}\n${tgHint}`)
       } catch {
-        setShareMsg(`Link: ${url}`)
+        setShareMsg(`Link: ${url}\n${tgHint}`)
       }
+      // Abre el bot listo para enlazar el viaje
+      openTelegramBot(token)
     } catch (e) {
       exportTripJson()
       setShareMsg(
@@ -148,8 +186,8 @@ export function TripPage({ tripId }: { tripId: string }) {
         <p className="brand small">RutaDos</p>
         <h1>{trip.title}</h1>
         <p className="muted">
-          {trip.startDate} → {trip.endDate} · {trip.places.length} recomendaciones · ritmo{' '}
-          {trip.routeStyle.pace}
+          {trip.startDate} → {trip.endDate} · {trip.places.length} recomendaciones ·{' '}
+          {prefsSummaryLine(trip.preferences, trip.routeStyle)}
           {trip.logistics?.arrivalTime ? ` · llegada ${trip.logistics.arrivalTime}` : ''}
           {trip.logistics?.hotel ? ` · hotel: ${trip.logistics.hotel.name}` : ''}
           {trip.logistics?.airport ? ` · aero: ${trip.logistics.airport.name}` : ''}
@@ -170,7 +208,106 @@ export function TripPage({ tripId }: { tripId: string }) {
           {budget.totalMin}–{budget.totalMax} €/persona ({budget.nights} noches)
         </p>
         <p className="muted tiny">{budget.blurb}</p>
+        <button
+          type="button"
+          className="btn ghost sm"
+          style={{ marginTop: '0.5rem' }}
+          onClick={() => {
+            setDraftPrefs({ ...DEFAULT_PREFERENCES, ...trip.preferences })
+            setDraftPace(trip.routeStyle.pace)
+            setDraftExplore(trip.routeStyle.explore)
+            setDraftFood(trip.routeStyle.foodBudget)
+            setStyleOpen((v) => !v)
+          }}
+        >
+          {styleOpen ? 'Cerrar ajuste' : 'Ajustar gustos y ritmo'}
+        </button>
       </div>
+
+      {styleOpen && draftPrefs && (
+        <div className="panel" style={{ marginTop: '0.75rem' }}>
+          <h3>Ajustar y rearmar plan</h3>
+          <p className="muted tiny">
+            Cambiad gustos / ritmo / comida. Podéis buscar sitios de nuevo o solo rearmar los días
+            con lo que ya hay.
+          </p>
+          <div className="chip-row" style={{ flexWrap: 'wrap', gap: '0.35rem' }}>
+            {STYLE_KEYS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                className={`chip ${draftPrefs[k] ? 'on' : ''}`}
+                onClick={() => setDraftPrefs({ ...draftPrefs, [k]: !draftPrefs[k] })}
+              >
+                {PREFERENCE_LABELS[k]}
+              </button>
+            ))}
+          </div>
+          <label className="field" style={{ marginTop: '0.75rem' }}>
+            <span>Ritmo</span>
+            <select
+              value={draftPace ?? trip.routeStyle.pace}
+              onChange={(e) => setDraftPace(e.target.value as RouteStyle['pace'])}
+            >
+              <option value="relaxed">Tranquilo</option>
+              <option value="normal">Normal</option>
+              <option value="intense">Intenso</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Explorar</span>
+            <select
+              value={draftExplore ?? trip.routeStyle.explore}
+              onChange={(e) => setDraftExplore(e.target.value as RouteStyle['explore'])}
+            >
+              <option value="icons">Iconos</option>
+              <option value="mixed">Mixto</option>
+              <option value="local">Local / barrios</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Comida</span>
+            <select
+              value={draftFood ?? trip.routeStyle.foodBudget}
+              onChange={(e) => setDraftFood(e.target.value as RouteStyle['foodBudget'])}
+            >
+              <option value="low">Económica</option>
+              <option value="mid">Media</option>
+              <option value="high">Especial</option>
+            </select>
+          </label>
+          <label className="check" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={rediscover}
+              onChange={(e) => setRediscover(e.target.checked)}
+            />
+            <span>Buscar sitios de nuevo (más lento, mejor si cambiáis gustos)</span>
+          </label>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={generating}
+            style={{ marginTop: '0.75rem' }}
+            onClick={() =>
+              void replanTripStyle(
+                tripId,
+                {
+                  preferences: draftPrefs,
+                  routeStyle: {
+                    pace: draftPace ?? trip.routeStyle.pace,
+                    explore: draftExplore ?? trip.routeStyle.explore,
+                    foodBudget: draftFood ?? trip.routeStyle.foodBudget,
+                  },
+                },
+                { rediscover },
+              ).then(() => setStyleOpen(false))
+            }
+          >
+            {generating ? 'Rearmando…' : 'Aplicar y rearmar días'}
+          </button>
+        </div>
+      )}
 
       <div className="panel tip-panel">
         <h3>Cómo planificamos (estilo guía)</h3>
@@ -230,8 +367,9 @@ export function TripPage({ tripId }: { tripId: string }) {
       </div>
       {shareMsg && <p className="muted tiny">{shareMsg}</p>}
       <p className="muted tiny">
-        Compartir: enviad el link a vuestra pareja. Con cuenta + Pareja, notas, me gusta / no quiero
-        y el check-in se sincronizan. Sin Supabase, se descarga JSON.
+        Compartir: link web para la pareja. También genera un token de Telegram:{' '}
+        <code>/start TOKEN</code> en el bot enlaza el plan (ruta de hoy / qué toca). Sin viaje
+        enlazado, el bot sigue recomendando in situ con vuestra ubicación.
       </p>
 
       {exportOpen && (

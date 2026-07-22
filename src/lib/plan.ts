@@ -2,6 +2,11 @@ import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { uid } from './id'
 import { enrichDayStops } from './planEnrichment'
+import {
+  filterFoodPlaces,
+  filterNightlife,
+  filterSightPlaces,
+} from './prefPlan'
 import type {
   DayFocus,
   DayIntensity,
@@ -9,6 +14,7 @@ import type {
   GeoPlace,
   HotelInfo,
   Mobility,
+  Preferences,
   RouteStyle,
   Stop,
   TimeSlot,
@@ -516,6 +522,7 @@ export function buildDayPlans(
   style: RouteStyle,
   logistics: TripLogistics,
   cityCenter?: { lat: number; lng: number },
+  preferences?: Preferences,
 ): DayPlan[] {
   const start = parseISO(startDate)
   const end = parseISO(endDate)
@@ -529,21 +536,23 @@ export function buildDayPlans(
   const preferCentral = style.preferCentral !== false
   const defaultFocus: DayFocus = preferCentral ? 'central' : 'mixed'
 
-  const sightsAll = places.filter(isSight).sort((a, b) => b.score - a.score)
-  const sights = filterByFocus(sightsAll, center, defaultFocus, preferCentral)
-  const foods = filterByFocus(
-    places.filter((p) => p.category === 'food' || p.category === 'cafe'),
-    center,
-    defaultFocus,
-    preferCentral,
-  )
-  const nightlife = places.filter((p) => p.category === 'nightlife')
-  const parks = filterByFocus(
-    places.filter((p) => p.category === 'park'),
-    center,
-    defaultFocus,
-    preferCentral,
-  )
+  // Gustos + explore + foodBudget atan el pool del plan
+  const sightsRanked = preferences
+    ? filterSightPlaces(places, preferences, style.explore)
+    : places.filter(isSight).sort((a, b) => b.score - a.score)
+  const foodsRanked = preferences
+    ? filterFoodPlaces(places, preferences, style.foodBudget)
+    : places.filter((p) => p.category === 'food' || p.category === 'cafe')
+  const nightlife = preferences
+    ? filterNightlife(places, preferences)
+    : places.filter((p) => p.category === 'nightlife')
+  const parksRanked = preferences
+    ? sightsRanked.filter((p) => p.category === 'park')
+    : places.filter((p) => p.category === 'park')
+
+  const sights = filterByFocus(sightsRanked, center, defaultFocus, preferCentral)
+  const foods = filterByFocus(foodsRanked, center, defaultFocus, preferCentral)
+  const parks = filterByFocus(parksRanked, center, defaultFocus, preferCentral)
 
   // Full days get geographic clusters; arrival/departure handled near hotel
   const fullDayIndexes: number[] = []
@@ -697,6 +706,7 @@ export function replanDayForFocus(
   logistics: TripLogistics,
   cityCenter: { lat: number; lng: number },
   reservedIds: Set<string>,
+  preferences?: Preferences,
 ): DayPlan {
   const hotel = logistics.hotel
   const hotelPoint = hotel ? { lat: hotel.lat, lng: hotel.lng } : null
@@ -707,17 +717,25 @@ export function replanDayForFocus(
   const origin = hotelPoint ?? cityCenter
   const used = new Set(reservedIds)
 
-  const sightsAll = allPlaces.filter(isSight).sort((a, b) => b.score - a.score)
+  const sightsAll = preferences
+    ? filterSightPlaces(allPlaces, preferences, style.explore)
+    : allPlaces.filter(isSight).sort((a, b) => b.score - a.score)
   const sights = filterByFocus(sightsAll, cityCenter, focus, preferCentral)
   const foods = filterByFocus(
-    allPlaces.filter((p) => p.category === 'food' || p.category === 'cafe'),
+    preferences
+      ? filterFoodPlaces(allPlaces, preferences, style.foodBudget)
+      : allPlaces.filter((p) => p.category === 'food' || p.category === 'cafe'),
     cityCenter,
     focus,
     preferCentral,
   )
-  const nightlife = allPlaces.filter((p) => p.category === 'nightlife')
+  const nightlife = preferences
+    ? filterNightlife(allPlaces, preferences)
+    : allPlaces.filter((p) => p.category === 'nightlife')
   const parks = filterByFocus(
-    allPlaces.filter((p) => p.category === 'park'),
+    preferences
+      ? sightsAll.filter((p) => p.category === 'park')
+      : allPlaces.filter((p) => p.category === 'park'),
     cityCenter,
     focus,
     preferCentral,
