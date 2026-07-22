@@ -1404,8 +1404,32 @@ code {
   margin-bottom: 0.65rem;
 }
 
-.day-primary-actions .btn:last-child {
+.day-primary-actions .tired-btn {
   grid-column: 1 / -1;
+}
+
+.btn.tired-btn {
+  background: color-mix(in srgb, var(--sand) 22%, #fff);
+  border: 1px solid color-mix(in srgb, var(--sand) 55%, transparent);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.btn.tired-btn:hover,
+.btn.tired-btn:focus-visible {
+  background: color-mix(in srgb, var(--sand) 34%, #fff);
+}
+
+.tired-panel {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--sand) 14%, #fff),
+    color-mix(in srgb, var(--sea) 6%, #fff)
+  );
+  border: 1px solid color-mix(in srgb, var(--sand) 40%, var(--line));
 }
 
 .day-quick {
@@ -1673,6 +1697,10 @@ code {
 }
 
 .onroute-cta .btn:first-child {
+  grid-column: 1 / -1;
+}
+
+.onroute-cta .tired-btn {
   grid-column: 1 / -1;
 }
 

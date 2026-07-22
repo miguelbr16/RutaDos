@@ -855,8 +855,11 @@ export function chaosReplanDay(
     maxStops = Math.max(2, Math.ceil(maxStops * 0.55))
     noteExtra = 'Replan: vais tarde — jornada más corta desde media tarde.'
   } else if (mode === 'shorter') {
-    maxStops = Math.max(2, Math.ceil(maxStops * 0.6))
-    noteExtra = 'Replan: día más ligero (menos paradas).'
+    // Cansados: menos paradas, arranque un poco más tarde, priorizar café / parque
+    startHour = Math.min(startHour + 1, 12.5)
+    maxStops = Math.max(2, Math.min(4, Math.ceil(maxStops * 0.45)))
+    noteExtra =
+      'Cansados: día más corto, con pausa café cerca si hay. El resto queda para otro día.'
   } else if (mode === 'rain') {
     noteExtra = 'Replan: lluvia — priorizamos sitios cubiertos / comida.'
   }
@@ -897,6 +900,12 @@ export function chaosReplanDay(
       if (p.reaction === 'like') score += 20
       if (p.reaction === 'dislike') score -= 40
       if (mode === 'rain' && indoor(p)) score += 25
+      if (mode === 'shorter') {
+        if (p.category === 'cafe') score += 45
+        if (p.category === 'park') score += 22
+        if (p.category === 'museum') score -= 12
+        if (d > 2.2) score -= 15
+      }
       return { p, score }
     })
     .sort((a, b) => b.score - a.score)
@@ -909,6 +918,26 @@ export function chaosReplanDay(
     if (keepIds.has(p.id)) continue
     picked.push(p)
     if (picked.length >= need) break
+  }
+
+  // Cansados: asegurar al menos un café cerca si existe en el pool
+  if (mode === 'shorter') {
+    const hasCafe = [...keepDone, ...picked].some((x) => {
+      const cat = 'category' in x ? x.category : undefined
+      return cat === 'cafe'
+    })
+    if (!hasCafe) {
+      const cafe = scored.find(
+        (p) =>
+          p.category === 'cafe' &&
+          !keepIds.has(p.id) &&
+          !picked.some((x) => x.id === p.id),
+      )
+      if (cafe) {
+        if (picked.length >= need && picked.length > 0) picked.pop()
+        picked.unshift(cafe)
+      }
+    }
   }
 
   const placeStops = [

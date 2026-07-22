@@ -31,7 +31,8 @@ export function VenueFinder({ kind, lat, lng, city, onClose, onAdd }: Props) {
     }
   }, [kind, lat, lng, city])
 
-  const title = kind === 'hotel' ? 'Hoteles cerca' : 'Restaurantes cerca'
+  const title =
+    kind === 'hotel' ? 'Hoteles cerca' : kind === 'cafe' ? 'Cafés cerca' : 'Restaurantes cerca'
 
   return (
     <section className="venue-finder" aria-label={title}>

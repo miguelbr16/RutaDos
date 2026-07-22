@@ -26,6 +26,7 @@ import { hoursForPlace, evaluateOpeningHours, type PlaceHours } from '../lib/ope
 import { loadOfflineDay, saveOfflineDay, type OfflineDayPack } from '../lib/offlineDay'
 import { fetchDayWeather, weatherSuggestsIndoor, type DayWeather } from '../lib/weather'
 import { VenueFinder } from '../components/VenueFinder'
+import { TiredPanel } from '../components/TiredPanel'
 import type { VenueKind } from '../lib/bookingLinks'
 import type { NearbyVenue } from '../lib/nearbyVenues'
 import { hotelBookingUrl } from '../lib/bookingLinks'
@@ -71,6 +72,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const [packPreview, setPackPreview] = useState(false)
   const [weather, setWeather] = useState<DayWeather | null>(null)
   const [venueKind, setVenueKind] = useState<VenueKind | null>(null)
+  const [tiredOpen, setTiredOpen] = useState(false)
 
   const day = trip?.days.find((d) => d.id === dayId)
 
@@ -320,20 +322,53 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         >
           En ruta
         </button>
+        <button
+          type="button"
+          className="btn tired-btn"
+          onClick={() => {
+            chaosReplan(tripId, dayId, 'shorter')
+            setTiredOpen(true)
+            setVenueKind(null)
+            setMsg('Día acortado. Elegí un café si querés pausar.')
+          }}
+        >
+          Cansados
+        </button>
       </div>
+
+      {tiredOpen && (
+        <TiredPanel
+          lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
+          lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
+          city={trip.city.name}
+          tripCafes={trip.places.filter((p) => p.category === 'cafe')}
+          onClose={() => setTiredOpen(false)}
+          onAddCafe={(place) => {
+            addSuggestedToDay(tripId, dayId, place)
+            setMsg(`Café añadido: ${place.name}`)
+            setTiredOpen(false)
+          }}
+        />
+      )}
 
       <div className="chaos-bar day-quick">
         <button
           type="button"
           className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
-          onClick={() => setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))}
+          onClick={() => {
+            setTiredOpen(false)
+            setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))
+          }}
         >
           Restaurantes
         </button>
         <button
           type="button"
           className={venueKind === 'hotel' ? 'chip on' : 'chip'}
-          onClick={() => setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))}
+          onClick={() => {
+            setTiredOpen(false)
+            setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))
+          }}
         >
           Hoteles
         </button>
@@ -356,16 +391,6 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           }}
         >
           Llueve
-        </button>
-        <button
-          type="button"
-          className="chip"
-          onClick={() => {
-            chaosReplan(tripId, dayId, 'shorter')
-            setMsg('Replan: cansados / más corto.')
-          }}
-        >
-          Cansados
         </button>
         <button
           type="button"

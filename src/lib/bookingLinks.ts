@@ -88,7 +88,7 @@ export function hotelWebUrl(opts: {
   return normalizeWebsite(opts.website) ?? hotelBookingUrl(opts)
 }
 
-export type VenueKind = 'restaurant' | 'hotel'
+export type VenueKind = 'restaurant' | 'hotel' | 'cafe'
 
 export type VenueLinkSet = {
   maps: string
@@ -121,11 +121,12 @@ export function venueLinks(
       hasOfficialWeb,
     }
   }
+  // restaurant + cafe
   return {
     maps: googleMapsPlaceUrl(opts.lat, opts.lng, opts.name),
     web: restaurantWebUrl(opts),
     reserveOrBook: restaurantReserveUrl(opts),
-    reserveLabel: hasOfficialWeb && looksLikeBookingSite(opts.website || '') ? 'Reservar' : 'Reservar',
+    reserveLabel: kind === 'cafe' ? 'Maps' : 'Reservar',
     phone: opts.phone || undefined,
     hasOfficialWeb,
   }

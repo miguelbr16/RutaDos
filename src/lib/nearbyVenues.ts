@@ -55,6 +55,18 @@ function queryFor(kind: VenueKind, lat: number, lng: number, radiusM: number): s
 out center 40;
 `
   }
+  if (kind === 'cafe') {
+    return `
+[out:json][timeout:25];
+(
+  node(${around})[amenity=cafe]["name"];
+  way(${around})[amenity=cafe]["name"];
+  node(${around})[amenity=ice_cream]["name"];
+  way(${around})[amenity=ice_cream]["name"];
+);
+out center 30;
+`
+  }
   return `
 [out:json][timeout:25];
 (
@@ -104,21 +116,24 @@ export async function fetchNearbyVenues(opts: {
         const website = extractOsmWebsite(tags)
         const phone = extractOsmPhone(tags)
         const category =
-          tags.amenity || tags.tourism || (opts.kind === 'hotel' ? 'hotel' : 'restaurant')
+          opts.kind === 'cafe'
+            ? 'cafe'
+            : tags.amenity || tags.tourism || (opts.kind === 'hotel' ? 'hotel' : 'restaurant')
         const distanceM = Math.round(haversineKm({ lat: opts.lat, lng: opts.lng }, { lat: plat, lng: plng }) * 1000)
+        const venueKind: VenueKind = opts.kind === 'cafe' ? 'cafe' : opts.kind
         const venue: NearbyVenue = {
           id: `osm-${el.id ?? `${plat}-${plng}`}`,
           name,
           lat: plat,
           lng: plng,
-          kind: opts.kind,
+          kind: venueKind,
           category,
           website,
           phone,
           cuisine: tags.cuisine,
           stars: tags.stars,
           distanceM,
-          links: venueLinks(opts.kind, {
+          links: venueLinks(venueKind, {
             name,
             lat: plat,
             lng: plng,

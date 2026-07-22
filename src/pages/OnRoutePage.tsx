@@ -11,6 +11,7 @@ import {
 } from '../lib/mapsUrl'
 import { loadOfflineDay, saveOfflineDay, type OfflineDayPack } from '../lib/offlineDay'
 import { hoursForPlace, type PlaceHours } from '../lib/openingHours'
+import { TiredPanel } from '../components/TiredPanel'
 
 export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }) {
   const trip = useAppStore((s) => s.trips.find((t) => t.id === tripId))
@@ -18,11 +19,14 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
   const setStopVisitStatus = useAppStore((s) => s.setStopVisitStatus)
   const deferStopToLater = useAppStore((s) => s.deferStopToLater)
   const chaosReplan = useAppStore((s) => s.chaosReplan)
+  const addSuggestedToDay = useAppStore((s) => s.addSuggestedToDay)
   const [hours, setHours] = useState<PlaceHours | null>(null)
   const [online, setOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   )
   const [pack, setPack] = useState<OfflineDayPack | null>(() => loadOfflineDay())
+  const [tiredOpen, setTiredOpen] = useState(false)
+  const [flash, setFlash] = useState<string | null>(null)
 
   const day = trip?.days.find((d) => d.id === dayId)
 
@@ -164,6 +168,17 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
               >
                 Hecho
               </button>
+              <button
+                type="button"
+                className="btn tired-btn"
+                onClick={() => {
+                  chaosReplan(tripId, dayId, 'shorter')
+                  setTiredOpen(true)
+                  setFlash('Día acortado. Café cerca abajo.')
+                }}
+              >
+                Cansados
+              </button>
               <a
                 className="btn ghost"
                 href={googleMapsPlaceUrl(current.lat, current.lng, current.name)}
@@ -189,6 +204,23 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
             </div>
           </div>
 
+          {flash && <p className="flash-msg">{flash}</p>}
+
+          {tiredOpen && trip && (
+            <TiredPanel
+              lat={current.lat}
+              lng={current.lng}
+              city={trip.city.name}
+              tripCafes={trip.places.filter((p) => p.category === 'cafe')}
+              onClose={() => setTiredOpen(false)}
+              onAddCafe={(place) => {
+                addSuggestedToDay(tripId, dayId, place)
+                setFlash(`Café: ${place.name}`)
+                setTiredOpen(false)
+              }}
+            />
+          )}
+
           <div className="chaos-bar day-quick">
             <button
               type="button"
@@ -203,13 +235,6 @@ export function OnRoutePage({ tripId, dayId }: { tripId: string; dayId: string }
               onClick={() => chaosReplan(tripId, dayId, 'rain')}
             >
               Llueve
-            </button>
-            <button
-              type="button"
-              className="chip"
-              onClick={() => chaosReplan(tripId, dayId, 'shorter')}
-            >
-              Cansados
             </button>
             <a
               className="chip"
