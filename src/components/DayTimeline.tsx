@@ -8,7 +8,7 @@ import {
 import { googleMapsPlaceUrl, googleMapsTransitLegUrl, travelModeForTransit } from '../lib/mapsUrl'
 import type { PlaceHours } from '../lib/openingHours'
 import { fetchPlaceBlurb, type PlaceBlurb } from '../lib/placeWiki'
-import { hotelBookingUrl, restaurantReserveUrl, restaurantWebUrl } from '../lib/bookingLinks'
+import { hotelBookingUrl, placeQuickLinks, restaurantReserveUrl, restaurantWebUrl } from '../lib/bookingLinks'
 
 type Props = {
   stops: Stop[]
@@ -141,67 +141,26 @@ export function DayTimeline({
 
               {!stop.isHotel && (
                 <div className="tl-quick-actions">
-                  <a
-                    className="btn ghost sm"
-                    href={googleMapsPlaceUrl(stop.lat, stop.lng, stop.name)}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Maps
-                  </a>
-                  {stop.listingKind === 'hotel' ? (
+                  {placeQuickLinks({
+                    name: stop.name,
+                    lat: stop.lat,
+                    lng: stop.lng,
+                    category: stop.category,
+                    listingKind: stop.listingKind,
+                    website: stop.website,
+                    isHotel: stop.isHotel,
+                  }).map((l) => (
                     <a
-                      className="btn primary sm"
-                      href={hotelBookingUrl({
-                        name: stop.name,
-                        lat: stop.lat,
-                        lng: stop.lng,
-                      })}
+                      key={l.label}
+                      className={l.primary ? 'btn primary sm' : 'btn ghost sm'}
+                      href={l.href}
                       target="_blank"
                       rel="noreferrer"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      Booking
+                      {l.label}
                     </a>
-                  ) : null}
-                  {(stop.category === 'food' ||
-                    stop.category === 'cafe' ||
-                    stop.listingKind === 'restaurant') && (
-                    <a
-                      className="btn primary sm"
-                      href={restaurantReserveUrl({
-                        name: stop.name,
-                        lat: stop.lat,
-                        lng: stop.lng,
-                        website: stop.website,
-                      })}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Reservar
-                    </a>
-                  )}
-                  {(stop.category === 'museum' ||
-                    stop.category === 'monument' ||
-                    stop.category === 'must_see' ||
-                    stop.category === 'show') && (
-                    <a
-                      className="btn ghost sm"
-                      href={restaurantWebUrl({
-                        name: stop.name,
-                        lat: stop.lat,
-                        lng: stop.lng,
-                        website: stop.website,
-                      })}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {stop.website ? 'Web / entradas' : 'Info'}
-                    </a>
-                  )}
+                  ))}
                 </div>
               )}
 

@@ -88,6 +88,76 @@ export function hotelWebUrl(opts: {
   return normalizeWebsite(opts.website) ?? hotelBookingUrl(opts)
 }
 
+/** Entradas / visita: web oficial o búsqueda de tickets. */
+export function attractionTicketsUrl(opts: {
+  name: string
+  lat: number
+  lng: number
+  website?: string | null
+  city?: string
+}): string {
+  const web = normalizeWebsite(opts.website)
+  if (web) return web
+  const q = `entradas ${opts.name}${opts.city ? ` ${opts.city}` : ''}`
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`
+}
+
+/** Acciones rápidas según tipo de parada. */
+export function placeQuickLinks(opts: {
+  name: string
+  lat: number
+  lng: number
+  category?: string
+  listingKind?: string
+  website?: string | null
+  isHotel?: boolean
+  city?: string
+}): Array<{ label: string; href: string; primary?: boolean }> {
+  const maps = googleMapsPlaceUrl(opts.lat, opts.lng, opts.name)
+  if (opts.isHotel || opts.listingKind === 'hotel') {
+    return [
+      { label: 'Booking', href: hotelBookingUrl(opts), primary: true },
+      { label: 'Maps', href: maps },
+    ]
+  }
+  if (
+    opts.category === 'food' ||
+    opts.category === 'cafe' ||
+    opts.listingKind === 'restaurant'
+  ) {
+    return [
+      {
+        label: 'Reservar',
+        href: restaurantReserveUrl(opts),
+        primary: true,
+      },
+      { label: opts.website ? 'Web' : 'Maps', href: restaurantWebUrl(opts) },
+    ]
+  }
+  if (
+    opts.category === 'museum' ||
+    opts.category === 'monument' ||
+    opts.category === 'must_see' ||
+    opts.category === 'show' ||
+    opts.category === 'viewpoint'
+  ) {
+    return [
+      {
+        label: opts.website ? 'Web / entradas' : 'Entradas',
+        href: attractionTicketsUrl(opts),
+        primary: true,
+      },
+      { label: 'Maps', href: maps },
+    ]
+  }
+  return [
+    { label: 'Maps', href: maps, primary: true },
+    ...(opts.website
+      ? [{ label: 'Web', href: restaurantWebUrl(opts) }]
+      : []),
+  ]
+}
+
 export type VenueKind = 'restaurant' | 'hotel' | 'cafe'
 
 export type VenueLinkSet = {
