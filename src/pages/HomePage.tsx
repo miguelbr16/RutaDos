@@ -90,9 +90,9 @@ export function HomePage() {
 
         <div className="hero-copy">
           <p className="brand">RutaDos</p>
-          <h1>Planificá juntos, sin lío</h1>
+          <h1>Tu viaje, a tu ritmo</h1>
           <p className="lede">
-            Horarios, transporte y mapa editable — una guía hecha a vuestra medida.
+            Destino, gustos y un plan por días con mapa y transporte — solo o con quien viajéis.
           </p>
           <div className="hero-cta">
             <button type="button" className="btn primary" onClick={startWizard}>
@@ -103,7 +103,7 @@ export function HomePage() {
               className="btn ghost"
               onClick={() => setView({ name: 'settings' })}
             >
-              Pareja / sync
+              Sync (opcional)
             </button>
           </div>
         </div>

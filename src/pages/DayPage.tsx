@@ -24,6 +24,7 @@ import {
 import { fetchPlacePhotoUrls } from '../lib/placePhotos'
 import { hoursForPlace, evaluateOpeningHours, type PlaceHours } from '../lib/openingHours'
 import { loadOfflineDay, saveOfflineDay, type OfflineDayPack } from '../lib/offlineDay'
+import { fetchDayWeather, weatherSuggestsIndoor, type DayWeather } from '../lib/weather'
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
@@ -64,6 +65,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   )
   const [offlinePack, setOfflinePack] = useState<OfflineDayPack | null>(() => loadOfflineDay())
   const [packPreview, setPackPreview] = useState(false)
+  const [weather, setWeather] = useState<DayWeather | null>(null)
 
   const day = trip?.days.find((d) => d.id === dayId)
 
@@ -84,6 +86,20 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       setOfflinePack(pack)
     }
   }, [trip, day])
+
+  useEffect(() => {
+    if (!trip || !day || !online) {
+      setWeather(null)
+      return
+    }
+    let cancelled = false
+    void fetchDayWeather(trip.city.lat, trip.city.lng, day.date).then((w) => {
+      if (!cancelled) setWeather(w)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [trip?.city.lat, trip?.city.lng, day?.date, online])
 
   useEffect(() => {
     if (!day?.stops.length) {
@@ -258,6 +274,25 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
               : ''}
           {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
         </p>
+        {weather && (
+          <div className="weather-chip">
+            <strong>
+              {weather.label} · {weather.tempMin}–{weather.tempMax}°
+            </strong>
+            {weatherSuggestsIndoor(weather.code) ? (
+              <button
+                type="button"
+                className="chip on"
+                onClick={() => {
+                  chaosReplan(tripId, dayId, 'rain')
+                  setMsg('Replan por lluvia: priorizamos sitios cubiertos.')
+                }}
+              >
+                Adaptar a lluvia
+              </button>
+            ) : null}
+          </div>
+        )}
       </header>
 
       <div className="day-map-wrap">

@@ -207,6 +207,10 @@ export function TripPage({ tripId }: { tripId: string }) {
           {budget.totalMin}–{budget.totalMax} €/persona ({budget.nights} noches)
         </p>
         <p className="muted tiny">{budget.blurb}</p>
+        <p className="prefs-driven muted tiny">
+          Este plan se generó con: {prefsSummaryLine(trip.preferences, trip.routeStyle)}. Si cambiás
+          gustos, usá «Ajustar» y rearmar para que influya de verdad.
+        </p>
         <button
           type="button"
           className="btn ghost sm"

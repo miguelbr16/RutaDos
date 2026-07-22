@@ -740,6 +740,23 @@ a {
   border: 0;
 }
 
+.weather-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--deep) 8%, #fff);
+  font-size: 0.86rem;
+}
+
+.prefs-driven {
+  margin: 0.45rem 0 0;
+  line-height: 1.35;
+}
+
 .trip-toolbar {
   margin-bottom: 0.75rem;
 }
