@@ -8,6 +8,8 @@ export type CityGuide = {
   key: string
   transportTitle: string
   transportBlurb: string
+  /** Planificador oficial (rutas metro/bus/tren) */
+  transportPlannerUrl: string
   transportTicketUrl: string
   transportMapUrl?: string
   museums: CityLink[]
@@ -22,6 +24,7 @@ const GUIDES: Record<string, CityGuide> = {
     transportTitle: 'Transporte en Londres',
     transportBlurb:
       'Tube (metro), buses, Elizabeth line y trenes suburbanos van con la misma tarjeta/app: Oyster o contactless. El Journey Planner de TfL es la referencia.',
+    transportPlannerUrl: 'https://tfl.gov.uk/plan-a-journey/',
     transportTicketUrl: 'https://tfl.gov.uk/fares/',
     transportMapUrl: 'https://tfl.gov.uk/maps/',
     museums: [
@@ -83,6 +86,7 @@ const GUIDES: Record<string, CityGuide> = {
     transportTitle: 'Transporte en Madrid',
     transportBlurb:
       'Metro, EMT (bus) y Cercanías. La tarjeta Multi / abonos en la app o en máquinas de metro.',
+    transportPlannerUrl: 'https://www.crtm.es/',
     transportTicketUrl: 'https://www.metromadrid.es/es/viaja-en-metro/tarifas-y-titulos',
     transportMapUrl: 'https://www.metromadrid.es/es/viaja-en-metro/mapa-de-red',
     museums: [
@@ -134,6 +138,7 @@ const GUIDES: Record<string, CityGuide> = {
     transportTitle: 'Transporte en París',
     transportBlurb:
       'Metro, RER y bus (Île-de-France Mobilités). Navigo Semaine cubre zona 1–5 según el pase; Orly/Disney suelen pedir ticket zona ampliada. En Maps: «Ver línea» para M3/M4/RER concretos.',
+    transportPlannerUrl: 'https://www.iledefrance-mobilites.fr/en/routes-schedules',
     transportTicketUrl: 'https://www.iledefrance-mobilites.fr/en/tickets-fares',
     transportMapUrl: 'https://www.ratp.fr/en/plans',
     museums: [
@@ -185,6 +190,7 @@ const GUIDES: Record<string, CityGuide> = {
     transportTitle: 'Transporte en Roma',
     transportBlurb:
       'Metro (A/B/C), buses y trams ATAC. Billete BIT o app; el mismo vale metro/bus en el tiempo marcado.',
+    transportPlannerUrl: 'https://www.atac.roma.it/',
     transportTicketUrl: 'https://www.atac.roma.it/',
     museums: [
       {
@@ -224,6 +230,7 @@ const GUIDES: Record<string, CityGuide> = {
     key: 'nuremberg',
     transportTitle: 'Transporte en Núremberg',
     transportBlurb: 'VAG: U-Bahn, tram y bus. Billetes en máquinas o app VAG.',
+    transportPlannerUrl: 'https://www.vgn.de/',
     transportTicketUrl: 'https://www.vgn.de/',
     museums: [
       {
@@ -252,6 +259,7 @@ const GUIDES: Record<string, CityGuide> = {
     key: 'boston',
     transportTitle: 'Transporte en Boston',
     transportBlurb: 'MBTA (subway “T”, bus, ferry). CharlieCard / app.',
+    transportPlannerUrl: 'https://www.mbta.com/trip-planner',
     transportTicketUrl: 'https://www.mbta.com/fares',
     museums: [
       {
@@ -280,6 +288,7 @@ const GUIDES: Record<string, CityGuide> = {
     key: 'san diego',
     transportTitle: 'Transporte en San Diego',
     transportBlurb: 'MTS: trolley, bus. PRONTO card / app.',
+    transportPlannerUrl: 'https://www.sdmts.com/',
     transportTicketUrl: 'https://www.sdmts.com/fares-passes',
     museums: [],
     shows: [],
@@ -297,6 +306,7 @@ const GUIDES: Record<string, CityGuide> = {
     transportTitle: 'Transporte en Japón',
     transportBlurb:
       'IC cards (Suica/Pasmo), JR Pass si os compensa, metros locales por ciudad. Google Maps funciona muy bien con trenes.',
+    transportPlannerUrl: 'https://www.japan-guide.com/e/e2017.html',
     transportTicketUrl: 'https://www.japan-guide.com/e/e2359_003.html',
     museums: [],
     shows: [],
@@ -318,6 +328,7 @@ const GUIDES: Record<string, CityGuide> = {
     key: 'suiza',
     transportTitle: 'Transporte en Suiza',
     transportBlurb: 'SBB: trenes, buses y barcos coordinados. Swiss Travel Pass si os interesa.',
+    transportPlannerUrl: 'https://www.sbb.ch/en',
     transportTicketUrl: 'https://www.sbb.ch/en/tickets-offers.html',
     museums: [],
     shows: [],
@@ -335,6 +346,7 @@ const GUIDES: Record<string, CityGuide> = {
     transportTitle: 'Moverse por Dolomitas',
     transportBlurb:
       'Coche/furgoneta es lo habitual. En temporada hay buses de valle (SAD / Mobilcard en algunos valles).',
+    transportPlannerUrl: 'https://www.suedtirolmobil.info/',
     transportTicketUrl: 'https://www.suedtirolmobil.info/',
     museums: [],
     shows: [],
@@ -392,7 +404,9 @@ export function genericGuide(cityName: string): CityGuide {
     transportTitle: `Transporte en ${cityName}`,
     transportBlurb:
       'Busca la empresa de transporte local (metro/bus) y la app oficial. Google Maps suele dar bien las líneas.',
-    transportTicketUrl: `https://www.google.com/maps/search/public+transport+${q}`,
+    transportPlannerUrl: `https://www.google.com/search?q=${q}+metro+bus+journey+planner`,
+    transportTicketUrl: `https://www.google.com/search?q=${q}+transport+tickets`,
+    transportMapUrl: `https://www.google.com/search?q=${q}+metro+map`,
     museums: [
       {
         title: 'Museos (búsqueda)',

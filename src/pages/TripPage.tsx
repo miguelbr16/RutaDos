@@ -76,6 +76,11 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
 
+  useEffect(() => {
+    if (!trip?.logistics?.hotelSkipped || trip.logistics?.hotel) return
+    setVenueKind('hotel')
+  }, [trip?.id, trip?.logistics?.hotelSkipped, trip?.logistics?.hotel])
+
   if (!trip) {
     return (
       <div className="page">
@@ -94,13 +99,6 @@ export function TripPage({ tripId }: { tripId: string }) {
   const guide = getCityGuide(trip.city.name, trip.city.displayName) ?? genericGuide(trip.city.name)
   const showHotelSuggest =
     Boolean(trip.logistics?.hotelSkipped) && !trip.logistics?.hotel && !hotelBannerDismissed
-
-  useEffect(() => {
-    if (trip.logistics?.hotelSkipped && !trip.logistics?.hotel) {
-      setVenueKind('hotel')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trip.id, trip.logistics?.hotelSkipped, trip.logistics?.hotel])
 
   function exportTripJson() {
     const blob = new Blob([JSON.stringify(trip, null, 2)], { type: 'application/json' })
@@ -426,22 +424,14 @@ export function TripPage({ tripId }: { tripId: string }) {
             </div>
           ) : null}
 
-          <div className="trip-transit-strip" aria-label="Transporte">
+          <div className="trip-transit-strip" aria-label="Transporte local">
             <a
               className="btn ghost sm"
-              href={googleMapsDirectionsUrl(allStops.slice(0, 10), { mode: 'transit' })}
+              href={guide.transportPlannerUrl}
               target="_blank"
               rel="noreferrer"
             >
               Metro / bus
-            </a>
-            <a
-              className="btn ghost sm"
-              href={googleMapsDirectionsUrl(allStops.slice(0, 10), { mode: 'driving' })}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Taxi / coche
             </a>
             <a
               className="btn ghost sm"
@@ -461,16 +451,11 @@ export function TripPage({ tripId }: { tripId: string }) {
                 Mapa red
               </a>
             ) : null}
-            <a
-              className="btn ghost sm"
-              href={googleMapsDirectionsUrl(allStops.slice(0, 10), { mode: 'walking' })}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Andando
-            </a>
           </div>
-          <p className="muted tiny trip-transit-hint">{guide.transportTitle}</p>
+          <p className="muted tiny trip-transit-hint">
+            {guide.transportTitle}: planificar rutas, billetes y mapa oficial — no es la ruta del
+            viaje.
+          </p>
 
           {showHotelSuggest ? (
             <div className="hotel-suggest-banner">
@@ -606,21 +591,12 @@ export function TripPage({ tripId }: { tripId: string }) {
                     <div className="day-summary-actions">
                       <a
                         className="btn ghost sm"
-                        href={googleMapsDirectionsUrl(day.stops, { mode: 'transit' })}
+                        href={googleMapsDirectionsUrl(day.stops)}
                         target="_blank"
                         rel="noreferrer"
-                        title="Ruta en transporte público"
+                        title="Abrir este día en Google Maps"
                       >
-                        Metro
-                      </a>
-                      <a
-                        className="btn ghost sm"
-                        href={googleMapsDirectionsUrl(day.stops, { mode: 'driving' })}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="Taxi o coche"
-                      >
-                        Taxi
+                        Maps
                       </a>
                       <button
                         type="button"
