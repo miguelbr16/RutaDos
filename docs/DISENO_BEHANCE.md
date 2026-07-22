@@ -1,111 +1,115 @@
-# RutaDos — Inspiración Behance y roadmap visual
+# RutaDos — Diseño UI (Behance + estado real)
 
-**Referencias (jul 2026):**
+**Referencias Behance (jul 2026):**
 
 1. [Travel agency landing](https://www.behance.net/gallery/168961811/Travel-agency-landing-page-uxui)
-2. [Travelscape — Plan Trips Together](https://www.behance.net/gallery/252622071/Travelscape-Plan-Trips-Together-Powered-by-AI)
-3. [Touri — AI Trip Planner](https://www.behance.net/gallery/248048297/Touri-AI-Trip-Planner-App-UI-UX-Design)
-4. [Travel Booking Trip Planner](https://www.behance.net/gallery/249333877/Travel-Booking-Trip-Planner-App-UIUX-Design)
+2. [Travelscape](https://www.behance.net/gallery/252622071/Travelscape-Plan-Trips-Together-Powered-by-AI)
+3. [Touri](https://www.behance.net/gallery/248048297/Touri-AI-Trip-Planner-App-UI-UX-Design)
+4. [Travel Booking](https://www.behance.net/gallery/249333877/Travel-Booking-Trip-Planner-App-UIUX-Design)
 5. [YOGO Trip Planner](https://www.behance.net/gallery/78632553/YOGO-Trip-Planner-App)
 
-**Principio:** RutaDos es para **cualquier viajero** (solo o acompañado). No copiar flujos 100% colaborativos; sí el diseño y herramientas útiles para todos.
-
----
-
-## Qué tomar de cada referencia
-
-| Referencia | Diseño | Feature / producto |
-|------------|--------|-------------------|
-| **Landing agency** | Hero potente, destinos curados, confianza | Home con fotos reales por ciudad; footer legal; copy claro |
-| **Travelscape** | Presupuesto visible, timeline, cards ricas | Budget siempre en trip; share visual; cards con distancia/foto |
-| **Touri** | Onboarding corto, presets grandes, progress minimal | Wizard: mapa preview, paso 3 “boarding pass”, iconos en presets |
-| **Travel Booking** | Tabs Mapa/Días/Hotel/Comer, cards reserva | VenueFinder con tabs; CTA “Añadir al día” destacado |
-| **YOGO** | Mapa fijo, día compacto, barra acciones abajo | Trip/Day map-first; barra fija Maps/Metro/Comer; color por día |
+**Principio:** app para **cualquier viajero**. Inspiración visual, no copiar flujos de app solo-grupo.
 
 ---
 
 ## Mapa pantalla → inspiración
 
-```
-HOME     → Landing agency + Touri (hero editorial + destinos con foto)
-WIZARD   → Touri + Travelscape (dots progreso, banner ciudad, boarding pass)
-TRIP     → YOGO + Travelscape (mapa overlay, presupuesto visible, días color)
-DAY      → YOGO + Travel Booking (mapa + lista + reservar/comer)
-VENUES   → Travel Booking (cards foto, tabs hotel/comida)
-SHARE    → Travelscape (tarjeta visual del viaje)
-```
+| Pantalla | Inspiración | Estado jul 2026 |
+|----------|-------------|-----------------|
+| **Home** | Landing agency + Touri | Parcial — hero + destinos foto; diseño aún en iteración |
+| **Wizard** | Touri + Travelscape | Parcial — 3 pasos, sitios típicos; falta mapa preview |
+| **Trip** | YOGO + Travelscape | Parcial — mapa+panel PC, presupuesto; falta tabs y pulido |
+| **Day** | YOGO + Travel Booking | Legacy — pendiente rediseño |
+| **Map popup** | Travel Booking cards | Hecho — galería al clicar pin |
+| **Venues** | Travel Booking | Parcial — cards con thumb |
 
 ---
 
-## Fases de diseño (orden recomendado)
+## Qué significa “wizard” en diseño
 
-### Fase A — Hecho (rediseño v2, 22 jul 2026 noche)
+El **wizard** es la UI de **crear viaje** (no la home ni el trip). Objetivo Behance/Touri:
 
-- [x] Home v2: hero editorial “Donde vayas, día a día”, features 3 columnas, destinos scroll con **foto Unsplash**
-- [x] Wizard v2: dots progreso, banner ciudad, search pill, presets con iconos, paso 3 **boarding pass**
-- [x] Trip v2: presupuesto **siempre visible**, mapa con overlay título + foto ciudad, días con borde color
-- [x] `src/redesign.css` importado en `main.tsx` (override limpio sobre `index.css`)
-- [x] `DestinationGrid` con `<img>` por destino
-- [x] VenueFinder cards v2 + OpenTripMap opcional — `docs/OPENTRIPMAP.md`
-- [x] Afiliado Booking preparado sin activar — `docs/BOOKING_AFILIADO.md`
-- [x] Fix selección aeropuerto wizard (comparar lat/lng/code)
-- [x] Fotos documentadas — `docs/IMAGENES.md`
+- Pocos pasos, sensación de app de viajes (no encuesta larga)
+- Destinos visuales con foto
+- Presets grandes (Clásico / Local / Foodie)
+- Paso final tipo boarding pass
+- Sitios típicos como inspiración al elegir ciudad
 
-### Fase B — Siguiente (prioridad alta)
+Problemas reportados por usuario (jul 2026):
 
-- [ ] **Wizard Touri:** mini mapa Leaflet al elegir destino (preview antes de generar)
-- [ ] **Day YOGO:** mapa fijo arriba; barra inferior sticky (Maps · Metro · Comer · En ruta)
-- [ ] Pulir trip: acciones rápidas fuera del menú ··· (Maps, compartir)
+- Sensación de “encuesta” / formulario largo
+- Huecos vacíos (corregido parcialmente en `3c2f7d5`)
+- Layout centrado estrecho en PC (mejorado en `37aafd7` con `--layout-max: 72rem`)
+- Estética general aún no convence → **retomar mañana**
+
+---
+
+## Fases de diseño
+
+### Fase A — Hecho (base v2)
+
+- [x] `redesign.css` + import en `main.tsx`
+- [x] Home v2: hero, destinos Unsplash, features, viajes numerados
+- [x] Wizard v2: dots, presets SVG, boarding pass, sitios típicos, panel lateral paso 1
+- [x] Trip v2: presupuesto visible, layout mapa+panel PC, días con color
+- [x] Iconos SVG (`Icons.tsx`) en lugar de emojis
+- [x] Popup mapa con fotos Wikipedia (no en pins)
+- [x] Layout ancho desktop (`--layout-max: 72rem`)
+- [x] OpenTripMap + VenueFinder + docs afiliado/OTM
+
+### Fase B — Siguiente (prioridad usuario)
+
+- [ ] **Diseño global** — sensación app profesional (home, wizard, trip, day coherentes)
+- [ ] **Day YOGO** — mapa fijo + barra inferior sticky (Maps · Metro · Comer · En ruta)
+- [ ] **Wizard Touri** — mini mapa Leaflet al elegir destino
+- [ ] Trip: acciones rápidas visibles (no solo menú ···)
 
 ### Fase C — Pulido pre-lanzamiento
 
 - [ ] Trip tabs: Mapa · Días · Alojamiento · Comer
-- [ ] SharePage más visual (mapa + fechas + CTA)
+- [ ] SharePage visual
 - [ ] Página privacidad (requerida antes afiliado Booking)
-- [ ] Hero propio `/public/hero/` por destino o rotación
-- [ ] Sustituir Unsplash por fotos propias cuando existan
+- [ ] Fotos propias en `/public/` sustituyendo Unsplash
 
-### Fase D — Post-beta (opcional)
+### Fase D — Post-beta
 
-- [ ] OpenTripMap key en Vercel prod
-- [ ] Afiliado Booking (`VITE_BOOKING_AID`) tras aprobación
-- [ ] Votación en link compartido (Travelscape) — solo si se quiere colaboración
+- [ ] `VITE_OPENTRIPMAP_KEY` en Vercel prod
+- [ ] `VITE_BOOKING_AID` tras aprobación afiliado
 - [ ] Packs curados por ciudad
 
 ---
 
 ## Qué NO copiar
 
-- Catálogo Booking/Google embebido (API de pago / legal)
-- IA chat como pantalla principal (ya hay Telegram)
+- Catálogo Booking/Google embebido (API de pago)
+- Chat IA como pantalla principal (Telegram ya cubre in situ)
 - App centrada solo en grupos
-- Animaciones Behance que pesen en móvil real
+- Animaciones pesadas en móvil real
 
 ---
 
-## OpenTripMap (resumen)
+## Tokens CSS v2
 
-Base de datos **gratis** de POIs turísticos y restaurantes valorados. **No es Booking.**
+```css
+--layout-max: 72rem;      /* ancho contenido desktop */
+--v2-ink, --v2-card, --v2-muted, --v2-line
+--page-pad: clamp(1rem, 3.5vw, 1.75rem);
+```
 
-- Sin key → solo OpenStreetMap (como siempre)
-- Con `VITE_OPENTRIPMAP_KEY` → más sitios en plan + fotos en VenueFinder
-- Guía: `docs/OPENTRIPMAP.md`
+Clases principales: `.rd-layout`, `.home-v2`, `.wizard-v2`, `.trip-v2`, `.map-stop-popup`
 
 ---
 
-## Archivos tocados en Fase A v2
+## Archivos diseño
 
-| Archivo | Cambio |
-|---------|--------|
-| `src/pages/HomePage.tsx` | Home v2 |
-| `src/pages/WizardPage.tsx` | Wizard v2 |
-| `src/pages/TripPage.tsx` | Trip v2 |
-| `src/components/DestinationGrid.tsx` | Cards con foto |
-| `src/components/VenueFinder.tsx` | Cards enriquecidas |
-| `src/lib/quickDestinations.ts` | Destinos + URLs Unsplash |
-| `src/lib/opentripmap.ts` | Cliente OTM |
-| `src/lib/nearbyVenues.ts` | OSM + OTM |
-| `src/redesign.css` | **Nuevo** — estilos v2 |
-| `src/main.tsx` | Import redesign.css |
-| `src/App.tsx` | Fondo app-v2 sin atmosphere mint |
-| `docs/IMAGENES.md` | Atribución Unsplash |
+| Archivo | Rol |
+|---------|-----|
+| `src/redesign.css` | Estilos v2 |
+| `src/index.css` | Base + legacy |
+| `src/pages/HomePage.tsx` | Portada |
+| `src/pages/WizardPage.tsx` | Wizard |
+| `src/pages/TripPage.tsx` | Trip |
+| `src/pages/DayPage.tsx` | Day (siguiente foco) |
+| `src/components/TripMap.tsx` | Mapa + popups |
+| `src/components/Icons.tsx` | Iconos |
+| `src/lib/quickDestinations.ts` | Fotos destino |

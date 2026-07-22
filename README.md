@@ -1,72 +1,94 @@
 # RutaDos
 
-PWA mobile-first para planificar un viaje **solo o con alguien**: destino + gustos + ritmo → plan por días, mapa, transporte, offline del día y copiloto in situ (app + Telegram).
+PWA para planificar un viaje **día a día** (solo o acompañado): destino, fechas y gustos → itinerario con mapa, transporte oficial, hoteles/restaurantes, offline del día y copiloto Telegram.
 
+**Live:** https://ruta-dos-miguelbr16s-projects.vercel.app  
 **Repo:** https://github.com/miguelbr16/RutaDos
+
+---
 
 ## Arrancar en local
 
 ```bash
 npm install
+cp .env.example .env   # Supabase y bot opcionales
 npm run dev
 ```
 
-Abre `http://localhost:5173`. En el móvil (misma Wi‑Fi): la URL Network que muestre Vite.
+Abre `http://localhost:5173`. En móvil (misma Wi‑Fi): URL Network de Vite.
 
-Copia `.env.example` → `.env` (Supabase + username del bot Telegram, sin token).
+```bash
+npm run build   # verificar antes de push
+```
 
-## Funciones
+---
 
-1. **Wizard (3 pasos)** — Viaje (destino + fechas; hotel opcional) → Estilo → Generar
-2. **Descubrimiento** — OpenStreetMap/Overpass (+ OpenTripMap opcional)
-3. **Días** — fichas con mini timeline; editar paradas; Maps / En ruta
-4. **Cansados** — acorta el día y sugiere cafés cerca
-5. **Restaurantes / Hoteles** — listados OSM con Web, Reservar o Booking
-6. **Offline** — pack del día activo (paradas, transporte, Maps)
-7. **Meteo** — Open-Meteo del día + adaptar a lluvia
-8. **Import Google Maps** — KML / GeoJSON / enlaces
-9. **Sync opcional** — Supabase (auth + RLS) o Exportar/Importar JSON
-10. **Telegram** — [@RutaDosGuia_bot](https://t.me/RutaDosGuia_bot); ver [`docs/COPILOTO_TELEGRAM.md`](docs/COPILOTO_TELEGRAM.md)
+## Qué hace la app
+
+1. **Home** — Destinos populares, viajes guardados, crear viaje
+2. **Wizard** (3 pasos) — Destino y fechas → Estilo → Confirmar y generar
+3. **Trip** — Mapa del viaje, presupuesto, días, hotel/restaurantes
+4. **Day** — Timeline del día, mapa, caos, offline, meteo
+5. **Telegram** — [@RutaDosGuia_bot](https://t.me/RutaDosGuia_bot) en destino
+
+Glosario y flujos: **[`docs/GUIA_APP.md`](docs/GUIA_APP.md)**
+
+---
 
 ## Documentación
 
 | Doc | Contenido |
 |-----|-----------|
-| [`docs/PUNTO_SITUACION.md`](docs/PUNTO_SITUACION.md) | Estado del producto, backlog, backups, entorno |
+| [`docs/PUNTO_SITUACION.md`](docs/PUNTO_SITUACION.md) | Estado del proyecto, commits, handoff Cursor |
+| [`docs/GUIA_APP.md`](docs/GUIA_APP.md) | Pantallas, wizard, navegación, archivos |
+| [`docs/DISENO_BEHANCE.md`](docs/DISENO_BEHANCE.md) | Roadmap visual e inspiración UI |
+| [`docs/IMAGENES.md`](docs/IMAGENES.md) | Unsplash, Wikipedia, map popups |
+| [`docs/OPENTRIPMAP.md`](docs/OPENTRIPMAP.md) | API key free para más POIs |
+| [`docs/BOOKING_AFILIADO.md`](docs/BOOKING_AFILIADO.md) | Afiliado (futuro, no activar aún) |
 | [`docs/COPILOTO_TELEGRAM.md`](docs/COPILOTO_TELEGRAM.md) | Setup del bot |
 
-## Supabase (sync opcional)
+---
 
-1. Proyecto en [supabase.com](https://supabase.com)
-2. SQL: migraciones en `supabase/migrations/`
-3. Auth email; variables `VITE_SUPABASE_*` en `.env`
-4. En la app: Settings → sync (opcional)
+## Variables de entorno (`.env`)
 
-Sin Supabase la app funciona en un solo dispositivo; usad Exportar/Importar para pasar viajes.
+| Variable | Uso |
+|----------|-----|
+| `VITE_SUPABASE_URL` | Sync opcional |
+| `VITE_SUPABASE_ANON_KEY` | Sync opcional |
+| `VITE_TELEGRAM_BOT` | Username del bot (sin @) |
+| `VITE_OPENTRIPMAP_KEY` | Más sitios y fotos (opcional) |
+| `VITE_BOOKING_AID` | **No activar** hasta afiliado |
 
-## Deploy
+Sin Supabase: todo en local + export/import JSON.
 
-### Vercel
-
-App: https://ruta-dos-miguelbr16s-projects.vercel.app  
-
-Conectar repo `miguelbr16/RutaDos`. Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TELEGRAM_BOT`.  
-Wizard: **3 pasos** (Viaje · Estilo · Listo). Si la UI no cambia tras un push: **Redeploy** en el dashboard (caché / PWA).  
-Si pide login de Vercel al abrir: Settings → **Deployment Protection** → desactivar Authentication (para PWA pública).
-
-### Bot Telegram
-
-Edge Function en Supabase (`telegram-bot`), siempre con **`verify_jwt: false`**. Token solo en Secrets, nunca en el front.
-
-## Añadir a pantalla de inicio (PWA)
-
-1. URL HTTPS en el móvil  
-2. **iPhone:** Compartir → Añadir a pantalla de inicio  
-3. **Android:** menú → Instalar aplicación  
+---
 
 ## Stack
 
-- Vite + React + TypeScript + PWA  
-- Leaflet + OpenStreetMap · Overpass · OSRM · Nominatim/Photon · Wikipedia · Open-Meteo  
-- Supabase free (opcional) · Vercel  
-- Telegram Bot API (gratis)
+- Vite + React 19 + TypeScript + Zustand + PWA
+- Leaflet + OpenStreetMap · Overpass · Nominatim · OSRM · Wikipedia · Open-Meteo
+- Supabase (opcional) · Vercel · Telegram Bot API
+
+---
+
+## Deploy
+
+**Vercel:** conectar repo, env vars, auto-deploy en push.  
+Si la UI no cambia: Redeploy + borrar caché PWA.  
+Si pide login Vercel: desactivar Deployment Protection.
+
+**Bot:** Edge Function `telegram-bot` en Supabase, `verify_jwt: false`, token solo en Secrets.
+
+---
+
+## PWA — añadir a pantalla de inicio
+
+1. Abrir URL HTTPS en el móvil  
+2. **iPhone:** Compartir → Añadir a pantalla de inicio  
+3. **Android:** Instalar aplicación  
+
+---
+
+## Estado diseño (jul 2026)
+
+Rediseño visual **en progreso** (`src/redesign.css`). Funcionalidad estable; UI iterándose (layout ancho PC, iconos SVG, popups mapa con fotos). Ver `docs/DISENO_BEHANCE.md`.

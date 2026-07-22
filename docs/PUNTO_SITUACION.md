@@ -1,94 +1,115 @@
 # RutaDos — Punto de situación
 
-**Fecha:** 22 jul 2026 (noche, rediseño v2)  
+**Fecha:** 22 jul 2026 (noche, tras sesión diseño)  
 **Repo:** https://github.com/miguelbr16/RutaDos (`main`)  
-**App:** PWA mobile-first — Vite + React + TypeScript + Supabase  
-**UI:** español · rediseño visual v2 (Behance-inspired, fotos Unsplash)  
+**Live:** https://ruta-dos-miguelbr16s-projects.vercel.app  
 **Bot:** [@RutaDosGuia_bot](https://t.me/RutaDosGuia_bot)  
-**Supabase:** `odecdpzcnsmvafvbuiby` · https://odecdpzcnsmvafvbuiby.supabase.co  
-**Vercel:** https://ruta-dos-miguelbr16s-projects.vercel.app  
-(proyecto **ruta-dos** · auto-deploy en push; a veces Redeploy manual)  
-Nota: `ruta-dos.vercel.app` ya no responde (404). Si al abrir la app pide login de Vercel, desactivá **Deployment Protection** en Settings → Deployment Protection.
+**Supabase:** `odecdpzcnsmvafvbuiby` · https://odecdpzcnsmvafvbuiby.supabase.co
 
 ---
 
-## Posicionamiento
+## Qué es RutaDos
 
-App para **cualquier viajero** (solo o acompañado). Sync/pareja es opcional.
+PWA mobile-first (también usable en PC) para **planificar un viaje día a día**: destino, fechas, gustos → itinerario con mapa, transporte oficial, hoteles/restaurantes (OSM + links), offline del día y copiloto Telegram.
 
-Propuesta: plan día a día con mapa, transporte oficial, hoteles/restaurantes (OSM + links), offline del día, Telegram en destino.
+**Para cualquier viajero** (solo o acompañado). Sync en pareja es opcional (Supabase).
+
+Guía de pantallas y términos: **`docs/GUIA_APP.md`**
 
 ---
 
-## Fase actual: **Layout responsive + iconos profesionales (jul 2026)**
+## Commits recientes (orden cronológico)
 
-| Capa | Estado |
+| Commit | Qué |
+|--------|-----|
+| `a4ea5b1` | Fotos en **popup del mapa** al clicar pin (no en el pin); trip map limpio |
+| `3c2f7d5` | Wizard: sin hueco vacío, sitios típicos, panel lateral paso Estilo |
+| `37aafd7` | Layout ancho PC, iconos SVG, trip mapa + panel lateral |
+| `9c045af` | Rediseño v2 home/wizard/trip + `redesign.css` + Unsplash |
+| `f03d6f5` | OpenTripMap, VenueFinder, docs Behance, fix aeropuerto wizard |
+
+---
+
+## Estado funcional
+
+| Área | Estado |
 |------|--------|
-| Layout ancho en PC (`--layout-max: 72rem`) — home/wizard/trip | **Hecho** |
-| Home: hero full-bleed, columnas destinos + viajes en desktop | **Hecho** |
-| Iconos SVG (sin emojis) en home/wizard/venues | **Hecho** |
-| Trip: mapa + panel lateral en desktop; pines con foto | **Hecho** |
-| Wizard v2: presets, boarding pass, dots | Hecho |
-| Day / OnRoute estilo YOGO | **Pendiente (Fase B)** |
-
-**Roadmap diseño completo:** `docs/DISENO_BEHANCE.md`  
-**Fotos legales:** `docs/IMAGENES.md`
-
----
-
-## Último commit (esperado tras push)
-
-Rediseño visual v2: home/wizard/trip con fotos Unsplash, `redesign.css`, docs actualizados.
+| Wizard 3 pasos (destino → estilo → confirmar) | OK |
+| Generar plan (OSM + Wikipedia + OTM opcional) | OK |
+| Trip: mapa, presupuesto, días, hotel/restaurantes | OK |
+| Day: timeline, caos, offline, meteo | OK |
+| VenueFinder (OSM + OTM) | OK |
+| Share por token | OK |
+| Sync Supabase / export JSON | OK |
+| Bot Telegram v6 | OK |
+| Afiliado Booking | Preparado, **no activar** |
+| OpenTripMap en prod | Código listo; falta key en Vercel |
 
 ---
 
-## Backups git (revertir)
+## Estado diseño (jul 2026 — en progreso)
 
-| Qué | Ref |
-|-----|-----|
-| Antes rediseño v2 jul 2026 | tag `backup-pre-visual-redesign` |
-| Antes wizard 3 pasos | `backup/pre-wizard-3steps` · `backup-pre-wizard-3steps` |
-| Antes landing hero | `backup/pre-landing-hero` · `backup-pre-landing-hero` |
-| Antes transit cleanup | `backup/pre-transit-cleanup` · `backup-pre-transit-cleanup` |
+| Pantalla | Hecho | Pendiente / feedback usuario |
+|----------|-------|------------------------------|
+| **Home** | Hero full-bleed, destinos con foto, layout ancho PC | Pulir copy y densidad |
+| **Wizard** | Panel compacto, destinos siempre visibles, sitios típicos | Mapa preview; menos “encuesta” |
+| **Trip** | Mapa + panel lateral PC, popup con fotos, presupuesto | Tabs Mapa/Días/Hotel; diseño general |
+| **Day** | Funcional | Rediseño YOGO (mapa fijo + barra abajo) |
+| **Iconos** | SVG stroke (`Icons.tsx`), sin emojis en UI principal | — |
 
-```bash
-git log --oneline -10
-git tag -l 'backup*'
+Roadmap visual: **`docs/DISENO_BEHANCE.md`**
+
+---
+
+## Mapa del producto (pantallas)
+
+```
+Home → Wizard (3 pasos) → Trip → Day → OnRoute
+                ↓              ↓
+            Settings       VenueFinder / Guides / Copilot / Share
 ```
 
+Detalle: **`docs/GUIA_APP.md`**
+
 ---
 
-## Qué está implementado
+## Stack y datos
 
-### App
-- Wizard **3 pasos:** Destino/fechas → Estilo (presets + movilidad/comida) → Listo (boarding pass)
-- Home v2: hero editorial, scroll destinos con foto, viajes numerados, export/import
-- Trip v2: presupuesto siempre visible, mapa con foto ciudad, días con borde color
-- Day: timeline, caos, offline, Telegram
-- Share por token (Supabase)
-- Copiloto in-app + FAB Telegram
+- **Front:** Vite + React 19 + TypeScript + Zustand + PWA
+- **Mapa:** Leaflet + OSM tiles
+- **Plan:** OSM/Overpass, Nominatim, Wikipedia, OSRM, landmarks curados (Londres/París)
+- **Opcional:** OpenTripMap (`VITE_OPENTRIPMAP_KEY`), Supabase sync
+- **Deploy:** Vercel (front) + Supabase Edge (bot)
 
-### Datos (gratis)
-- OSM/Overpass · Nominatim · Wikipedia · OSRM · Open-Meteo
-- **OpenTripMap** (opcional, mejora discover + VenueFinder)
-- Links: Booking search, Google Maps, reservar mesa (sin APIs de pago)
+---
 
-### Telegram (`telegram-bot` v6)
-- Menú: ubicación · Restaurantes · Hoteles · Recomiéndame · etc.
-- Setup: `docs/COPILOTO_TELEGRAM.md`
+## Variables de entorno
+
+Ver `.env.example`. Resumen:
+
+| Variable | Obligatoria | Uso |
+|----------|-------------|-----|
+| `VITE_SUPABASE_URL` | No* | Sync + share |
+| `VITE_SUPABASE_ANON_KEY` | No* | Sync + share |
+| `VITE_TELEGRAM_BOT` | No | Username del bot (sin @) |
+| `VITE_OPENTRIPMAP_KEY` | No | Más POIs y fotos en venues |
+| `VITE_BOOKING_AID` | No | **No activar** hasta afiliado |
+
+\*Sin Supabase: app local + export/import JSON.
 
 ---
 
 ## Documentación
 
-| Doc | Contenido |
-|-----|-----------|
-| `docs/PUNTO_SITUACION.md` | Este archivo |
-| `docs/DISENO_BEHANCE.md` | Ideas Behance + fases diseño |
+| Archivo | Contenido |
+|---------|-----------|
+| `docs/PUNTO_SITUACION.md` | Este archivo — estado y handoff |
+| `docs/GUIA_APP.md` | Pantallas, wizard, flujo, archivos clave |
+| `docs/DISENO_BEHANCE.md` | Inspiración UI + fases A–D |
 | `docs/IMAGENES.md` | Fotos Unsplash por destino |
 | `docs/OPENTRIPMAP.md` | Activar API key free |
 | `docs/BOOKING_AFILIADO.md` | Guía afiliado (futuro) |
-| `docs/COPILOTO_TELEGRAM.md` | Bot Telegram |
+| `docs/COPILOTO_TELEGRAM.md` | Setup bot |
 
 ---
 
@@ -99,56 +120,91 @@ git clone https://github.com/miguelbr16/RutaDos.git
 cd RutaDos
 npm install
 cp .env.example .env
-# Rellenar VITE_SUPABASE_* y opcional VITE_OPENTRIPMAP_KEY
 npm run dev
 ```
 
 ```bash
-npm run build   # verificar antes de push
+npm run build   # obligatorio antes de push
 ```
 
 ---
 
-## Archivos clave (rediseño v2)
+## Archivos clave (jul 2026)
 
 | Ruta | Para qué |
 |------|----------|
-| `src/pages/HomePage.tsx` | Home v2 |
-| `src/pages/WizardPage.tsx` | Wizard v2 |
-| `src/pages/TripPage.tsx` | Trip v2 |
-| `src/pages/DayPage.tsx` | Día + timeline (**siguiente rediseño**) |
-| `src/components/DestinationGrid.tsx` | Cards destino con foto |
-| `src/components/VenueFinder.tsx` | Hoteles/restaurantes |
-| `src/lib/quickDestinations.ts` | Destinos + URLs Unsplash |
+| `src/pages/HomePage.tsx` | Portada |
+| `src/pages/WizardPage.tsx` | Asistente crear viaje (3 pasos) |
+| `src/pages/TripPage.tsx` | Resumen viaje + mapa |
+| `src/pages/DayPage.tsx` | Día detallado |
+| `src/components/TripMap.tsx` | Mapa Leaflet + popups con fotos |
+| `src/components/Icons.tsx` | Iconos SVG |
+| `src/components/VenueFinder.tsx` | Hoteles/restaurantes cerca |
+| `src/components/DestinationGrid.tsx` | Cards destino |
+| `src/lib/discover.ts` | Generar sitios del plan |
+| `src/lib/landmarks.ts` | Iconos Londres/París + sitios típicos wizard |
+| `src/lib/quickDestinations.ts` | Destinos curados + URLs Unsplash |
 | `src/lib/opentripmap.ts` | Cliente OpenTripMap |
-| `src/redesign.css` | Estilos v2 (home/wizard/trip) |
-| `src/index.css` | Estilos globales legacy |
+| `src/redesign.css` | Estilos v2 (home, wizard, trip) |
+| `src/index.css` | Estilos base + componentes legacy |
+| `src/store.ts` | Estado global (viajes, wizard, navegación) |
 
 ---
 
-## Nota para el asistente (Cursor)
+## Backups git
+
+```bash
+git tag -l 'backup*'
+git log --oneline -15
+```
+
+| Tag / rama | Momento |
+|------------|---------|
+| `backup-pre-visual-redesign` | Antes rediseño jul 2026 |
+| `backup-pre-wizard-3steps` | Antes wizard 3 pasos |
+
+---
+
+## Problemas conocidos
+
+1. **PWA cachea CSS viejo** — hard refresh, borrar datos del sitio, o Redeploy Vercel sin caché.
+2. **Diseño aún no convence al usuario** — funcionalidad OK; iteración visual pendiente (Fase B/C).
+3. **Fotos en mapa** — solo en **popup al clicar pin** (Wikipedia); tarda ~1–2 s en cargar al abrir trip.
+4. **`ruta-dos.vercel.app`** — 404; usar URL del proyecto `ruta-dos-miguelbr16s-projects`.
+
+---
+
+## Notas para el asistente (Cursor)
 
 - Repo: **miguelbr16/RutaDos**, branch `main`.
 - **No** commitear `.env`, tokens Telegram, `_tg_*`.
 - **No** activar `VITE_BOOKING_AID` hasta afiliado aprobado.
 - Bot Supabase: `verify_jwt: false` siempre.
-- Si UI vieja en móvil: Redeploy Vercel + hard refresh / borrar caché PWA (service worker precachea CSS).
-- **Siguiente trabajo:** Fase B en `docs/DISENO_BEHANCE.md` (Day YOGO + wizard mapa preview).
-- Build debe pasar: `npm run build`.
+- Build: `npm run build` antes de push.
+- Leer **`docs/GUIA_APP.md`** para entender wizard y navegación.
 
 ---
 
-## Prompt handoff (copiar en el otro PC)
+## Prompt handoff (copiar en otro PC / mañana)
 
 ```
-Continúo RutaDos en main (github.com/miguelbr16/RutaDos). Leé docs/PUNTO_SITUACION.md y docs/DISENO_BEHANCE.md.
+Continúo RutaDos en main (github.com/miguelbr16/RutaDos).
+Leé docs/PUNTO_SITUACION.md, docs/GUIA_APP.md y docs/DISENO_BEHANCE.md.
 
-Hecho (v2): rediseño home/wizard/trip con fotos Unsplash, src/redesign.css, presupuesto visible en trip, wizard boarding pass, destinos con foto. Build OK.
+Estado jul 2026 noche:
+- Rediseño v2 parcial: home/wizard/trip con redesign.css, layout ancho PC (--layout-max 72rem), iconos SVG.
+- Wizard: 3 pasos compactos, destinos populares siempre visibles, chips "sitios típicos" (landmarks.ts + cityGuides).
+- Trip: mapa + panel lateral en desktop, presupuesto visible, popup con galería foto al clicar pin (NO foto en pin).
+- Pendiente diseño: usuario no satisfecho con estética general — retomar mañana Fase B/C.
 
-Siguiente Fase B (prioridad):
-1. Wizard: mini mapa Leaflet al elegir destino (Touri)
-2. Day: mapa fijo + barra inferior sticky Maps/Metro/Comer/En ruta (YOGO)
-3. Trip tabs: Mapa · Días · Alojamiento · Comer (Travel Booking)
+Prioridad diseño:
+1. Day YOGO: mapa fijo + barra inferior sticky
+2. Trip tabs: Mapa · Días · Hotel · Comer
+3. Wizard: mini mapa preview al elegir destino
+4. Pulir trip/home para sensación app profesional (no encuesta, no huecos)
 
-No romper botones existentes. No activar Booking afiliado. Fotos en quickDestinations.ts (Unsplash). Si UI vieja: borrar caché PWA.
+Funcional sin tocar salvo bugs:
+- OpenTripMap opcional (VITE_OPENTRIPMAP_KEY en Vercel)
+- No activar VITE_BOOKING_AID
+- npm run build al terminar
 ```
