@@ -110,38 +110,6 @@ const QUICK_DESTINATIONS: Array<{
   },
 ]
 
-const PREF_GROUPS: Array<{
-  title: string
-  blurb: string
-  keys: PreferenceKey[]
-}> = [
-  {
-    title: 'De día',
-    blurb: 'Mañana y tarde',
-    keys: [
-      'monuments',
-      'museums',
-      'architecture',
-      'viewpoints',
-      'parks',
-      'neighborhoods',
-      'hidden',
-      'shopping',
-      'markets',
-    ],
-  },
-  {
-    title: 'Comer',
-    blurb: 'Comida, cena y pausas (también de noche)',
-    keys: ['restaurants', 'cafes', 'street_food'],
-  },
-  {
-    title: 'De noche',
-    blurb: 'Ambiente nocturno — no solo bares',
-    keys: ['night_walks', 'shows', 'nightlife'],
-  },
-]
-
 const PREF_HINTS: Record<PreferenceKey, string> = {
   monuments: 'Plazas, iconos, imprescindibles',
   museums: 'Arte, historia, exposiciones',
@@ -160,15 +128,87 @@ const PREF_HINTS: Record<PreferenceKey, string> = {
   night_walks: 'Calles y monumentos bonitos de noche',
 }
 
+/** 4 buckets grandes en vez del muro de chips */
+const VIBE_BUCKETS: Array<{
+  id: string
+  label: string
+  hint: string
+  keys: PreferenceKey[]
+}> = [
+  {
+    id: 'culture',
+    label: 'Cultura',
+    hint: 'Museos, monumentos, arquitectura',
+    keys: ['museums', 'monuments', 'architecture', 'shows'],
+  },
+  {
+    id: 'wander',
+    label: 'Callejear',
+    hint: 'Barrios, vistas, parques, rincones',
+    keys: ['neighborhoods', 'viewpoints', 'parks', 'hidden', 'markets'],
+  },
+  {
+    id: 'food',
+    label: 'Comer',
+    hint: 'Restaurantes, cafés, street food',
+    keys: ['restaurants', 'cafes', 'street_food'],
+  },
+  {
+    id: 'night',
+    label: 'De noche',
+    hint: 'Paseos iluminados y ambiente',
+    keys: ['night_walks', 'nightlife'],
+  },
+]
+
+const FINE_PREF_KEYS: PreferenceKey[] = [
+  'monuments',
+  'museums',
+  'architecture',
+  'viewpoints',
+  'parks',
+  'neighborhoods',
+  'hidden',
+  'markets',
+  'shopping',
+  'restaurants',
+  'cafes',
+  'street_food',
+  'night_walks',
+  'shows',
+  'nightlife',
+]
+
 function emptyNightlife(prefs: Preferences): Preferences {
   return { ...prefs, nightlife: false, night_walks: prefs.night_walks ?? true }
 }
 
-const PRESETS: Array<{ id: string; label: string; desc: string; prefs: Preferences }> = [
+function bucketIsOn(prefs: Preferences, keys: PreferenceKey[]): boolean {
+  const n = keys.filter((k) => prefs[k]).length
+  return n >= Math.ceil(keys.length / 2)
+}
+
+function toggleBucketPrefs(prefs: Preferences, keys: PreferenceKey[]): Preferences {
+  const turnOn = !bucketIsOn(prefs, keys)
+  const next = { ...prefs }
+  for (const k of keys) next[k] = turnOn
+  return next
+}
+
+const PRESETS: Array<{
+  id: string
+  label: string
+  desc: string
+  prefs: Preferences
+  pace?: Pace
+  explore?: ExploreMode
+}> = [
   {
     id: 'classic',
     label: 'Clásico',
-    desc: 'Iconos + museos + comer',
+    desc: 'Iconos, museos y buen comer — sin prisa',
+    pace: 'relaxed',
+    explore: 'icons',
     prefs: emptyNightlife({
       ...DEFAULT_PREFERENCES,
       monuments: true,
@@ -191,6 +231,8 @@ const PRESETS: Array<{ id: string; label: string; desc: string; prefs: Preferenc
     id: 'local',
     label: 'Más local',
     desc: 'Barrios, mercados y secretos',
+    pace: 'normal',
+    explore: 'local',
     prefs: emptyNightlife({
       ...DEFAULT_PREFERENCES,
       monuments: true,
@@ -210,31 +252,11 @@ const PRESETS: Array<{ id: string; label: string; desc: string; prefs: Preferenc
     }),
   },
   {
-    id: 'culture',
-    label: 'Cultural',
-    desc: 'Museos, arquitectura y teatros',
-    prefs: emptyNightlife({
-      ...DEFAULT_PREFERENCES,
-      monuments: true,
-      museums: true,
-      architecture: true,
-      viewpoints: true,
-      parks: true,
-      neighborhoods: true,
-      hidden: true,
-      restaurants: true,
-      cafes: true,
-      markets: false,
-      street_food: false,
-      shopping: false,
-      shows: true,
-      nightlife: false,
-    }),
-  },
-  {
     id: 'food',
     label: 'Foodie',
-    desc: 'Mercados, restaurantes y café',
+    desc: 'Mercados, mesas y cafés primero',
+    pace: 'normal',
+    explore: 'mixed',
     prefs: emptyNightlife({
       ...DEFAULT_PREFERENCES,
       monuments: true,
@@ -255,23 +277,48 @@ const PRESETS: Array<{ id: string; label: string; desc: string; prefs: Preferenc
   },
 ]
 
-const PACE_OPTIONS: Array<{ value: Pace; title: string; desc: string }> = [
-  { value: 'relaxed', title: 'Tranquilo', desc: 'Pocas paradas, margen para café' },
-  { value: 'normal', title: 'Equilibrado', desc: 'Ver lo importante sin prisas' },
-  { value: 'intense', title: 'A tope', desc: 'Días densos, más sitios' },
-]
-
-const EXPLORE_OPTIONS: Array<{ value: ExploreMode; title: string; desc: string }> = [
-  { value: 'icons', title: 'Imprescindibles', desc: 'Lo más famoso primero' },
-  { value: 'mixed', title: 'Turismo + local', desc: 'Iconos y barrios' },
-  { value: 'local', title: 'Como locales', desc: 'Menos postal, más barrio' },
+/** Ritmo + exploración en una sola elección visual */
+const STYLE_PACKS: Array<{
+  id: string
+  title: string
+  desc: string
+  pace: Pace
+  explore: ExploreMode
+}> = [
+  {
+    id: 'chill-icons',
+    title: 'Sin prisa · iconos',
+    desc: 'Pocas paradas, lo famoso primero',
+    pace: 'relaxed',
+    explore: 'icons',
+  },
+  {
+    id: 'balanced',
+    title: 'Equilibrado · mixto',
+    desc: 'Turismo y barrio sin agobio',
+    pace: 'normal',
+    explore: 'mixed',
+  },
+  {
+    id: 'full-local',
+    title: 'A tope · local',
+    desc: 'Días densos, más barrio que postal',
+    pace: 'intense',
+    explore: 'local',
+  },
 ]
 
 const MOBILITY_OPTIONS: Array<{ value: Mobility; title: string; desc: string }> = [
-  { value: 'walk', title: 'Andando', desc: 'Pie primero; transporte si es lejos' },
-  { value: 'mixed', title: 'Lo óptimo', desc: 'Pie / metro / taxi con motivo' },
+  { value: 'walk', title: 'Andando', desc: 'Pie primero' },
+  { value: 'mixed', title: 'Lo óptimo', desc: 'Pie / metro / taxi' },
   { value: 'transit', title: 'Transporte', desc: 'Ahorra piernas' },
-  { value: 'drive', title: 'Coche / furgoneta', desc: 'Ideal Dolomitas u otras rutas' },
+  { value: 'drive', title: 'Coche', desc: 'Rutas / furgoneta' },
+]
+
+const FOOD_OPTIONS = [
+  { value: 'low' as const, title: 'Económica', desc: 'Casual / street' },
+  { value: 'mid' as const, title: 'Media', desc: 'Buenas cartas' },
+  { value: 'high' as const, title: 'Especial', desc: 'Más encanto' },
 ]
 
 function nightsBetween(start: string, end: string): number {
@@ -297,6 +344,7 @@ export function WizardPage() {
   const error = useAppStore((s) => s.error)
 
   const [citySuggestions, setCitySuggestions] = useState<PlaceSuggestion[]>([])
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const [hotelSuggestions, setHotelSuggestions] = useState<PlaceSuggestion[]>([])
   const [mustSuggestions, setMustSuggestions] = useState<PlaceSuggestion[]>([])
   const [searchingCity, setSearchingCity] = useState(false)
@@ -901,23 +949,28 @@ export function WizardPage() {
 
       {step === 2 && (
         <section className="wiz-stage">
-          <h2 className="wiz-title">Qué os gusta</h2>
-          <p className="muted">
-            Nada viene marcado: elegid vosotros (o un preset como atajo). De noche: cenas,
-            paseos iluminados y, si queréis, bares.
-          </p>
+          <h2 className="wiz-title">Qué te apetece</h2>
+          <p className="muted">Elegí un estilo o armá con las 4 categorías. Podés afinar después.</p>
 
-          <div className="preset-row">
+          <div className="wiz-hero-presets">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                className="preset-card"
-                onClick={() =>
+                className={selectedPreset === p.id ? 'wiz-hero-preset on' : 'wiz-hero-preset'}
+                onClick={() => {
+                  setSelectedPreset(p.id)
                   patchWizard({
-                    preferences: { ...p.prefs, nightlife: false, night_walks: true },
+                    preferences: { ...p.prefs },
+                    routeStyle: {
+                      ...wizard.routeStyle,
+                      ...(p.pace ? { pace: p.pace } : {}),
+                      ...(p.explore ? { explore: p.explore } : {}),
+                      foodBudget: wizard.routeStyle.foodBudget ?? 'mid',
+                      mobility: wizard.routeStyle.mobility ?? 'mixed',
+                    },
                   })
-                }
+                }}
               >
                 <strong>{p.label}</strong>
                 <span>{p.desc}</span>
@@ -925,27 +978,46 @@ export function WizardPage() {
             ))}
           </div>
 
-          {PREF_GROUPS.map((group) => (
-            <div key={group.title} className="pref-group">
-              <div className="pref-group-head">
-                <h3>{group.title}</h3>
-                <p>{group.blurb}</p>
-              </div>
-              <div className="pref-cards">
-                {group.keys.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={wizard.preferences[key] ? 'pref-card on' : 'pref-card'}
-                    onClick={() => togglePref(key)}
-                  >
-                    <strong>{PREFERENCE_LABELS[key]}</strong>
-                    <span>{PREF_HINTS[key]}</span>
-                  </button>
-                ))}
-              </div>
+          <p className="wiz-section-label">O tocá categorías</p>
+          <div className="vibe-grid">
+            {VIBE_BUCKETS.map((b) => {
+              const on = bucketIsOn(wizard.preferences, b.keys)
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  className={on ? 'vibe-card on' : 'vibe-card'}
+                  onClick={() => {
+                    setSelectedPreset(null)
+                    patchWizard({ preferences: toggleBucketPrefs(wizard.preferences, b.keys) })
+                  }}
+                >
+                  <strong>{b.label}</strong>
+                  <span>{b.hint}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <details className="wiz-fine">
+            <summary>Afinar gustos uno a uno</summary>
+            <div className="wiz-fine-chips">
+              {FINE_PREF_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={wizard.preferences[key] ? 'chip on' : 'chip'}
+                  title={PREF_HINTS[key]}
+                  onClick={() => {
+                    setSelectedPreset(null)
+                    togglePref(key)
+                  }}
+                >
+                  {PREFERENCE_LABELS[key]}
+                </button>
+              ))}
             </div>
-          ))}
+          </details>
 
           <p className="hint-box">
             Activo: {activePrefs.map((k) => PREFERENCE_LABELS[k]).join(', ') || 'nada aún'}
@@ -969,89 +1041,65 @@ export function WizardPage() {
 
       {step === 3 && (
         <section className="wiz-stage">
-          <h2 className="wiz-title">Cómo queréis recorrer la ciudad</h2>
-          <p className="muted">
-            Nada premarcado: elegid ritmo, exploración, movilidad y comida.
-          </p>
+          <h2 className="wiz-title">Cómo querés recorrer</h2>
+          <p className="muted">Una elección de ritmo, luego movilidad y comida.</p>
 
-          <div className="option-block">
-            <h3>Ritmo</h3>
-            <div className="option-cards">
-              {PACE_OPTIONS.map((o) => (
+          <div className="style-pack-grid">
+            {STYLE_PACKS.map((pack) => {
+              const on =
+                wizard.routeStyle.pace === pack.pace &&
+                wizard.routeStyle.explore === pack.explore
+              return (
                 <button
-                  key={o.value}
+                  key={pack.id}
                   type="button"
-                  className={
-                    wizard.routeStyle.pace === o.value ? 'option-card on' : 'option-card'
-                  }
+                  className={on ? 'style-pack on' : 'style-pack'}
                   onClick={() =>
-                    patchWizard({ routeStyle: { ...wizard.routeStyle, pace: o.value } })
+                    patchWizard({
+                      routeStyle: {
+                        ...wizard.routeStyle,
+                        pace: pack.pace,
+                        explore: pack.explore,
+                      },
+                    })
                   }
                 >
-                  <strong>{o.title}</strong>
-                  <span>{o.desc}</span>
+                  <strong>{pack.title}</strong>
+                  <span>{pack.desc}</span>
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
 
-          <div className="option-block">
-            <h3>Exploración</h3>
-            <div className="option-cards">
-              {EXPLORE_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  className={
-                    wizard.routeStyle.explore === o.value ? 'option-card on' : 'option-card'
-                  }
-                  onClick={() =>
-                    patchWizard({ routeStyle: { ...wizard.routeStyle, explore: o.value } })
-                  }
-                >
-                  <strong>{o.title}</strong>
-                  <span>{o.desc}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="option-block">
-            <h3>Cómo moveros</h3>
-            <div className="option-cards">
+          <div className="wiz-pill-block">
+            <p className="wiz-section-label">Cómo moverte</p>
+            <div className="wiz-pills">
               {MOBILITY_OPTIONS.map((o) => (
                 <button
                   key={o.value}
                   type="button"
                   className={
-                    wizard.routeStyle.mobility === o.value ? 'option-card on' : 'option-card'
+                    wizard.routeStyle.mobility === o.value ? 'wiz-pill on' : 'wiz-pill'
                   }
                   onClick={() =>
                     patchWizard({ routeStyle: { ...wizard.routeStyle, mobility: o.value } })
                   }
                 >
-                  <strong>{o.title}</strong>
-                  <span>{o.desc}</span>
+                  {o.title}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="option-block">
-            <h3>Comida</h3>
-            <div className="option-cards compact">
-              {(
-                [
-                  { value: 'low' as const, title: 'Económica', desc: 'Casual / street food' },
-                  { value: 'mid' as const, title: 'Media', desc: 'Buenas cartas sin lujo' },
-                  { value: 'high' as const, title: 'Especial', desc: 'Más encanto' },
-                ] as const
-              ).map((o) => (
+          <div className="wiz-pill-block">
+            <p className="wiz-section-label">Comida</p>
+            <div className="wiz-pills">
+              {FOOD_OPTIONS.map((o) => (
                 <button
                   key={o.value}
                   type="button"
                   className={
-                    wizard.routeStyle.foodBudget === o.value ? 'option-card on' : 'option-card'
+                    wizard.routeStyle.foodBudget === o.value ? 'wiz-pill on' : 'wiz-pill'
                   }
                   onClick={() =>
                     patchWizard({
@@ -1059,61 +1107,61 @@ export function WizardPage() {
                     })
                   }
                 >
-                  <strong>{o.title}</strong>
-                  <span>{o.desc}</span>
+                  {o.title}
                 </button>
               ))}
             </div>
           </div>
 
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={wizard.routeStyle.preferCentral === true}
-              onChange={(e) =>
-                patchWizard({
-                  routeStyle: {
-                    ...wizard.routeStyle,
-                    preferCentral: e.target.checked,
-                  },
-                })
-              }
-            />
-            Plan sugerido: priorizar centro (afueras en wishlist / armar nosotros)
-          </label>
-
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={wizard.routeStyle.preferScenicWalks === true}
-              onChange={(e) =>
-                patchWizard({
-                  routeStyle: {
-                    ...wizard.routeStyle,
-                    preferScenicWalks: e.target.checked,
-                  },
-                })
-              }
-            />
-            Si hay un barrio o parque bonito de camino, preferir andar
-          </label>
-
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={wizard.routeStyle.detours === true}
-              onChange={(e) =>
-                patchWizard({
-                  routeStyle: { ...wizard.routeStyle, detours: e.target.checked },
-                })
-              }
-            />
-            Proponer paradas extra entre un sitio y otro
-          </label>
+          <details className="wiz-fine">
+            <summary>Opciones avanzadas</summary>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={wizard.routeStyle.preferCentral === true}
+                onChange={(e) =>
+                  patchWizard({
+                    routeStyle: {
+                      ...wizard.routeStyle,
+                      preferCentral: e.target.checked,
+                    },
+                  })
+                }
+              />
+              Priorizar centro en el plan sugerido
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={wizard.routeStyle.preferScenicWalks === true}
+                onChange={(e) =>
+                  patchWizard({
+                    routeStyle: {
+                      ...wizard.routeStyle,
+                      preferScenicWalks: e.target.checked,
+                    },
+                  })
+                }
+              />
+              Preferir andar si el camino es bonito
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={wizard.routeStyle.detours === true}
+                onChange={(e) =>
+                  patchWizard({
+                    routeStyle: { ...wizard.routeStyle, detours: e.target.checked },
+                  })
+                }
+              />
+              Proponer paradas extra entre sitios
+            </label>
+          </details>
 
           <p className="hint-box">
             Resumen: {preview}
-            {!styleReady ? ' · Falta elegir ritmo, exploración, movilidad y comida.' : ''}
+            {!styleReady ? ' · Falta ritmo, movilidad o comida.' : ''}
           </p>
 
           <div className="wiz-actions">
