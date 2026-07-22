@@ -192,380 +192,371 @@ export function TripPage({ tripId }: { tripId: string }) {
         <p className="brand small">RutaDos</p>
         <h1>{trip.title}</h1>
         <p className="muted">
-          {trip.startDate} → {trip.endDate} · {trip.places.length} recomendaciones ·{' '}
-          {prefsSummaryLine(trip.preferences, trip.routeStyle)}
-          {trip.logistics?.arrivalTime ? ` · llegada ${trip.logistics.arrivalTime}` : ''}
-          {trip.logistics?.hotel ? ` · hotel: ${trip.logistics.hotel.name}` : ''}
-          {trip.logistics?.airport ? ` · aero: ${trip.logistics.airport.name}` : ''}
-          {trip.city.scale === 'region'
-            ? ' · región / pueblos'
-            : trip.city.scale === 'country'
-              ? ' · ruta por el país'
-              : ''}
+          {trip.startDate} → {trip.endDate}
+          {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
         </p>
       </header>
 
-      <TripMap stops={allStops.slice(0, 40)} height="220px" showLegend />
+      <div className="trip-layout">
+        <TripMap stops={allStops.slice(0, 40)} height="200px" showLegend />
 
-      {offlineForThisTrip ? (
-        <div className="offline-banner ok" style={{ marginTop: '0.75rem' }}>
-          <strong>Pack offline listo</strong>
+        {offlineForThisTrip ? (
+          <div className="offline-banner ok">
+            <strong>Pack offline listo</strong>
+            <p>
+              {offlineForThisTrip.dayLabel} · {offlineForThisTrip.stops.length} paradas.
+            </p>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() =>
+                setView({
+                  name: 'day',
+                  tripId: trip.id,
+                  dayId: offlineForThisTrip.dayId,
+                })
+              }
+            >
+              Abrir día offline
+            </button>
+          </div>
+        ) : null}
+
+        <section className="section trip-days">
+          <h2>Días</h2>
+          <ul className="day-list visual">
+            {trip.days.map((day) => {
+              const visits = [...day.stops]
+                .filter((s) => !s.isHotel)
+                .sort((a, b) => a.order - b.order)
+              const tag =
+                day.intensity === 'arrival'
+                  ? 'Llegada'
+                  : day.intensity === 'departure'
+                    ? 'Salida'
+                    : null
+              const preview = visits.slice(0, 4)
+              return (
+                <li key={day.id}>
+                  <article className="day-card-v">
+                    <button
+                      type="button"
+                      className="day-card-v-main"
+                      onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
+                    >
+                      <div className="day-card-v-head">
+                        <strong className="day-label">{day.label}</strong>
+                        <span className="day-meta-pills">
+                          {tag ? <span className="day-pill tag">{tag}</span> : null}
+                          <span className="day-pill count">
+                            {visits.length} sitio{visits.length === 1 ? '' : 's'}
+                          </span>
+                        </span>
+                      </div>
+
+                      {preview.length === 0 ? (
+                        <p className="muted tiny">Sin paradas aún — tocá para armar el día</p>
+                      ) : (
+                        <ol className="day-mini-tl">
+                          {preview.map((s, i) => {
+                            const mode = (s.transitMode || 'walk') as TransitMode
+                            const short = s.name.replace(/\s*\/.*$/, '').slice(0, 28)
+                            return (
+                              <li key={s.id}>
+                                <span className="day-mini-n">{i + 1}</span>
+                                <span className="day-mini-body">
+                                  <strong>{short}</strong>
+                                  <span className="muted tiny">
+                                    {s.suggestedTime ? `${s.suggestedTime}` : ''}
+                                    {s.suggestedTime && i < preview.length - 1 ? ' · ' : ''}
+                                    {i < preview.length - 1
+                                      ? `${TRANSIT_MODE_LABELS[mode]}${
+                                          s.minutesToNext != null ? ` ${s.minutesToNext}'` : ''
+                                        }`
+                                      : ''}
+                                  </span>
+                                </span>
+                              </li>
+                            )
+                          })}
+                          {visits.length > preview.length ? (
+                            <li className="day-mini-more">
+                              <span className="day-mini-n">+</span>
+                              <span className="muted tiny">
+                                {visits.length - preview.length} más · abrir día
+                              </span>
+                            </li>
+                          ) : null}
+                        </ol>
+                      )}
+                    </button>
+                    <div className="day-card-v-actions">
+                      <a
+                        className="btn ghost sm"
+                        href={googleMapsDirectionsUrl(day.stops)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Maps
+                      </a>
+                      <button
+                        type="button"
+                        className="btn primary sm"
+                        onClick={() => setView({ name: 'onroute', tripId: trip.id, dayId: day.id })}
+                      >
+                        En ruta
+                      </button>
+                    </div>
+                  </article>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      </div>
+
+      <details className="more-panel">
+        <summary>Más</summary>
+
+        <div className="chaos-bar day-quick" style={{ marginTop: '0.5rem' }}>
+          <button
+            type="button"
+            className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
+            onClick={() => setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))}
+          >
+            Restaurantes
+          </button>
+          <button
+            type="button"
+            className={venueKind === 'hotel' ? 'chip on' : 'chip'}
+            onClick={() => setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))}
+          >
+            Hoteles
+          </button>
+          {trip.logistics?.hotel ? (
+            <a
+              className="chip"
+              href={hotelBookingUrl({
+                name: trip.logistics.hotel.name,
+                city: trip.city.name,
+                lat: trip.logistics.hotel.lat,
+                lng: trip.logistics.hotel.lng,
+              })}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Booking · {trip.logistics.hotel.name.slice(0, 18)}
+            </a>
+          ) : null}
+        </div>
+
+        {venueKind && (
+          <VenueFinder
+            kind={venueKind}
+            lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
+            lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
+            city={trip.city.name}
+            onClose={() => setVenueKind(null)}
+          />
+        )}
+
+        <div className="budget-box" style={{ marginTop: '1rem' }}>
+          <strong>Presupuesto orientativo</strong>
           <p>
-            {offlineForThisTrip.dayLabel} · {offlineForThisTrip.stops.length} paradas. Abrí ese día
-            o En ruta aunque no haya red.
+            ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/persona/día · total ~{' '}
+            {budget.totalMin}–{budget.totalMax} €/persona ({budget.nights} noches)
+          </p>
+          <p className="muted tiny">{budget.blurb}</p>
+          <p className="prefs-driven muted tiny">
+            Plan con: {prefsSummaryLine(trip.preferences, trip.routeStyle)}.
           </p>
           <button
             type="button"
             className="btn ghost sm"
-            onClick={() =>
-              setView({
-                name: 'day',
-                tripId: trip.id,
-                dayId: offlineForThisTrip.dayId,
-              })
-            }
+            style={{ marginTop: '0.5rem' }}
+            onClick={() => {
+              setDraftPrefs({ ...DEFAULT_PREFERENCES, ...trip.preferences })
+              setDraftPace(trip.routeStyle.pace)
+              setDraftExplore(trip.routeStyle.explore)
+              setDraftFood(trip.routeStyle.foodBudget)
+              setStyleOpen((v) => !v)
+            }}
           >
-            Abrir día offline
+            {styleOpen ? 'Cerrar ajuste' : 'Ajustar gustos y ritmo'}
           </button>
         </div>
-      ) : (
-        <p className="muted tiny" style={{ marginTop: '0.75rem' }}>
-          Tip: abrí un día y tocá «Offline» para guardar el pack del día (paradas + transporte) en el
-          móvil.
-        </p>
-      )}
 
-      <div className="chaos-bar day-quick" style={{ marginTop: '0.75rem' }}>
-        <button
-          type="button"
-          className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
-          onClick={() => setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))}
-        >
-          Restaurantes
-        </button>
-        <button
-          type="button"
-          className={venueKind === 'hotel' ? 'chip on' : 'chip'}
-          onClick={() => setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))}
-        >
-          Hoteles
-        </button>
-        {trip.logistics?.hotel ? (
-          <a
-            className="chip"
-            href={hotelBookingUrl({
-              name: trip.logistics.hotel.name,
-              city: trip.city.name,
-              lat: trip.logistics.hotel.lat,
-              lng: trip.logistics.hotel.lng,
-            })}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Booking · {trip.logistics.hotel.name.slice(0, 18)}
-          </a>
-        ) : null}
-      </div>
-
-      {venueKind && (
-        <VenueFinder
-          kind={venueKind}
-          lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
-          lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
-          city={trip.city.name}
-          onClose={() => setVenueKind(null)}
-        />
-      )}
-
-      <div className="budget-box" style={{ marginTop: '1rem' }}>
-        <strong>Presupuesto orientativo</strong>
-        <p>
-          ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/persona/día · total ~{' '}
-          {budget.totalMin}–{budget.totalMax} €/persona ({budget.nights} noches)
-        </p>
-        <p className="muted tiny">{budget.blurb}</p>
-        <p className="prefs-driven muted tiny">
-          Este plan se generó con: {prefsSummaryLine(trip.preferences, trip.routeStyle)}. Si cambiás
-          gustos, usá «Ajustar» y rearmar para que influya de verdad.
-        </p>
-        <button
-          type="button"
-          className="btn ghost sm"
-          style={{ marginTop: '0.5rem' }}
-          onClick={() => {
-            setDraftPrefs({ ...DEFAULT_PREFERENCES, ...trip.preferences })
-            setDraftPace(trip.routeStyle.pace)
-            setDraftExplore(trip.routeStyle.explore)
-            setDraftFood(trip.routeStyle.foodBudget)
-            setStyleOpen((v) => !v)
-          }}
-        >
-          {styleOpen ? 'Cerrar ajuste' : 'Ajustar gustos y ritmo'}
-        </button>
-      </div>
-
-      {styleOpen && draftPrefs && (
-        <div className="panel" style={{ marginTop: '0.75rem' }}>
-          <h3>Ajustar y rearmar plan</h3>
-          <p className="muted tiny">
-            Cambiad gustos / ritmo / comida. Podéis buscar sitios de nuevo o solo rearmar los días
-            con lo que ya hay.
-          </p>
-          <div className="chip-row" style={{ flexWrap: 'wrap', gap: '0.35rem' }}>
-            {STYLE_KEYS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                className={`chip ${draftPrefs[k] ? 'on' : ''}`}
-                onClick={() => setDraftPrefs({ ...draftPrefs, [k]: !draftPrefs[k] })}
+        {styleOpen && draftPrefs && (
+          <div className="panel" style={{ marginTop: '0.75rem' }}>
+            <h3>Ajustar y rearmar plan</h3>
+            <p className="muted tiny">
+              Cambiad gustos / ritmo / comida. Podéis buscar sitios de nuevo o solo rearmar los días
+              con lo que ya hay.
+            </p>
+            <div className="chip-row" style={{ flexWrap: 'wrap', gap: '0.35rem' }}>
+              {STYLE_KEYS.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={`chip ${draftPrefs[k] ? 'on' : ''}`}
+                  onClick={() => setDraftPrefs({ ...draftPrefs, [k]: !draftPrefs[k] })}
+                >
+                  {PREFERENCE_LABELS[k]}
+                </button>
+              ))}
+            </div>
+            <label className="field" style={{ marginTop: '0.75rem' }}>
+              <span>Ritmo</span>
+              <select
+                value={draftPace ?? trip.routeStyle.pace}
+                onChange={(e) => setDraftPace(e.target.value as RouteStyle['pace'])}
               >
-                {PREFERENCE_LABELS[k]}
-              </button>
-            ))}
-          </div>
-          <label className="field" style={{ marginTop: '0.75rem' }}>
-            <span>Ritmo</span>
-            <select
-              value={draftPace ?? trip.routeStyle.pace}
-              onChange={(e) => setDraftPace(e.target.value as RouteStyle['pace'])}
-            >
-              <option value="relaxed">Tranquilo</option>
-              <option value="normal">Normal</option>
-              <option value="intense">Intenso</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Explorar</span>
-            <select
-              value={draftExplore ?? trip.routeStyle.explore}
-              onChange={(e) => setDraftExplore(e.target.value as RouteStyle['explore'])}
-            >
-              <option value="icons">Iconos</option>
-              <option value="mixed">Mixto</option>
-              <option value="local">Local / barrios</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Comida</span>
-            <select
-              value={draftFood ?? trip.routeStyle.foodBudget}
-              onChange={(e) => setDraftFood(e.target.value as RouteStyle['foodBudget'])}
-            >
-              <option value="low">Económica</option>
-              <option value="mid">Media</option>
-              <option value="high">Especial</option>
-            </select>
-          </label>
-          <label className="check" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <input
-              type="checkbox"
-              checked={rediscover}
-              onChange={(e) => setRediscover(e.target.checked)}
-            />
-            <span>Buscar sitios de nuevo (más lento, mejor si cambiáis gustos)</span>
-          </label>
-          <button
-            type="button"
-            className="btn primary"
-            disabled={generating}
-            style={{ marginTop: '0.75rem' }}
-            onClick={() =>
-              void replanTripStyle(
-                tripId,
-                {
-                  preferences: draftPrefs,
-                  routeStyle: {
-                    pace: draftPace ?? trip.routeStyle.pace,
-                    explore: draftExplore ?? trip.routeStyle.explore,
-                    foodBudget: draftFood ?? trip.routeStyle.foodBudget,
+                <option value="relaxed">Tranquilo</option>
+                <option value="normal">Normal</option>
+                <option value="intense">Intenso</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Explorar</span>
+              <select
+                value={draftExplore ?? trip.routeStyle.explore}
+                onChange={(e) => setDraftExplore(e.target.value as RouteStyle['explore'])}
+              >
+                <option value="icons">Iconos</option>
+                <option value="mixed">Mixto</option>
+                <option value="local">Local / barrios</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Comida</span>
+              <select
+                value={draftFood ?? trip.routeStyle.foodBudget}
+                onChange={(e) => setDraftFood(e.target.value as RouteStyle['foodBudget'])}
+              >
+                <option value="low">Económica</option>
+                <option value="mid">Media</option>
+                <option value="high">Especial</option>
+              </select>
+            </label>
+            <label className="check" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <input
+                type="checkbox"
+                checked={rediscover}
+                onChange={(e) => setRediscover(e.target.checked)}
+              />
+              <span>Buscar sitios de nuevo (más lento, mejor si cambiáis gustos)</span>
+            </label>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={generating}
+              style={{ marginTop: '0.75rem' }}
+              onClick={() =>
+                void replanTripStyle(
+                  tripId,
+                  {
+                    preferences: draftPrefs,
+                    routeStyle: {
+                      pace: draftPace ?? trip.routeStyle.pace,
+                      explore: draftExplore ?? trip.routeStyle.explore,
+                      foodBudget: draftFood ?? trip.routeStyle.foodBudget,
+                    },
                   },
-                },
-                { rediscover },
-              ).then(() => setStyleOpen(false))
-            }
-          >
-            {generating ? 'Rearmando…' : 'Aplicar y rearmar días'}
+                  { rediscover },
+                ).then(() => setStyleOpen(false))
+              }
+            >
+              {generating ? 'Rearmando…' : 'Aplicar y rearmar días'}
+            </button>
+          </div>
+        )}
+
+        <div className="toolbar trip-toolbar" style={{ marginTop: '0.75rem' }}>
+          <button type="button" className="btn primary sm" onClick={exportToGoogleMaps}>
+            Llevar a Google Maps
           </button>
-        </div>
-      )}
-
-      <div className="toolbar trip-toolbar">
-        <button type="button" className="btn primary sm" onClick={exportToGoogleMaps}>
-          Llevar a Google Maps
-        </button>
-        <button
-          type="button"
-          className="btn ghost sm"
-          disabled={shareBusy}
-          onClick={() => void onShare()}
-        >
-          {shareBusy ? 'Compartiendo…' : 'Compartir'}
-        </button>
-        <button type="button" className="btn ghost sm" onClick={() => setImportOpen((v) => !v)}>
-          Importar
-        </button>
-      </div>
-      {shareMsg && <p className="muted tiny">{shareMsg}</p>}
-
-      {exportOpen && (
-        <div className="panel">
-          <h3>Sitios en tu Google Maps</h3>
-          <p className="muted">
-            Se descargó un <strong>.kml</strong>. Importalo en{' '}
-            <a href={GOOGLE_MY_MAPS_URL} target="_blank" rel="noreferrer">
-              My Maps
-            </a>
-            .
-          </p>
-          <button type="button" className="btn ghost sm" onClick={() => setExportOpen(false)}>
-            Entendido
-          </button>
-        </div>
-      )}
-
-      {importOpen && (
-        <div className="panel">
-          <h3>Importar sitios</h3>
-          <p className="muted">
-            Pegá enlaces de Maps (también los cortos maps.app.goo.gl), uno por línea, o subí un
-            KML/GeoJSON.
-          </p>
-          <label className="btn ghost sm file-btn">
-            Elegir archivo .kml / .geojson
-            <input
-              type="file"
-              accept=".kml,.geojson,.json,.txt,application/json,application/vnd.google-earth.kml+xml,text/xml,text/plain"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) void onFile(f)
-              }}
-            />
-          </label>
-          <label className="field">
-            <span>Pegar enlaces o nombres</span>
-            <textarea
-              rows={5}
-              value={paste}
-              onChange={(e) => setPaste(e.target.value)}
-              placeholder={`https://maps.app.goo.gl/xxxx\nhttps://maps.app.goo.gl/yyyy\nBritish Museum`}
-            />
-          </label>
           <button
             type="button"
-            className="btn primary"
-            disabled={busy || !paste.trim()}
-            onClick={() => void onPaste()}
+            className="btn ghost sm"
+            disabled={shareBusy}
+            onClick={() => void onShare()}
           >
-            {busy ? 'Importando…' : 'Añadir al viaje'}
+            {shareBusy ? 'Compartiendo…' : 'Compartir'}
           </button>
-          {importMsg && <p className="muted">{importMsg}</p>}
+          <button type="button" className="btn ghost sm" onClick={() => setImportOpen((v) => !v)}>
+            Importar sitios
+          </button>
         </div>
-      )}
+        {shareMsg && <p className="muted tiny">{shareMsg}</p>}
 
-      <section className="section">
-        <h2>Días</h2>
-        <ul className="day-list visual">
-          {trip.days.map((day) => {
-            const visits = [...day.stops]
-              .filter((s) => !s.isHotel)
-              .sort((a, b) => a.order - b.order)
-            const tag =
-              day.intensity === 'arrival'
-                ? 'Llegada'
-                : day.intensity === 'departure'
-                  ? 'Salida'
-                  : null
-            const preview = visits.slice(0, 4)
-            return (
-              <li key={day.id}>
-                <article className="day-card-v">
-                  <button
-                    type="button"
-                    className="day-card-v-main"
-                    onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
-                  >
-                    <div className="day-card-v-head">
-                      <strong className="day-label">{day.label}</strong>
-                      <span className="day-meta-pills">
-                        {tag ? <span className="day-pill tag">{tag}</span> : null}
-                        <span className="day-pill count">
-                          {visits.length} sitio{visits.length === 1 ? '' : 's'}
-                        </span>
-                      </span>
-                    </div>
+        {exportOpen && (
+          <div className="panel">
+            <h3>Sitios en tu Google Maps</h3>
+            <p className="muted">
+              Se descargó un <strong>.kml</strong>. Importalo en{' '}
+              <a href={GOOGLE_MY_MAPS_URL} target="_blank" rel="noreferrer">
+                My Maps
+              </a>
+              .
+            </p>
+            <button type="button" className="btn ghost sm" onClick={() => setExportOpen(false)}>
+              Entendido
+            </button>
+          </div>
+        )}
 
-                    {preview.length === 0 ? (
-                      <p className="muted tiny">Sin paradas aún — tocá para armar el día</p>
-                    ) : (
-                      <ol className="day-mini-tl">
-                        {preview.map((s, i) => {
-                          const mode = (s.transitMode || 'walk') as TransitMode
-                          const short = s.name.replace(/\s*\/.*$/, '').slice(0, 28)
-                          return (
-                            <li key={s.id}>
-                              <span className="day-mini-n">{i + 1}</span>
-                              <span className="day-mini-body">
-                                <strong>{short}</strong>
-                                <span className="muted tiny">
-                                  {s.suggestedTime ? `${s.suggestedTime}` : ''}
-                                  {s.suggestedTime && i < preview.length - 1 ? ' · ' : ''}
-                                  {i < preview.length - 1
-                                    ? `${TRANSIT_MODE_LABELS[mode]}${
-                                        s.minutesToNext != null ? ` ${s.minutesToNext}'` : ''
-                                      }`
-                                    : ''}
-                                </span>
-                              </span>
-                            </li>
-                          )
-                        })}
-                        {visits.length > preview.length ? (
-                          <li className="day-mini-more">
-                            <span className="day-mini-n">+</span>
-                            <span className="muted tiny">
-                              {visits.length - preview.length} más · abrir día
-                            </span>
-                          </li>
-                        ) : null}
-                      </ol>
-                    )}
-                  </button>
-                  <div className="day-card-v-actions">
-                    <a
-                      className="btn ghost sm"
-                      href={googleMapsDirectionsUrl(day.stops)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Maps
-                    </a>
-                    <button
-                      type="button"
-                      className="btn primary sm"
-                      onClick={() => setView({ name: 'onroute', tripId: trip.id, dayId: day.id })}
-                    >
-                      En ruta
-                    </button>
-                  </div>
-                </article>
+        {importOpen && (
+          <div className="panel">
+            <h3>Importar sitios</h3>
+            <p className="muted">
+              Pegá enlaces de Maps (también los cortos maps.app.goo.gl), uno por línea, o subí un
+              KML/GeoJSON.
+            </p>
+            <label className="btn ghost sm file-btn">
+              Elegir archivo .kml / .geojson
+              <input
+                type="file"
+                accept=".kml,.geojson,.json,.txt,application/json,application/vnd.google-earth.kml+xml,text/xml,text/plain"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void onFile(f)
+                }}
+              />
+            </label>
+            <label className="field">
+              <span>Pegar enlaces o nombres</span>
+              <textarea
+                rows={5}
+                value={paste}
+                onChange={(e) => setPaste(e.target.value)}
+                placeholder={`https://maps.app.goo.gl/xxxx\nhttps://maps.app.goo.gl/yyyy\nBritish Museum`}
+              />
+            </label>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={busy || !paste.trim()}
+              onClick={() => void onPaste()}
+            >
+              {busy ? 'Importando…' : 'Añadir al viaje'}
+            </button>
+            {importMsg && <p className="muted">{importMsg}</p>}
+          </div>
+        )}
+
+        <section className="section">
+          <h2>Wishlist</h2>
+          <ul className="place-grid">
+            {trip.places.slice(0, 40).map((p) => (
+              <li key={p.id} className="place-pill">
+                <span className="cat">{CATEGORY_LABELS[p.category]}</span>
+                <strong>{p.name}</strong>
               </li>
-            )
-          })}
-        </ul>
-      </section>
-
-      <section className="section">
-        <h2>Wishlist</h2>
-        <ul className="place-grid">
-          {trip.places.slice(0, 40).map((p) => (
-            <li key={p.id} className="place-pill">
-              <span className="cat">{CATEGORY_LABELS[p.category]}</span>
-              <strong>{p.name}</strong>
-            </li>
-          ))}
-        </ul>
-      </section>
+            ))}
+          </ul>
+        </section>
+      </details>
     </div>
   )
 }

@@ -1,9 +1,9 @@
 # RutaDos — Punto de situación
 
 **Fecha:** 22 jul 2026  
-**Repo:** https://github.com/miguelbr16/RutaDos (`main` @ `e2df23c`)  
+**Repo:** https://github.com/miguelbr16/RutaDos (`main`)  
 **App:** PWA mobile-first — Vite + React + TypeScript + Supabase  
-**UI:** español  
+**UI:** español · diseño sencillo (móvil primero)  
 **Bot:** [@RutaDosGuia_bot](https://t.me/RutaDosGuia_bot)  
 **Supabase:** `odecdpzcnsmvafvbuiby` · https://odecdpzcnsmvafvbuiby.supabase.co  
 **Vercel:** https://ruta-dos-miguelbr16s-projects.vercel.app  
@@ -22,20 +22,20 @@ Propuesta: plan diario personal (1–2) con mapa, transporte, offline del día y
 
 ## Fase actual
 
-**Producto usable en web + Telegram.** Gustos influyen en generación; wizard visual; días con timeline; Cansados / Restaurantes / Hoteles; bot v6 con enlaces Web/Reservar/Booking.
+**Wizard 3 pasos** (Viaje · Estilo · Listo) + UI más limpia (días/timeline primero, herramientas en «Más»). Recs: nightlife Overpass, sin inflar `must`, bias por gustos.
 
 | Capa | Estado |
 |------|--------|
-| App web (wizard, días, mapa, offline, copiloto) | Hecho · en `main` |
-| Preferencias → discover / plan / presupuesto | Hecho |
-| Wizard visual (presets + buckets, sin muro de chips) | Hecho (`b7dc13d`) |
-| Fichas de días (mini timeline) | Hecho (`e2df23c`) — si ves UI vieja (“Check-in”), redeploy / hard refresh |
-| Cansados (día corto + panel café) | Hecho (`9c4b109`) |
-| Restaurantes / Hoteles + Web · Reservar · Booking | Hecho (app + Telegram) |
+| App web (wizard 3, días, mapa, offline, copiloto) | Hecho |
+| Preferencias → discover / plan / presupuesto | Hecho (+ bias prefs) |
+| Wizard 3 pasos (logística opcional colapsada) | Hecho |
+| UI sencilla mobile-first | Hecho |
+| Fichas de días (mini timeline) | Hecho |
+| Cansados / Restaurantes / Hoteles | Hecho (en «Ajustar día») |
 | Meteo del día (Open-Meteo) | Hecho |
 | Supabase (migraciones + sync) | Hecho |
 | Edge Function `telegram-bot` | **ACTIVE v6**, `verify_jwt: false` |
-| Webhook Telegram | Configurado (si falla: revisar token en Secrets) |
+| Webhook Telegram | Configurado |
 | Vercel | Vinculado; a veces Redeploy manual |
 | Partners / B2B / afiliados formales | Stubs / Booking search sin `aid` aún |
 
@@ -45,16 +45,15 @@ Propuesta: plan diario personal (1–2) con mapa, transporte, offline del día y
 
 | Qué | Ref |
 |-----|-----|
+| Antes wizard 3 pasos + UI limpia | `backup/pre-wizard-3steps` · tag `backup-pre-wizard-3steps` |
 | Antes fix horas + UX offline/Vercel URL | `backup/pre-fix-order-hours` · tag `backup-pre-fix-order-hours` |
 | Antes visual día + offline | `backup/pre-day-visual-offline` · tag `backup-pre-day-visual-offline` |
 | Antes wizard visual | `backup/pre-wizard-visual` · tag `backup-pre-wizard-visual` |
 
 ```bash
+git reset --hard backup/pre-wizard-3steps
+# o
 git reset --hard backup/pre-fix-order-hours
-# o
-git reset --hard backup/pre-wizard-visual
-# o
-git reset --hard backup/pre-day-visual-offline
 ```
 
 (Si ya pusheaste, hace falta force-with-lease con cuidado.)
@@ -64,24 +63,19 @@ git reset --hard backup/pre-day-visual-offline
 ## Qué está implementado
 
 ### App
-- Wizard 5 pasos: destino → llegada/hotel → gustos (presets + 4 categorías + afinar) → ritmo (style packs + pills) → resumen
+- Wizard **3 pasos:** Viaje (destino + fechas; hotel/vuelos opcionales) → Estilo (gustos + ritmo) → Listo (resumen + generar)
 - Preferencias vacías al empezar; hay que elegir (influyen en discover, plan, €)
-- TripPage: fichas día con mini timeline numerada, Maps / En ruta
-- DayPage: timeline visual, meteo, Cansados, Restaurantes, Hoteles, offline pack
-- En ruta: check-in, Cansados con cafés cerca
-- Pack offline del día (transporte, minutos, Maps)
-- Copiloto in-app + FAB → Telegram
-- Sync opcional (Pareja / settings)
+- Home: marca + CTA + lista de viajes; export/import/sync en «Más»
+- TripPage: mapa + **días primero**; presupuesto/import/venues en «Más»
+- DayPage: En ruta + timeline primero; caos/sugerencias en «Ajustar día»
+- Pack offline del día; copiloto + Telegram; sync opcional
 
 ### Datos / APIs (sin Google Places de pago)
-- Overpass (OSM) · Nominatim/Photon · Wikipedia · OSRM · Open-Meteo · OpenTripMap opcional
+- Overpass (OSM, incl. nightlife) · Nominatim/Photon · Wikipedia · OSRM · Open-Meteo · OpenTripMap opcional
 - Enlaces: web OSM, “reservar mesa” Google, Booking.com search
 
 ### Telegram (`telegram-bot` v6)
-- Menú: ubicación · **Restaurantes** · **Hoteles** · Recomiéndame · Qué hay cerca · pines · ruta / qué toca / cómo llego
-- Prioriza sitios con web OSM; botones inline Web / Reservar / Booking
-- In situ sin viaje OK; plan del día necesita `/start TOKEN` tras Compartir
-- Dedup `update_id` + cooldown ~20s (evita bucle de recomendaciones)
+- Menú: ubicación · Restaurantes · Hoteles · Recomiéndame · Qué hay cerca · pines · ruta
 - Docs setup: `docs/COPILOTO_TELEGRAM.md`
 
 ---
@@ -96,23 +90,31 @@ Métrica norte: uso **en destino** (En ruta / Maps / Telegram), no solo generar 
 
 ---
 
-## Backlog siguiente
+## Backlog siguiente (oleada 3)
 
-### Corto
-- [ ] Pack offline más visible en home del viaje
-- [ ] Enlaces reserva museos cuando haya URL OSM
-- [ ] Telegram: digests más cortos del día
-- [ ] Confirmar Vercel siempre al día (Redeploy si UI vieja)
-- [ ] Afiliado Booking (`aid=`) cuando haya cuenta
+### Servicios
+- [ ] Afiliado Booking (`aid=`)
+- [ ] GetYourGuide / Civitatis en actividades
+- [ ] OpenTripMap key en prod
+- [ ] Fotos de ciudad (hero del viaje)
 
-### Medio
-- [ ] Partners / listings reales
-- [ ] Mejor calidad POIs (OpenTripMap key / más filtros)
-- [ ] Soften copy “Pareja” restante en Auth/Settings
+### Optimizar
+- [ ] Caché Overpass por destino
+- [ ] Tiempos reales OSRM en legs
+- [ ] Debounce búsqueda destino
+- [ ] Telegram digests más cortos
+- [ ] Deployment Protection off en production
+
+### Ideas producto
+- [ ] Modo «solo hoy» (GPS + gustos)
+- [ ] Packs curados por ciudad
+- [ ] Compartir día como story
+- [ ] Freemium
 
 ### No ahora
 - WhatsApp Business (caro)
 - Ads invasivos
+- Google Places de pago
 
 ---
 
@@ -155,24 +157,22 @@ supabase functions deploy telegram-bot --no-verify-jwt
 |------|----------|
 | `docs/PUNTO_SITUACION.md` | Este documento |
 | `docs/COPILOTO_TELEGRAM.md` | Setup Telegram |
-| `src/pages/WizardPage.tsx` | Wizard visual |
-| `src/pages/TripPage.tsx` | Fichas de días |
-| `src/pages/DayPage.tsx` | Día + Cansados / venues |
-| `src/components/TiredPanel.tsx` | Panel cafés cansados |
-| `src/components/VenueFinder.tsx` | Restaurantes / hoteles |
-| `src/lib/bookingLinks.ts` | Web / reservar / Booking |
-| `src/lib/nearbyVenues.ts` | OSM venues |
-| `src/lib/prefPlan.ts` | Gustos → plan |
-| `src/lib/weather.ts` | Meteo |
-| `src/lib/offlineDay.ts` | Pack offline |
+| `src/pages/WizardPage.tsx` | Wizard 3 pasos |
+| `src/pages/HomePage.tsx` | Home sencillo |
+| `src/pages/TripPage.tsx` | Días primero |
+| `src/pages/DayPage.tsx` | Timeline + ajustar |
+| `src/lib/discover.ts` | POIs / nightlife |
+| `src/lib/prefPlan.ts` | Gustos → score |
+| `src/lib/plan.ts` | Plan por días |
 | `supabase/functions/telegram-bot/index.ts` | Bot |
 
 ---
 
 ## Nota para el asistente (Cursor)
 
-- Path: carpeta `viajes` / repo **RutaDos**.  
+- Path: carpeta `Projects/RutaDos` / repo **RutaDos**.  
 - No redeployar el bot con JWT verificado.  
 - No commitear `.env`, `_tg_*.txt/json`, tokens.  
-- Si el usuario ve UI con “Check-in” / “llegada suave”: build viejo → Redeploy Vercel + hard refresh.  
-- Preferencias solo rehace el plan al **generar** o **Ajustar gustos y ritmo → rearmar**.
+- Si el usuario ve UI vieja: Redeploy Vercel + hard refresh / borrar caché PWA.  
+- Preferencias solo rehace el plan al **generar** o **Ajustar gustos y ritmo → rearmar**.  
+- Backup reciente UI: `backup/pre-wizard-3steps`.

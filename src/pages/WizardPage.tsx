@@ -399,7 +399,7 @@ export function WizardPage() {
   }, [wizard.cityPick])
 
   useEffect(() => {
-    if (view.name !== 'wizard' || view.step !== 1) return
+    if (view.name !== 'wizard' || view.step !== 0) return
     const q = wizard.hotelQuery.trim()
     if (q.length < 3 || !wizard.cityQuery.trim()) {
       setHotelSuggestions([])
@@ -433,7 +433,7 @@ export function WizardPage() {
   }, [wizard.hotelQuery, wizard.cityQuery, wizard.hotelPick, wizard.cityPick, view, patchWizard])
 
   useEffect(() => {
-    if (view.name !== 'wizard' || view.step !== 4) return
+    if (view.name !== 'wizard' || view.step !== 2) return
     const q = wizard.mustVisitQuery.trim()
     if (q.length < 2 || !wizard.cityPick) {
       setMustSuggestions([])
@@ -544,11 +544,11 @@ export function WizardPage() {
       <header className="wiz-header">
         <p className="brand small">RutaDos</p>
         <h1>Nuevo viaje</h1>
-        <p className="muted wiz-lede">Cinco pasos. Lo podéis cambiar después.</p>
+        <p className="muted wiz-lede">Tres pasos. Lo podéis cambiar después.</p>
       </header>
 
       <nav className="wiz-progress" aria-label="Pasos del viaje">
-        {['Destino', 'Llegada', 'Gustos', 'Ritmo', 'Resumen'].map((label, i) => (
+        {['Viaje', 'Estilo', 'Listo'].map((label, i) => (
           <button
             key={label}
             type="button"
@@ -619,7 +619,7 @@ export function WizardPage() {
                           hotelPick: null,
                           airportPick: null,
                           areaScale: scale,
-                          // No premarcar movilidad: la eligen en el paso de ritmo
+                          // No premarcar movilidad: la eligen en el paso de estilo
                         })
                         setCitySuggestions([])
                       }}
@@ -721,6 +721,201 @@ export function WizardPage() {
             )}
           </div>
 
+          <details className="wiz-optional">
+            <summary>Llegada y dónde dormís (opcional)</summary>
+
+            <div className="wiz-block">
+              <h3 className="wiz-block-title">Horarios de vuelo</h3>
+              <div className="grid-2">
+                <label className="field">
+                  <span>Hora del vuelo de llegada</span>
+                  <input
+                    type="time"
+                    value={wizard.arrivalTime}
+                    onChange={(e) => patchWizard({ arrivalTime: e.target.value })}
+                  />
+                </label>
+                <label className="field">
+                  <span>Hora del vuelo de salida</span>
+                  <input
+                    type="time"
+                    value={wizard.departureTime}
+                    onChange={(e) => patchWizard({ departureTime: e.target.value })}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="wiz-block">
+              <h3 className="wiz-block-title">Aeropuerto</h3>
+              {loadingAirports && <p className="muted tiny">Buscando aeropuertos…</p>}
+              {airports.length > 0 ? (
+                <ul className="airport-chips">
+                  {airports.map((a) => {
+                    const selected =
+                      wizard.airportPick?.name === a.name &&
+                      wizard.airportPick?.lat === a.lat
+                    return (
+                      <li key={a.code || a.name}>
+                        <button
+                          type="button"
+                          className={selected ? 'chip active' : 'chip'}
+                          onClick={() =>
+                            patchWizard({
+                              airportPick: selected
+                                ? null
+                                : {
+                                    name: a.code ? `${a.name} (${a.code})` : a.name,
+                                    code: a.code,
+                                    lat: a.lat,
+                                    lng: a.lng,
+                                  },
+                            })
+                          }
+                        >
+                          <strong>
+                            {a.name}
+                            {a.code ? ` · ${a.code}` : ''}
+                          </strong>
+                          {a.blurb && <span className="muted tiny">{a.blurb}</span>}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
+                !loadingAirports && (
+                  <p className="muted tiny">
+                    No hay lista fija para este destino; podéis seguir sin aeropuerto.
+                  </p>
+                )
+              )}
+              {wizard.airportPick && (
+                <p className="hint-box dest-confirmed">
+                  <strong>Aeropuerto:</strong> {wizard.airportPick.name}
+                </p>
+              )}
+            </div>
+
+            <div className="wiz-block">
+              <h3 className="wiz-block-title">Hotel o barrio</h3>
+              <label className="field">
+                <span>Buscar o pegar enlace de Maps</span>
+                <input
+                  value={wizard.hotelQuery}
+                  onChange={(e) =>
+                    patchWizard({
+                      hotelQuery: e.target.value,
+                      hotelPick: null,
+                      hotelSkipped: false,
+                    })
+                  }
+                  placeholder={`Nombre, o pegá un enlace de Maps (maps.app.goo.gl/…)`}
+                  autoComplete="off"
+                />
+              </label>
+              {searchingHotel && (
+                <p className="muted tiny">
+                  {isGoogleMapsUrl(wizard.hotelQuery)
+                    ? 'Abriendo enlace de Google Maps…'
+                    : 'Buscando en mapas…'}
+                </p>
+              )}
+              {hotelSuggestions.length > 0 && !wizard.hotelPick && (
+                <div className="dest-dropdown">
+                  <p className="dest-dropdown-label">Selecciona para confirmar</p>
+                  <ul className="suggest-cities">
+                    {hotelSuggestions.map((s) => (
+                      <li key={s.label + s.lat}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            patchWizard({
+                              hotelQuery: s.shortName,
+                              hotelPick: { name: s.shortName, lat: s.lat, lng: s.lng },
+                              hotelSkipped: false,
+                            })
+                            setHotelSuggestions([])
+                          }}
+                        >
+                          <span className="dest-main">{s.label}</span>
+                          <span className="dest-kind">{s.kind}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {wizard.hotelPick && (
+                <>
+                  <div className="hint-box dest-confirmed">
+                    <strong>Hotel confirmado:</strong> {wizard.hotelPick.name}
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={() => patchWizard({ hotelPick: null, hotelSkipped: false })}
+                    >
+                      Cambiar
+                    </button>
+                  </div>
+                  <TripMap
+                    stops={[
+                      ...(wizard.airportPick
+                        ? [
+                            {
+                              id: 'wiz-airport',
+                              placeId: 'wiz-airport',
+                              name: wizard.airportPick.name,
+                              lat: wizard.airportPick.lat,
+                              lng: wizard.airportPick.lng,
+                              category: 'local' as const,
+                              order: 0,
+                            },
+                          ]
+                        : []),
+                      {
+                        id: 'wiz-hotel',
+                        placeId: 'wiz-hotel',
+                        name: wizard.hotelPick.name,
+                        lat: wizard.hotelPick.lat,
+                        lng: wizard.hotelPick.lng,
+                        category: 'local' as const,
+                        order: wizard.airportPick ? 1 : 0,
+                        isHotel: true,
+                      },
+                    ]}
+                    height="180px"
+                    showLegs={Boolean(wizard.airportPick)}
+                    showLegend={false}
+                    defaultCenter={{ lat: wizard.hotelPick.lat, lng: wizard.hotelPick.lng }}
+                  />
+                </>
+              )}
+
+              {wizard.hotelSkipped && !wizard.hotelPick && (
+                <p className="hint-box">Seguiréis sin hotel fijado (se puede añadir luego).</p>
+              )}
+
+              <p className="muted tiny">
+                Tip: pegá cualquier enlace de Google Maps y lo confirmamos solo.
+              </p>
+
+              {!wizard.hotelPick && (
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => {
+                    patchWizard({ hotelSkipped: true, hotelPick: null })
+                    go(1)
+                  }}
+                >
+                  Seguir sin hotel
+                </button>
+              )}
+            </div>
+          </details>
+
           <div className="wiz-actions">
             <button
               type="button"
@@ -736,221 +931,8 @@ export function WizardPage() {
 
       {step === 1 && (
         <section className="wiz-stage">
-          <h2 className="wiz-title">Llegada y hotel</h2>
-          <p className="muted">
-            Fechas, aeropuerto y base del día (ida y vuelta al hotel).
-            Confirma el hotel (o barrio) en la lista antes de seguir. Si no lo encuentra, pega el
-            enlace de Google Maps del hotel.
-          </p>
-
-          <div className="wiz-block">
-            <h3 className="wiz-block-title">Horarios de vuelo</h3>
-            <div className="grid-2">
-              <label className="field">
-                <span>Hora del vuelo de llegada</span>
-                <input
-                  type="time"
-                  value={wizard.arrivalTime}
-                  onChange={(e) => patchWizard({ arrivalTime: e.target.value })}
-                />
-              </label>
-              <label className="field">
-                <span>Hora del vuelo de salida</span>
-                <input
-                  type="time"
-                  value={wizard.departureTime}
-                  onChange={(e) => patchWizard({ departureTime: e.target.value })}
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="wiz-block">
-            <h3 className="wiz-block-title">Aeropuerto</h3>
-            {loadingAirports && <p className="muted tiny">Buscando aeropuertos…</p>}
-            {airports.length > 0 ? (
-              <ul className="airport-chips">
-                {airports.map((a) => {
-                  const selected =
-                    wizard.airportPick?.name === a.name &&
-                    wizard.airportPick?.lat === a.lat
-                  return (
-                    <li key={a.code || a.name}>
-                      <button
-                        type="button"
-                        className={selected ? 'chip active' : 'chip'}
-                        onClick={() =>
-                          patchWizard({
-                            airportPick: selected
-                              ? null
-                              : {
-                                  name: a.code ? `${a.name} (${a.code})` : a.name,
-                                  code: a.code,
-                                  lat: a.lat,
-                                  lng: a.lng,
-                                },
-                          })
-                        }
-                      >
-                        <strong>
-                          {a.name}
-                          {a.code ? ` · ${a.code}` : ''}
-                        </strong>
-                        {a.blurb && <span className="muted tiny">{a.blurb}</span>}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : (
-              !loadingAirports && (
-                <p className="muted tiny">
-                  No hay lista fija para este destino; podéis seguir sin aeropuerto.
-                </p>
-              )
-            )}
-            {wizard.airportPick && (
-              <p className="hint-box dest-confirmed">
-                <strong>Aeropuerto:</strong> {wizard.airportPick.name}
-              </p>
-            )}
-          </div>
-
-          <div className="wiz-block">
-            <h3 className="wiz-block-title">Hotel o barrio</h3>
-            <label className="field">
-              <span>Buscar o pegar enlace de Maps</span>
-              <input
-                value={wizard.hotelQuery}
-                onChange={(e) =>
-                  patchWizard({
-                    hotelQuery: e.target.value,
-                    hotelPick: null,
-                    hotelSkipped: false,
-                  })
-                }
-                placeholder={`Nombre, o pegá un enlace de Maps (maps.app.goo.gl/…)`}
-                autoComplete="off"
-              />
-            </label>
-            {searchingHotel && (
-              <p className="muted tiny">
-                {isGoogleMapsUrl(wizard.hotelQuery)
-                  ? 'Abriendo enlace de Google Maps…'
-                  : 'Buscando en mapas…'}
-              </p>
-            )}
-            {hotelSuggestions.length > 0 && !wizard.hotelPick && (
-              <div className="dest-dropdown">
-                <p className="dest-dropdown-label">Selecciona para confirmar</p>
-                <ul className="suggest-cities">
-                  {hotelSuggestions.map((s) => (
-                    <li key={s.label + s.lat}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          patchWizard({
-                            hotelQuery: s.shortName,
-                            hotelPick: { name: s.shortName, lat: s.lat, lng: s.lng },
-                            hotelSkipped: false,
-                          })
-                          setHotelSuggestions([])
-                        }}
-                      >
-                        <span className="dest-main">{s.label}</span>
-                        <span className="dest-kind">{s.kind}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {wizard.hotelPick && (
-              <>
-                <div className="hint-box dest-confirmed">
-                  <strong>Hotel confirmado:</strong> {wizard.hotelPick.name}
-                  <button
-                    type="button"
-                    className="btn ghost sm"
-                    onClick={() => patchWizard({ hotelPick: null, hotelSkipped: false })}
-                  >
-                    Cambiar
-                  </button>
-                </div>
-                <TripMap
-                  stops={[
-                    ...(wizard.airportPick
-                      ? [
-                          {
-                            id: 'wiz-airport',
-                            placeId: 'wiz-airport',
-                            name: wizard.airportPick.name,
-                            lat: wizard.airportPick.lat,
-                            lng: wizard.airportPick.lng,
-                            category: 'local' as const,
-                            order: 0,
-                          },
-                        ]
-                      : []),
-                    {
-                      id: 'wiz-hotel',
-                      placeId: 'wiz-hotel',
-                      name: wizard.hotelPick.name,
-                      lat: wizard.hotelPick.lat,
-                      lng: wizard.hotelPick.lng,
-                      category: 'local' as const,
-                      order: wizard.airportPick ? 1 : 0,
-                      isHotel: true,
-                    },
-                  ]}
-                  height="180px"
-                  showLegs={Boolean(wizard.airportPick)}
-                  showLegend={false}
-                  defaultCenter={{ lat: wizard.hotelPick.lat, lng: wizard.hotelPick.lng }}
-                />
-              </>
-            )}
-
-            {wizard.hotelSkipped && !wizard.hotelPick && (
-              <p className="hint-box">Seguiréis sin hotel fijado (se puede añadir luego).</p>
-            )}
-
-            <p className="muted tiny">
-              Tip: pegá cualquier enlace de Google Maps. RutaDos lo abre y confirma el sitio.
-            </p>
-          </div>
-
-          <div className="wiz-actions">
-            <button type="button" className="btn ghost" onClick={() => go(0)}>
-              Atrás
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => {
-                patchWizard({ hotelSkipped: true, hotelPick: null })
-                go(2)
-              }}
-            >
-              Seguir sin hotel
-            </button>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!wizard.hotelPick}
-              onClick={() => go(2)}
-            >
-              Siguiente
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === 2 && (
-        <section className="wiz-stage">
-          <h2 className="wiz-title">Qué te apetece</h2>
-          <p className="muted">Elegí un estilo o armá con las 4 categorías. Podés afinar después.</p>
+          <h2 className="wiz-title">Qué te apetece y cómo viajar</h2>
+          <p className="muted">Elegí un estilo o armá con las categorías, luego el ritmo para moverte.</p>
 
           <div className="wiz-hero-presets">
             {PRESETS.map((p) => (
@@ -1022,27 +1004,6 @@ export function WizardPage() {
           <p className="hint-box">
             Activo: {activePrefs.map((k) => PREFERENCE_LABELS[k]).join(', ') || 'nada aún'}
           </p>
-
-          <div className="wiz-actions">
-            <button type="button" className="btn ghost" onClick={() => go(1)}>
-              Atrás
-            </button>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={activePrefs.length === 0}
-              onClick={() => go(3)}
-            >
-              Siguiente
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === 3 && (
-        <section className="wiz-stage">
-          <h2 className="wiz-title">Cómo querés recorrer</h2>
-          <p className="muted">Una elección de ritmo, luego movilidad y comida.</p>
 
           <div className="style-pack-grid">
             {STYLE_PACKS.map((pack) => {
@@ -1165,22 +1126,22 @@ export function WizardPage() {
           </p>
 
           <div className="wiz-actions">
-            <button type="button" className="btn ghost" onClick={() => go(2)}>
+            <button type="button" className="btn ghost" onClick={() => go(0)}>
               Atrás
             </button>
             <button
               type="button"
               className="btn primary"
-              disabled={!styleReady}
-              onClick={() => go(4)}
+              disabled={activePrefs.length === 0 || !styleReady}
+              onClick={() => go(2)}
             >
-              Ver resumen
+              Siguiente
             </button>
           </div>
         </section>
       )}
 
-      {step === 4 && (
+      {step === 2 && (
         <section className="wiz-stage">
           <h2 className="wiz-title">Así queda el viaje</h2>
           <p className="muted">Revisad y generad. Podéis volver a cualquier paso.</p>
@@ -1207,7 +1168,7 @@ export function WizardPage() {
               </button>
             </li>
             <li>
-              <button type="button" className="wiz-summary-row" onClick={() => go(1)}>
+              <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
                 <span className="wiz-summary-k">Llegada / hotel</span>
                 <span className="wiz-summary-v">
                   Vuelo {wizard.arrivalTime} / salida {wizard.departureTime}
@@ -1222,7 +1183,7 @@ export function WizardPage() {
               </button>
             </li>
             <li>
-              <button type="button" className="wiz-summary-row" onClick={() => go(2)}>
+              <button type="button" className="wiz-summary-row" onClick={() => go(1)}>
                 <span className="wiz-summary-k">Gustos</span>
                 <span className="wiz-summary-v">
                   {activePrefs.map((k) => PREFERENCE_LABELS[k]).join(', ') || '—'}
@@ -1231,7 +1192,7 @@ export function WizardPage() {
               </button>
             </li>
             <li>
-              <button type="button" className="wiz-summary-row" onClick={() => go(3)}>
+              <button type="button" className="wiz-summary-row" onClick={() => go(1)}>
                 <span className="wiz-summary-k">Cómo viajáis</span>
                 <span className="wiz-summary-v">{preview}</span>
                 <span className="wiz-summary-edit">Editar</span>
@@ -1333,7 +1294,7 @@ export function WizardPage() {
           {error && <p className="error">{error}</p>}
 
           <div className="wiz-actions">
-            <button type="button" className="btn ghost" onClick={() => go(3)} disabled={generating}>
+            <button type="button" className="btn ghost" onClick={() => go(1)} disabled={generating}>
               Atrás
             </button>
             <button

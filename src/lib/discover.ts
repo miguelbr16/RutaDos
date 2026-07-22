@@ -302,6 +302,21 @@ function buildAroundQueries(
       ),
     )
   }
+  if (prefs.nightlife) {
+    out.push(
+      mk(
+        [
+          `["amenity"="bar"]["name"]`,
+          `["amenity"="pub"]["name"]`,
+          `["amenity"="nightclub"]["name"]`,
+        ],
+        'nightlife',
+        18,
+        foodCenters,
+        Math.min(foodR, 10000),
+      ),
+    )
+  }
 
   if (!out.length) {
     out.push(
@@ -522,15 +537,11 @@ export async function discoverPlaces(
   const picked = [
     ...sights.slice(0, sightCap),
     ...foods.slice(0, foodCap),
-    ...(prefs.nightlife ? nights.slice(0, 6) : []),
+    ...(prefs.nightlife ? nights.slice(0, 8) : []),
   ]
 
-  if (picked.filter((p) => p.tier === 'must' && !isNightFood(p)).length < 3) {
-    for (const p of sights.slice(0, 8)) {
-      p.tier = 'must'
-      p.score += 15
-    }
-  }
+  // Solo marcar "must" reales por score — no inflar artificialmente el top
+  // (eso hacía que casi todo pareciera imprescindible).
 
   if (prefs.night_walks) {
     let n = 0

@@ -47,8 +47,8 @@ export function placeAllowedByPrefs(place: GeoPlace, prefs: Preferences): boolea
   return isCategoryWanted(place.category, prefs)
 }
 
-/** Peso por estilo explore (iconos / mixto / local). */
-export function exploreScore(place: GeoPlace, explore: ExploreMode): number {
+/** Peso por estilo explore (iconos / mixto / local) + gustos marcados. */
+export function exploreScore(place: GeoPlace, explore: ExploreMode, prefs?: Preferences): number {
   let s = place.score
   if (explore === 'icons') {
     if (place.tier === 'must') s += 45
@@ -60,7 +60,26 @@ export function exploreScore(place: GeoPlace, explore: ExploreMode): number {
     if (place.tags?.some((t) => /local|hidden|neighbour|barrio/i.test(t))) s += 15
     if (place.tier === 'must') s += 5 // siguen entrando, sin monopolizar
     if (place.category === 'must_see' && place.tier === 'recommended') s -= 8
+  } else {
+    // mixed: ligero boost a lo bien puntuado sin matar lo local
+    if (place.tier === 'must') s += 20
+    if (place.category === 'hidden' || place.category === 'local') s += 12
   }
+
+  if (prefs) {
+    if (prefs.museums && place.category === 'museum') s += 22
+    if (prefs.monuments && (place.category === 'monument' || place.category === 'must_see')) s += 18
+    if (prefs.architecture && place.category === 'monument') s += 10
+    if (prefs.viewpoints && place.category === 'viewpoint') s += 20
+    if (prefs.parks && place.category === 'park') s += 16
+    if (prefs.hidden && (place.category === 'hidden' || place.category === 'local')) s += 18
+    if (prefs.neighborhoods && place.category === 'local') s += 14
+    if (prefs.shows && place.category === 'show') s += 16
+    if (prefs.shopping && place.category === 'shopping') s += 12
+    if (prefs.markets && place.category === 'market') s += 14
+    if (prefs.nightlife && place.category === 'nightlife') s += 20
+  }
+
   return s
 }
 
@@ -116,7 +135,7 @@ export function filterSightPlaces(
   return places
     .filter((p) => p.category !== 'food' && p.category !== 'cafe' && p.category !== 'nightlife')
     .filter((p) => placeAllowedByPrefs(p, prefs))
-    .map((p) => ({ ...p, score: exploreScore(p, explore) }))
+    .map((p) => ({ ...p, score: exploreScore(p, explore, prefs) }))
     .sort((a, b) => b.score - a.score)
 }
 

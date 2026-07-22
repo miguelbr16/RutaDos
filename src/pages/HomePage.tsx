@@ -61,49 +61,21 @@ export function HomePage() {
         <p className="offline-banner">
           Sin conexión.
           {offlineSnap
-            ? ` Día guardado: ${offlineSnap.tripTitle} · ${offlineSnap.day.label} (${offlineSnap.day.stops.filter((s) => !s.isHotel).length} paradas).`
-            : ' Abrí un día con datos para guardarlo offline.'}
+            ? ` Día guardado: ${offlineSnap.tripTitle} · ${offlineSnap.day.label}.`
+            : ' Abrí un día para guardarlo offline.'}
         </p>
       )}
-      <header className="hero home-hero">
-        <div className="hero-plane" aria-hidden>
-          <svg className="hero-route" viewBox="0 0 800 420" preserveAspectRatio="xMidYMid slice">
-            <defs>
-              <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#2a8f7a" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#e08a3c" stopOpacity="0.75" />
-              </linearGradient>
-            </defs>
-            <path
-              className="hero-path"
-              d="M40 320 C120 280 160 200 260 190 C360 180 400 260 480 240 C580 215 620 120 720 90"
-              fill="none"
-              stroke="url(#routeGrad)"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-            />
-            <circle className="hero-pin hero-pin-a" cx="40" cy="320" r="7" />
-            <circle className="hero-pin hero-pin-b" cx="480" cy="240" r="7" />
-            <circle className="hero-pin hero-pin-c" cx="720" cy="90" r="9" />
-          </svg>
-        </div>
 
+      <header className="hero home-hero simple">
         <div className="hero-copy">
           <p className="brand">RutaDos</p>
           <h1>Tu viaje, a tu ritmo</h1>
           <p className="lede">
-            Destino, gustos y un plan por días con mapa y transporte — solo o con quien viajéis.
+            Elegí destino y gustos. Te armamos un plan por días, claro y fácil de seguir.
           </p>
           <div className="hero-cta">
             <button type="button" className="btn primary" onClick={startWizard}>
               Nuevo viaje
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => setView({ name: 'settings' })}
-            >
-              Sync (opcional)
             </button>
           </div>
         </div>
@@ -112,27 +84,10 @@ export function HomePage() {
       <section className="section trips-section">
         <div className="section-head">
           <h2>Vuestros viajes</h2>
-          <div className="row gap">
-            <button type="button" className="btn ghost sm" onClick={exportAll}>
-              Exportar
-            </button>
-            <label className="btn ghost sm file-btn">
-              Importar
-              <input
-                type="file"
-                accept="application/json"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) onImportFile(f)
-                }}
-              />
-            </label>
-          </div>
         </div>
 
         {!trips.length && (
-          <p className="muted empty-hint">Aún no hay viajes. Creá el primero con una ciudad.</p>
+          <p className="muted empty-hint">Todavía no hay viajes. Empezá con «Nuevo viaje».</p>
         )}
 
         <ul className="trip-list">
@@ -145,7 +100,7 @@ export function HomePage() {
               >
                 <span className="trip-title">{t.title}</span>
                 <span className="muted">
-                  {t.startDate} → {t.endDate} · {t.days.length} días · {t.places.length} sitios
+                  {t.startDate} → {t.endDate} · {t.days.length} días
                 </span>
               </button>
               <button
@@ -160,6 +115,34 @@ export function HomePage() {
             </li>
           ))}
         </ul>
+
+        <details className="more-panel">
+          <summary>Más</summary>
+          <div className="row gap" style={{ marginTop: '0.5rem', flexWrap: 'wrap' }}>
+            <button type="button" className="btn ghost sm" onClick={exportAll}>
+              Exportar viajes
+            </button>
+            <label className="btn ghost sm file-btn">
+              Importar
+              <input
+                type="file"
+                accept="application/json"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) onImportFile(f)
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => setView({ name: 'settings' })}
+            >
+              Sync (opcional)
+            </button>
+          </div>
+        </details>
       </section>
     </div>
   )

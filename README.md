@@ -17,7 +17,7 @@ Copia `.env.example` → `.env` (Supabase + username del bot Telegram, sin token
 
 ## Funciones
 
-1. **Wizard** — destino, fechas, hotel; gustos con presets/categorías; ritmo en packs visuales
+1. **Wizard (3 pasos)** — Viaje (destino + fechas; hotel opcional) → Estilo → Generar
 2. **Descubrimiento** — OpenStreetMap/Overpass (+ OpenTripMap opcional)
 3. **Días** — fichas con mini timeline; editar paradas; Maps / En ruta
 4. **Cansados** — acorta el día y sugiere cafés cerca
@@ -51,7 +51,7 @@ Sin Supabase la app funciona en un solo dispositivo; usad Exportar/Importar para
 App: https://ruta-dos-miguelbr16s-projects.vercel.app  
 
 Conectar repo `miguelbr16/RutaDos`. Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_TELEGRAM_BOT`.  
-Si la UI no cambia tras un push: **Redeploy** en el dashboard (caché / PWA).  
+Wizard: **3 pasos** (Viaje · Estilo · Listo). Si la UI no cambia tras un push: **Redeploy** en el dashboard (caché / PWA).  
 Si pide login de Vercel al abrir: Settings → **Deployment Protection** → desactivar Authentication (para PWA pública).
 
 ### Bot Telegram

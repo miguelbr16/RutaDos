@@ -307,14 +307,6 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       </div>
 
       <div className="day-primary-actions">
-        <a
-          className="btn primary"
-          href={googleMapsDirectionsUrl(ordered)}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Día en Maps
-        </a>
         <button
           type="button"
           className="btn primary"
@@ -322,18 +314,14 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         >
           En ruta
         </button>
-        <button
-          type="button"
-          className="btn tired-btn"
-          onClick={() => {
-            chaosReplan(tripId, dayId, 'shorter')
-            setTiredOpen(true)
-            setVenueKind(null)
-            setMsg('Día acortado. Elegí un café si querés pausar.')
-          }}
+        <a
+          className="btn ghost"
+          href={googleMapsDirectionsUrl(ordered)}
+          target="_blank"
+          rel="noreferrer"
         >
-          Cansados
-        </button>
+          Día en Maps
+        </a>
       </div>
 
       {tiredOpen && (
@@ -349,108 +337,6 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
             setTiredOpen(false)
           }}
         />
-      )}
-
-      <div className="chaos-bar day-quick">
-        <button
-          type="button"
-          className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
-          onClick={() => {
-            setTiredOpen(false)
-            setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))
-          }}
-        >
-          Restaurantes
-        </button>
-        <button
-          type="button"
-          className={venueKind === 'hotel' ? 'chip on' : 'chip'}
-          onClick={() => {
-            setTiredOpen(false)
-            setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))
-          }}
-        >
-          Hoteles
-        </button>
-        <button
-          type="button"
-          className="chip"
-          onClick={() => {
-            chaosReplan(tripId, dayId, 'late')
-            setMsg('Replan: vais tarde.')
-          }}
-        >
-          Vamos tarde
-        </button>
-        <button
-          type="button"
-          className="chip"
-          onClick={() => {
-            chaosReplan(tripId, dayId, 'rain')
-            setMsg('Replan: lluvia.')
-          }}
-        >
-          Llueve
-        </button>
-        <button
-          type="button"
-          className="chip"
-          onClick={() => {
-            if (trip && day) {
-              setOfflinePack(saveOfflineDay(trip, day))
-              setPackPreview((v) => !v)
-            }
-          }}
-        >
-          Offline
-        </button>
-      </div>
-
-      {venueKind && (
-        <VenueFinder
-          kind={venueKind}
-          lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
-          lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
-          city={trip.city.name}
-          onClose={() => setVenueKind(null)}
-          onAdd={(v: NearbyVenue) => {
-            const place: GeoPlace = {
-              id: v.id,
-              name: v.name,
-              lat: v.lat,
-              lng: v.lng,
-              category: v.kind === 'hotel' ? 'custom' : 'food',
-              tier: 'recommended',
-              source: 'osm',
-              score: 85,
-              website: v.website,
-              phone: v.phone,
-              listingKind: v.kind === 'hotel' ? 'hotel' : 'restaurant',
-              bestSlot: v.kind === 'hotel' ? 'morning' : 'lunch',
-            }
-            addSuggestedToDay(tripId, dayId, place)
-            setMsg(`Añadido: ${v.name}`)
-            setVenueKind(null)
-          }}
-        />
-      )}
-
-      {trip.logistics?.hotel && (
-        <p className="hotel-book-row muted tiny">
-          Hotel: <strong>{trip.logistics.hotel.name}</strong>{' '}
-          <a
-            href={hotelBookingUrl({
-              name: trip.logistics.hotel.name,
-              city: trip.city.name,
-              lat: trip.logistics.hotel.lat,
-              lng: trip.logistics.hotel.lng,
-            })}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Ver en Booking
-          </a>
-        </p>
       )}
 
       {msg && <p className="flash-msg">{msg}</p>}
@@ -470,9 +356,6 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
             Reordenar
           </button>
         </div>
-        <p className="muted tiny">
-          Camino sugerido con transporte. Cambiá el modo en cada tramo y se recalcula.
-        </p>
 
         <DayTimeline
           stops={ordered}
@@ -505,36 +388,151 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         </button>
       </form>
 
-      <section className="section">
-        <h2>Sugerencias</h2>
-        <p className="muted tiny">Tocá para subir al plan.</p>
-        <ul className="suggest-list">
-          {suggestions.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                className="suggest-item"
-                onClick={() => {
-                  if (p.deferred) addDeferredToDay(tripId, dayId, p.id)
-                  else addSuggestedToDay(tripId, dayId, p)
-                  setMsg(`Añadido: ${p.name}`)
-                }}
-              >
-                <span className="cat">{CATEGORY_LABELS[p.category]}</span>
-                <strong>
-                  {p.deferred ? '↻ ' : ''}
-                  {p.name}
-                </strong>
-                <span className="add">↑</span>
-              </button>
-            </li>
-          ))}
-          {!suggestions.length && <p className="muted">No hay más sugerencias cerca.</p>}
-        </ul>
+      <details className="more-panel">
+        <summary>Ajustar día</summary>
 
-        <details className="day-more">
-          <summary>Más (enfoque / Maps KML)</summary>
-          <div className="chips" style={{ marginTop: '0.5rem' }}>
+        <div className="chaos-bar day-quick" style={{ marginTop: '0.35rem' }}>
+          <button
+            type="button"
+            className="btn tired-btn sm"
+            onClick={() => {
+              chaosReplan(tripId, dayId, 'shorter')
+              setTiredOpen(true)
+              setVenueKind(null)
+              setMsg('Día acortado. Elegí un café si querés pausar.')
+            }}
+          >
+            Cansados
+          </button>
+          <button
+            type="button"
+            className={venueKind === 'restaurant' ? 'chip on' : 'chip'}
+            onClick={() => {
+              setTiredOpen(false)
+              setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))
+            }}
+          >
+            Restaurantes
+          </button>
+          <button
+            type="button"
+            className={venueKind === 'hotel' ? 'chip on' : 'chip'}
+            onClick={() => {
+              setTiredOpen(false)
+              setVenueKind((k) => (k === 'hotel' ? null : 'hotel'))
+            }}
+          >
+            Hoteles
+          </button>
+          <button
+            type="button"
+            className="chip"
+            onClick={() => {
+              chaosReplan(tripId, dayId, 'late')
+              setMsg('Replan: vais tarde.')
+            }}
+          >
+            Vamos tarde
+          </button>
+          <button
+            type="button"
+            className="chip"
+            onClick={() => {
+              chaosReplan(tripId, dayId, 'rain')
+              setMsg('Replan: lluvia.')
+            }}
+          >
+            Llueve
+          </button>
+          <button
+            type="button"
+            className="chip"
+            onClick={() => {
+              if (trip && day) {
+                setOfflinePack(saveOfflineDay(trip, day))
+                setPackPreview((v) => !v)
+              }
+            }}
+          >
+            Offline
+          </button>
+        </div>
+
+        {venueKind && (
+          <VenueFinder
+            kind={venueKind}
+            lat={trip.logistics?.hotel?.lat ?? trip.city.lat}
+            lng={trip.logistics?.hotel?.lng ?? trip.city.lng}
+            city={trip.city.name}
+            onClose={() => setVenueKind(null)}
+            onAdd={(v: NearbyVenue) => {
+              const place: GeoPlace = {
+                id: v.id,
+                name: v.name,
+                lat: v.lat,
+                lng: v.lng,
+                category: v.kind === 'hotel' ? 'custom' : 'food',
+                tier: 'recommended',
+                source: 'osm',
+                score: 85,
+                website: v.website,
+                phone: v.phone,
+                listingKind: v.kind === 'hotel' ? 'hotel' : 'restaurant',
+                bestSlot: v.kind === 'hotel' ? 'morning' : 'lunch',
+              }
+              addSuggestedToDay(tripId, dayId, place)
+              setMsg(`Añadido: ${v.name}`)
+              setVenueKind(null)
+            }}
+          />
+        )}
+
+        {trip.logistics?.hotel && (
+          <p className="hotel-book-row muted tiny">
+            Hotel: <strong>{trip.logistics.hotel.name}</strong>{' '}
+            <a
+              href={hotelBookingUrl({
+                name: trip.logistics.hotel.name,
+                city: trip.city.name,
+                lat: trip.logistics.hotel.lat,
+                lng: trip.logistics.hotel.lng,
+              })}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ver en Booking
+            </a>
+          </p>
+        )}
+
+        <section className="section">
+          <h2>Sugerencias</h2>
+          <p className="muted tiny">Tocá para subir al plan.</p>
+          <ul className="suggest-list">
+            {suggestions.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  className="suggest-item"
+                  onClick={() => {
+                    if (p.deferred) addDeferredToDay(tripId, dayId, p.id)
+                    else addSuggestedToDay(tripId, dayId, p)
+                    setMsg(`Añadido: ${p.name}`)
+                  }}
+                >
+                  <span className="cat">{CATEGORY_LABELS[p.category]}</span>
+                  <strong>
+                    {p.deferred ? '↻ ' : ''}
+                    {p.name}
+                  </strong>
+                  <span className="add">↑</span>
+                </button>
+              </li>
+            ))}
+            {!suggestions.length && <p className="muted">No hay más sugerencias cerca.</p>}
+          </ul>
+
+          <div className="chips" style={{ marginTop: '0.75rem' }}>
             {(['central', 'mixed', 'outskirts'] as DayFocus[]).map((f) => (
               <button
                 key={f}
@@ -561,8 +559,8 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           >
             Exportar KML
           </button>
-        </details>
-      </section>
+        </section>
+      </details>
     </div>
   )
 }
