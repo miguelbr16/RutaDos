@@ -56,6 +56,7 @@ type ChatRow = {
   last_lng: number | null
   last_nearby: Place[] | null
   picks: Place[] | null
+  updated_at?: string | null
 }
 
 async function tg(method: string, body: Record<string, unknown>) {
@@ -387,7 +388,7 @@ async function sendNearbySuggestions(opts: {
     reply_markup: { inline_keyboard: rows },
   })
 
-  for (const p of merged.slice(0, 3)) {
+  for (const p of merged.slice(0, 1)) {
     await tg('sendVenue', {
       chat_id: chatId,
       latitude: p.lat,
@@ -469,18 +470,35 @@ function modeOf(s?: string): 'walking' | 'transit' | 'driving' {
   return 'transit'
 }
 
-Deno.serve(async (req) => {
-  if (req.method !== 'POST') return new Response('ok')
-  if (!TOKEN || !SUPABASE_URL || !SERVICE_KEY) {
-    return new Response('missing env', { status: 500 })
+/** Evita reprocesar el mismo update cuando Telegram reintenta el webhook. */
+const seenUpdateIds = new Set<number>()
+const SEEN_MAX = 200
+
+function markSeen(updateId: number | undefined): boolean {
+  if (updateId == null || !Number.isFinite(updateId)) return false
+  if (seenUpdateIds.has(updateId)) return true
+  seenUpdateIds.add(updateId)
+  if (seenUpdateIds.size > SEEN_MAX) {
+    const first = seenUpdateIds.values().next().value
+    if (first != null) seenUpdateIds.delete(first)
   }
+  return false
+}
 
-  const update = await req.json()
-  const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+// Deno Deploy / Supabase: procesar en background tras responder 200
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void }
 
+async function handleUpdate(
+  update: Record<string, unknown>,
+  supabase: SupabaseClient,
+): Promise<void> {
   // Inline button: marcar / desmarcar sitio
   if (update.callback_query) {
-    const cq = update.callback_query
+    const cq = update.callback_query as {
+      id: string
+      data?: string
+      message: { chat: { id: number } }
+    }
     const chatId = cq.message.chat.id as number
     const data = String(cq.data || '')
     const chat = await ensureChat(supabase, chatId)
@@ -510,7 +528,10 @@ Deno.serve(async (req) => {
           reply_markup: mainMenu(),
         })
       } else {
-        await tg('answerCallbackQuery', { callback_query_id: cq.id, text: 'Expirado; pedid cerca otra vez' })
+        await tg('answerCallbackQuery', {
+          callback_query_id: cq.id,
+          text: 'Expirado; pedid cerca otra vez',
+        })
       }
     } else if (data === 'maps') {
       await tg('answerCallbackQuery', { callback_query_id: cq.id })
@@ -518,10 +539,7 @@ Deno.serve(async (req) => {
         chat.last_lat != null && chat.last_lng != null
           ? { lat: chat.last_lat, lng: chat.last_lng }
           : null
-      const points = [
-        ...(here ? [here] : []),
-        ...picks,
-      ]
+      const points = [...(here ? [here] : []), ...picks]
       const url = mapsDir(points, 'walking')
       await tg('sendMessage', {
         chat_id: chatId,
@@ -529,11 +547,18 @@ Deno.serve(async (req) => {
         reply_markup: mainMenu(),
       })
     }
-    return new Response('ok')
+    return
   }
 
-  const msg = update.message
-  if (!msg) return new Response('ok')
+  const msg = update.message as
+    | {
+        chat: { id: number }
+        text?: string
+        caption?: string
+        location?: { latitude: number; longitude: number }
+      }
+    | undefined
+  if (!msg) return
   const chatId = msg.chat.id as number
   const text: string = (msg.text || msg.caption || '').trim()
   let chat = await ensureChat(supabase, chatId)
@@ -541,7 +566,7 @@ Deno.serve(async (req) => {
   if (text.startsWith('/start')) {
     const token = text.replace(/^\/start(@\w+)?/, '').trim()
     if (token) {
-      const { data, error } = await supabase.rpc('link_telegram_chat', {
+      const { error } = await supabase.rpc('link_telegram_chat', {
         p_chat_id: chatId,
         p_token: token,
       })
@@ -565,7 +590,7 @@ Deno.serve(async (req) => {
         reply_markup: mainMenu(),
       })
     }
-    return new Response('ok')
+    return
   }
 
   // Ubicación → recomendaciones in situ (con o sin viaje)
@@ -583,7 +608,7 @@ Deno.serve(async (req) => {
       mode: 'all',
       intro: 'Ubicación guardada ✓ Buscando recomendaciones in situ…',
     })
-    return new Response('ok')
+    return
   }
 
   chat = await ensureChat(supabase, chatId)
@@ -600,7 +625,7 @@ Deno.serve(async (req) => {
 
   if (/ayuda|help|\?/.test(t) || text === '❓ Ayuda') {
     await tg('sendMessage', { chat_id: chatId, text: helpText(), reply_markup: mainMenu() })
-    return new Response('ok')
+    return
   }
 
   if (/mis pines|pines|marcados/.test(t)) {
@@ -612,7 +637,7 @@ Deno.serve(async (req) => {
           : `Marcados:\n${picks.map((p) => `• ${p.name}`).join('\n')}`,
       reply_markup: mainMenu(),
     })
-    return new Response('ok')
+    return
   }
 
   if (/abrir en google|google maps|abrir en maps/.test(t)) {
@@ -638,7 +663,7 @@ Deno.serve(async (req) => {
       reply_markup: mainMenu(),
       disable_web_page_preview: false,
     })
-    return new Response('ok')
+    return
   }
 
   // Modo in situ: cerca / recomienda / comer (con o sin viaje)
@@ -656,7 +681,22 @@ Deno.serve(async (req) => {
         text: 'Para recomendaros in situ necesito ubicación. Usad 📍 Enviar ubicación.',
         reply_markup: mainMenu(),
       })
-      return new Response('ok')
+      return
+    }
+    // Cooldown corto: Telegram a veces reintenta el mismo toque → no spamear
+    const nearby = (chat.last_nearby ?? []) as Place[]
+    const updatedMs = chat.updated_at ? Date.parse(chat.updated_at) : 0
+    if (nearby.length > 0 && updatedMs && Date.now() - updatedMs < 20_000) {
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: [
+          'Ya os acabo de mandar recomendaciones ↑',
+          'Tocad ➕ o «Abrir en Google Maps».',
+          'Para buscar otra vez: esperad un momento o mandad 📍 ubicación de nuevo.',
+        ].join('\n'),
+        reply_markup: mainMenu(),
+      })
+      return
     }
     await sendNearbySuggestions({
       supabase,
@@ -669,7 +709,7 @@ Deno.serve(async (req) => {
         ? `Según vuestro viaje (${tripStyleLine(trip) || trip.title})…`
         : undefined,
     })
-    return new Response('ok')
+    return
   }
 
   if (!trip) {
@@ -685,13 +725,13 @@ Deno.serve(async (req) => {
       ].join('\n'),
       reply_markup: mainMenu(),
     })
-    return new Response('ok')
+    return
   }
 
   const day = activeDay(trip)
   if (!day) {
     await tg('sendMessage', { chat_id: chatId, text: 'Viaje sin días.', reply_markup: mainMenu() })
-    return new Response('ok')
+    return
   }
   const pend = pending(day)
   const next = pend[0]
@@ -703,7 +743,7 @@ Deno.serve(async (req) => {
         text: 'No hay parada pendiente.',
         reply_markup: mainMenu(),
       })
-      return new Response('ok')
+      return
     }
     await tg('sendVenue', {
       chat_id: chatId,
@@ -725,7 +765,7 @@ Deno.serve(async (req) => {
         .join('\n'),
       reply_markup: mainMenu(),
     })
-    return new Response('ok')
+    return
   }
 
   if (/como llego|transporte|metro|linea|optima/.test(t)) {
@@ -735,7 +775,7 @@ Deno.serve(async (req) => {
         text: 'No hay destino pendiente.',
         reply_markup: mainMenu(),
       })
-      return new Response('ok')
+      return
     }
     if (!here) {
       await tg('sendMessage', {
@@ -743,7 +783,7 @@ Deno.serve(async (req) => {
         text: 'Mandad ubicación para calcular el tramo.',
         reply_markup: mainMenu(),
       })
-      return new Response('ok')
+      return
     }
     await tg('sendMessage', {
       chat_id: chatId,
@@ -755,7 +795,7 @@ Deno.serve(async (req) => {
       ].join('\n'),
       reply_markup: mainMenu(),
     })
-    return new Response('ok')
+    return
   }
 
   // Ruta por defecto
@@ -777,15 +817,50 @@ Deno.serve(async (req) => {
     reply_markup: mainMenu(),
   })
 
-  for (const s of list.slice(0, 4)) {
+  if (list[0]) {
     await tg('sendVenue', {
       chat_id: chatId,
-      latitude: s.lat,
-      longitude: s.lng,
-      title: s.name.slice(0, 64),
-      address: s.suggestedTime || trip.title,
+      latitude: list[0].lat,
+      longitude: list[0].lng,
+      title: list[0].name.slice(0, 64),
+      address: list[0].suggestedTime || trip.title,
     })
   }
+}
 
+Deno.serve(async (req) => {
+  if (req.method !== 'POST') return new Response('ok')
+  if (!TOKEN || !SUPABASE_URL || !SERVICE_KEY) {
+    return new Response('missing env', { status: 500 })
+  }
+
+  let update: Record<string, unknown>
+  try {
+    update = await req.json()
+  } catch {
+    return new Response('ok')
+  }
+
+  const updateId = update.update_id as number | undefined
+  if (markSeen(updateId)) {
+    // Telegram reintentó el mismo update → no volver a recomendar
+    return new Response('ok')
+  }
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+  const work = handleUpdate(update, supabase).catch((err) => {
+    console.error('telegram handleUpdate', err)
+  })
+
+  try {
+    if (typeof EdgeRuntime !== 'undefined' && typeof EdgeRuntime.waitUntil === 'function') {
+      EdgeRuntime.waitUntil(work)
+      return new Response('ok')
+    }
+  } catch {
+    /* fall through */
+  }
+
+  await work
   return new Response('ok')
 })
