@@ -124,47 +124,104 @@ function mainMenu() {
   }
 }
 
+const OVERPASS_MIRRORS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+]
+
+function rankNearby(lat: number, lng: number, places: Place[], limit = 8): Place[] {
+  const seen = new Set<string>()
+  return places
+    .filter((p) => {
+      const key = p.name.toLowerCase().trim()
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .map((p) => ({ ...p, _d: haversineKm({ lat, lng }, p) }))
+    .sort((a, b) => (a as Place & { _d: number })._d - (b as Place & { _d: number })._d)
+    .slice(0, limit)
+    .map(({ name, lat: plat, lng: plng, category }) => ({
+      name,
+      lat: plat,
+      lng: plng,
+      category,
+    }))
+}
+
 async function fetchOsmNearby(lat: number, lng: number): Promise<Place[]> {
-  const around = `around:900,${lat},${lng}`
+  const around = `around:1800,${lat},${lng}`
   const query = `
-[out:json][timeout:18];
+[out:json][timeout:25];
 (
-  node(${around})[tourism~"attraction|museum|gallery|viewpoint"];
+  node(${around})[tourism];
   node(${around})[historic];
-  way(${around})[tourism~"attraction|museum"];
+  node(${around})[amenity~"museum|theatre|arts_centre|place_of_worship|fountain"];
+  way(${around})[tourism];
+  way(${around})[historic];
+  way(${around})[amenity~"museum|theatre|arts_centre|place_of_worship"];
 );
-out center 15;
+out center 30;
 `
+  for (const url of OVERPASS_MIRRORS) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        body: `data=${encodeURIComponent(query)}`,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
+      if (!res.ok) continue
+      const json = await res.json()
+      const out: Place[] = []
+      for (const el of json.elements ?? []) {
+        const plat = el.lat ?? el.center?.lat
+        const plng = el.lon ?? el.center?.lon
+        const name = el.tags?.name || el.tags?.['name:es'] || el.tags?.['name:en']
+        if (plat == null || plng == null || !name) continue
+        out.push({
+          name,
+          lat: plat,
+          lng: plng,
+          category: el.tags?.tourism || el.tags?.historic || el.tags?.amenity || 'sight',
+        })
+      }
+      const ranked = rankNearby(lat, lng, out, 8)
+      if (ranked.length) return ranked
+    } catch {
+      /* try next mirror */
+    }
+  }
+  return fetchWikiNearby(lat, lng)
+}
+
+/** Fallback si Overpass falla o no hay POIs con nombre. */
+async function fetchWikiNearby(lat: number, lng: number): Promise<Place[]> {
   try {
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      body: `data=${encodeURIComponent(query)}`,
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    const u = new URL('https://es.wikipedia.org/w/api.php')
+    u.searchParams.set('action', 'query')
+    u.searchParams.set('list', 'geosearch')
+    u.searchParams.set('gscoord', `${lat}|${lng}`)
+    u.searchParams.set('gsradius', '2000')
+    u.searchParams.set('gslimit', '10')
+    u.searchParams.set('format', 'json')
+    u.searchParams.set('origin', '*')
+    const res = await fetch(u.toString(), {
+      headers: { 'User-Agent': 'RutaDosBot/1.0 (couple trip planner)' },
     })
     if (!res.ok) return []
     const json = await res.json()
     const out: Place[] = []
-    const seen = new Set<string>()
-    for (const el of json.elements ?? []) {
-      const plat = el.lat ?? el.center?.lat
-      const plng = el.lon ?? el.center?.lon
-      const name = el.tags?.name
-      if (plat == null || plng == null || !name) continue
-      const key = name.toLowerCase()
-      if (seen.has(key)) continue
-      seen.add(key)
+    for (const hit of json.query?.geosearch ?? []) {
+      if (hit.lat == null || hit.lon == null || !hit.title) continue
       out.push({
-        name,
-        lat: plat,
-        lng: plng,
-        category: el.tags?.tourism || el.tags?.historic || 'sight',
+        name: hit.title,
+        lat: hit.lat,
+        lng: hit.lon,
+        category: 'wiki',
       })
     }
-    return out
-      .map((p) => ({ ...p, _d: haversineKm({ lat, lng }, p) }))
-      .sort((a, b) => (a as Place & { _d: number })._d - (b as Place & { _d: number })._d)
-      .slice(0, 8)
-      .map(({ name, lat, lng, category }) => ({ name, lat, lng, category }))
+    return rankNearby(lat, lng, out, 8)
   } catch {
     return []
   }
@@ -358,6 +415,22 @@ Deno.serve(async (req) => {
       .from('telegram_chats')
       .update({ last_nearby: merged, updated_at: new Date().toISOString() })
       .eq('chat_id', chatId)
+
+    if (!merged.length) {
+      await tg('sendMessage', {
+        chat_id: chatId,
+        text: [
+          'No encontré sitios con nombre cerca de esa ubicación.',
+          '',
+          'Probad:',
+          '• Otra ubicación (centro / zona turística)',
+          '• Enlazar un viaje: en RutaDos → Compartir → /start TOKEN aquí',
+          '• Volver a pulsar «Qué hay cerca»',
+        ].join('\n'),
+        reply_markup: mainMenu(),
+      })
+      return new Response('ok')
+    }
 
     const lines = [
       trip ? `${trip.title} · cerca de vosotros:` : 'Cerca de vosotros:',
