@@ -208,6 +208,25 @@ export const DEFAULT_PREFERENCES: Preferences = {
   night_walks: true,
 }
 
+/** Wizard en blanco: nada marcado hasta que elijáis. */
+export const EMPTY_PREFERENCES: Preferences = {
+  restaurants: false,
+  cafes: false,
+  museums: false,
+  monuments: false,
+  viewpoints: false,
+  nightlife: false,
+  hidden: false,
+  parks: false,
+  shopping: false,
+  markets: false,
+  street_food: false,
+  architecture: false,
+  shows: false,
+  neighborhoods: false,
+  night_walks: false,
+}
+
 export const DEFAULT_ROUTE_STYLE: RouteStyle = {
   pace: 'normal',
   explore: 'mixed',

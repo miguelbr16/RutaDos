@@ -21,9 +21,13 @@ import {
   DEFAULT_LOGISTICS,
   DEFAULT_PREFERENCES,
   DEFAULT_ROUTE_STYLE,
+  EMPTY_PREFERENCES,
   type AreaScale,
   type DayFocus,
+  type ExploreMode,
   type GeoPlace,
+  type Mobility,
+  type Pace,
   type Preferences,
   type RouteStyle,
   type TransitMode,
@@ -101,7 +105,13 @@ interface WizardDraft {
   startDate: string
   endDate: string
   preferences: Preferences
-  routeStyle: RouteStyle
+  /** Ritmo/estilo: null = aún no elegido en el wizard */
+  routeStyle: Omit<RouteStyle, 'pace' | 'explore' | 'mobility' | 'foodBudget'> & {
+    pace: Pace | null
+    explore: ExploreMode | null
+    mobility: Mobility | null
+    foodBudget: RouteStyle['foodBudget'] | null
+  }
   arrivalTime: string
   departureTime: string
   hotelQuery: string
@@ -208,8 +218,17 @@ const initialWizard = (): WizardDraft => ({
   cityPick: null,
   startDate: todayISO(),
   endDate: plusDaysISO(2),
-  preferences: { ...DEFAULT_PREFERENCES, nightlife: false },
-  routeStyle: { ...DEFAULT_ROUTE_STYLE },
+  preferences: { ...EMPTY_PREFERENCES },
+  routeStyle: {
+    ...DEFAULT_ROUTE_STYLE,
+    pace: null,
+    explore: null,
+    mobility: null,
+    foodBudget: null,
+    preferScenicWalks: false,
+    preferCentral: false,
+    detours: false,
+  },
   arrivalTime: '15:00',
   departureTime: '18:00',
   hotelQuery: '',
@@ -220,6 +239,20 @@ const initialWizard = (): WizardDraft => ({
   mustVisits: [],
   mustVisitQuery: '',
 })
+
+function resolveWizardRouteStyle(w: WizardDraft['routeStyle']): RouteStyle {
+  return {
+    ...DEFAULT_ROUTE_STYLE,
+    ...w,
+    pace: w.pace ?? DEFAULT_ROUTE_STYLE.pace,
+    explore: w.explore ?? DEFAULT_ROUTE_STYLE.explore,
+    mobility: w.mobility ?? DEFAULT_ROUTE_STYLE.mobility,
+    foodBudget: w.foodBudget ?? DEFAULT_ROUTE_STYLE.foodBudget,
+    preferCentral: w.preferCentral === true,
+    preferScenicWalks: w.preferScenicWalks === true,
+    detours: w.detours === true,
+  }
+}
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -276,6 +309,22 @@ export const useAppStore = create<AppState>()(
           set({ error: 'La fecha de fin debe ser posterior al inicio' })
           return
         }
+        const prefsOn = (Object.keys(wizard.preferences) as (keyof Preferences)[]).some(
+          (k) => wizard.preferences[k],
+        )
+        if (!prefsOn) {
+          set({ error: 'Elegid al menos un gusto (museos, comer, monumentos…)' })
+          return
+        }
+        if (
+          !wizard.routeStyle.pace ||
+          !wizard.routeStyle.explore ||
+          !wizard.routeStyle.mobility ||
+          !wizard.routeStyle.foodBudget
+        ) {
+          set({ error: 'Elegid ritmo, exploración, movilidad y tipo de comida' })
+          return
+        }
 
         set({ generating: true, error: null })
         try {
@@ -286,12 +335,14 @@ export const useAppStore = create<AppState>()(
             ) + 1,
           )
 
+          const resolvedStyle = resolveWizardRouteStyle(wizard.routeStyle)
+
           const areaScale: AreaScale =
             wizard.areaScale ||
             detectAreaScale(
               wizard.cityPick?.name || wizard.cityQuery,
               wizard.cityPick?.displayName,
-              wizard.routeStyle.mobility,
+              resolvedStyle.mobility,
             )
 
           let city
@@ -354,7 +405,7 @@ export const useAppStore = create<AppState>()(
           const rawPlaces = await discoverPlaces(
             city,
             normalizePreferences(wizard.preferences),
-            wizard.routeStyle,
+            resolvedStyle,
             dayCount,
           )
           const mustPlaces: GeoPlace[] = (wizard.mustVisits ?? []).map((m, i) => ({
@@ -386,8 +437,8 @@ export const useAppStore = create<AppState>()(
             wizard.startDate,
             wizard.endDate,
             {
-              ...wizard.routeStyle,
-              preferCentral: wizard.routeStyle.preferCentral !== false,
+              ...resolvedStyle,
+              preferCentral: resolvedStyle.preferCentral !== false,
             },
             logistics,
             { lat: city.lat, lng: city.lng },
@@ -401,7 +452,7 @@ export const useAppStore = create<AppState>()(
             startDate: wizard.startDate,
             endDate: wizard.endDate,
             preferences: { ...wizard.preferences },
-            routeStyle: { ...wizard.routeStyle },
+            routeStyle: { ...resolvedStyle },
             logistics,
             places,
             days,

@@ -411,6 +411,9 @@ export function WizardPage() {
   )
 
   const preview = useMemo(() => {
+    if (!wizard.routeStyle.pace || !wizard.routeStyle.explore) {
+      return 'Elegid ritmo y estilo de exploración para ver el resumen.'
+    }
     const pace =
       wizard.routeStyle.pace === 'relaxed'
         ? 'días tranquilas'
@@ -431,6 +434,12 @@ export function WizardPage() {
           : 'llegada temprana → casi un día completo'
     return `${pace}, ${explore}. ${arrive}.`
   }, [wizard.routeStyle.pace, wizard.routeStyle.explore, wizard.arrivalTime])
+
+  const styleReady =
+    !!wizard.routeStyle.pace &&
+    !!wizard.routeStyle.explore &&
+    !!wizard.routeStyle.mobility &&
+    !!wizard.routeStyle.foodBudget
 
   if (view.name !== 'wizard') return null
   const step = view.step
@@ -459,7 +468,7 @@ export function WizardPage() {
   function pickQuickDestination(d: (typeof QUICK_DESTINATIONS)[number]) {
     const scale =
       d.scale ??
-      detectAreaScale(d.name, d.displayName, d.mobility ?? wizard.routeStyle.mobility)
+      detectAreaScale(d.name, d.displayName, d.mobility ?? wizard.routeStyle.mobility ?? undefined)
     patchWizard({
       cityQuery: d.name,
       cityPick: {
@@ -473,10 +482,7 @@ export function WizardPage() {
       hotelQuery: '',
       airportPick: null,
       areaScale: scale,
-      routeStyle: {
-        ...wizard.routeStyle,
-        mobility: d.mobility ?? (scale === 'region' ? 'drive' : wizard.routeStyle.mobility),
-      },
+      // movilidad se elige en el paso de ritmo
     })
     setCitySuggestions([])
   }
@@ -551,7 +557,7 @@ export function WizardPage() {
                         const scale = detectAreaScale(
                           s.shortName,
                           s.displayName,
-                          wizard.routeStyle.mobility,
+                          wizard.routeStyle.mobility ?? undefined,
                           s.kind,
                         )
                         patchWizard({
@@ -565,15 +571,7 @@ export function WizardPage() {
                           hotelPick: null,
                           airportPick: null,
                           areaScale: scale,
-                          routeStyle: {
-                            ...wizard.routeStyle,
-                            mobility:
-                              scale === 'region'
-                                ? 'drive'
-                                : scale === 'country' && wizard.routeStyle.mobility === 'walk'
-                                  ? 'transit'
-                                  : wizard.routeStyle.mobility,
-                          },
+                          // No premarcar movilidad: la eligen en el paso de ritmo
                         })
                         setCitySuggestions([])
                       }}
@@ -619,15 +617,7 @@ export function WizardPage() {
                     onClick={() => {
                       patchWizard({
                         areaScale: o.value,
-                        routeStyle: {
-                          ...wizard.routeStyle,
-                          mobility:
-                            o.value === 'region'
-                              ? 'drive'
-                              : o.value === 'country' && wizard.routeStyle.mobility === 'walk'
-                                ? 'transit'
-                                : wizard.routeStyle.mobility,
-                        },
+                        // No premarcar movilidad aquí
                       })
                     }}
                   >
@@ -913,8 +903,8 @@ export function WizardPage() {
         <section className="wiz-stage">
           <h2 className="wiz-title">Qué os gusta</h2>
           <p className="muted">
-            Empezad con un preset y afinad. De noche: cenas (restaurantes), paseos iluminados y, si
-            queréis, bares.
+            Nada viene marcado: elegid vosotros (o un preset como atajo). De noche: cenas,
+            paseos iluminados y, si queréis, bares.
           </p>
 
           <div className="preset-row">
@@ -980,7 +970,9 @@ export function WizardPage() {
       {step === 3 && (
         <section className="wiz-stage">
           <h2 className="wiz-title">Cómo queréis recorrer la ciudad</h2>
-          <p className="muted">Densidad del día, tipo de sitios y cómo os movéis.</p>
+          <p className="muted">
+            Nada premarcado: elegid ritmo, exploración, movilidad y comida.
+          </p>
 
           <div className="option-block">
             <h3>Ritmo</h3>
@@ -1077,7 +1069,7 @@ export function WizardPage() {
           <label className="check">
             <input
               type="checkbox"
-              checked={wizard.routeStyle.preferCentral !== false}
+              checked={wizard.routeStyle.preferCentral === true}
               onChange={(e) =>
                 patchWizard({
                   routeStyle: {
@@ -1093,7 +1085,7 @@ export function WizardPage() {
           <label className="check">
             <input
               type="checkbox"
-              checked={wizard.routeStyle.preferScenicWalks}
+              checked={wizard.routeStyle.preferScenicWalks === true}
               onChange={(e) =>
                 patchWizard({
                   routeStyle: {
@@ -1109,7 +1101,7 @@ export function WizardPage() {
           <label className="check">
             <input
               type="checkbox"
-              checked={wizard.routeStyle.detours}
+              checked={wizard.routeStyle.detours === true}
               onChange={(e) =>
                 patchWizard({
                   routeStyle: { ...wizard.routeStyle, detours: e.target.checked },
@@ -1119,13 +1111,21 @@ export function WizardPage() {
             Proponer paradas extra entre un sitio y otro
           </label>
 
-          <p className="hint-box">Resumen: {preview}</p>
+          <p className="hint-box">
+            Resumen: {preview}
+            {!styleReady ? ' · Falta elegir ritmo, exploración, movilidad y comida.' : ''}
+          </p>
 
           <div className="wiz-actions">
             <button type="button" className="btn ghost" onClick={() => go(2)}>
               Atrás
             </button>
-            <button type="button" className="btn primary" onClick={() => go(4)}>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={!styleReady}
+              onClick={() => go(4)}
+            >
               Ver resumen
             </button>
           </div>
@@ -1267,8 +1267,8 @@ export function WizardPage() {
               displayName: wizard.cityPick?.displayName,
               startDate: wizard.startDate,
               endDate: wizard.endDate,
-              foodBudget: wizard.routeStyle.foodBudget,
-              pace: wizard.routeStyle.pace,
+              foodBudget: wizard.routeStyle.foodBudget ?? undefined,
+              pace: wizard.routeStyle.pace ?? undefined,
             })
             return (
               <div className="budget-box">
