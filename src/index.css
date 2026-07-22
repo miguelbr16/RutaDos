@@ -593,6 +593,7 @@ a {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 7%, transparent);
+  border: 1px solid var(--line);
 }
 
 .day-card-v-main {
@@ -608,10 +609,93 @@ a {
 
 .day-card-v-head {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.65rem;
+}
+
+.day-card-v-head .day-label {
+  margin-bottom: 0;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+}
+
+.day-meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.day-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+}
+
+.day-pill.count {
+  background: color-mix(in srgb, var(--deep) 10%, #fff);
+  color: var(--deep);
+}
+
+.day-pill.tag {
+  background: color-mix(in srgb, var(--sand) 28%, #fff);
+  color: var(--ink);
+}
+
+.day-mini-tl {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.day-mini-tl > li {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: 0.45rem;
+  align-items: start;
+}
+
+.day-mini-n {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--sea) 18%, #fff);
+  color: var(--deep);
+  flex-shrink: 0;
+}
+
+.day-mini-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  padding-top: 0.1rem;
+}
+
+.day-mini-body strong {
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-mini-more .day-mini-n {
+  background: color-mix(in srgb, var(--ink) 8%, #fff);
+  color: var(--muted);
 }
 
 .day-count {
@@ -1697,6 +1781,10 @@ code {
 }
 
 .onroute-cta .btn:first-child {
+  grid-column: 1 / -1;
+}
+
+.onroute-cta .tired-btn {
   grid-column: 1 / -1;
 }
 

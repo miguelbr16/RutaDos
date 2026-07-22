@@ -443,6 +443,7 @@ export function TripPage({ tripId }: { tripId: string }) {
                 : day.intensity === 'departure'
                   ? 'Salida'
                   : null
+            const preview = visits.slice(0, 4)
             return (
               <li key={day.id}>
                 <article className="day-card-v">
@@ -453,41 +454,49 @@ export function TripPage({ tripId }: { tripId: string }) {
                   >
                     <div className="day-card-v-head">
                       <strong className="day-label">{day.label}</strong>
-                      <span className="day-count">
-                        {visits.length} sitio{visits.length === 1 ? '' : 's'}
-                        {tag ? ` · ${tag}` : ''}
+                      <span className="day-meta-pills">
+                        {tag ? <span className="day-pill tag">{tag}</span> : null}
+                        <span className="day-pill count">
+                          {visits.length} sitio{visits.length === 1 ? '' : 's'}
+                        </span>
                       </span>
                     </div>
-                    <div className="day-route-flow" aria-label="Ruta del día">
-                      {visits.length === 0 ? (
-                        <span className="muted tiny">Sin paradas aún</span>
-                      ) : (
-                        visits.slice(0, 5).map((s, i) => {
-                          const next = visits[i + 1]
+
+                    {preview.length === 0 ? (
+                      <p className="muted tiny">Sin paradas aún — tocá para armar el día</p>
+                    ) : (
+                      <ol className="day-mini-tl">
+                        {preview.map((s, i) => {
                           const mode = (s.transitMode || 'walk') as TransitMode
-                          const short = s.name.replace(/\s*\/.*$/, '').slice(0, 22)
+                          const short = s.name.replace(/\s*\/.*$/, '').slice(0, 28)
                           return (
-                            <span key={s.id} className="day-flow-item">
-                              <span className="day-flow-stop">
-                                {s.suggestedTime ? (
-                                  <em>{s.suggestedTime}</em>
-                                ) : null}
-                                {short}
-                              </span>
-                              {next && i < 4 ? (
-                                <span className="day-flow-mode" title={TRANSIT_MODE_LABELS[mode]}>
-                                  → {TRANSIT_MODE_LABELS[mode]}
-                                  {s.minutesToNext != null ? ` ${s.minutesToNext}'` : ''} →
+                            <li key={s.id}>
+                              <span className="day-mini-n">{i + 1}</span>
+                              <span className="day-mini-body">
+                                <strong>{short}</strong>
+                                <span className="muted tiny">
+                                  {s.suggestedTime ? `${s.suggestedTime}` : ''}
+                                  {s.suggestedTime && i < preview.length - 1 ? ' · ' : ''}
+                                  {i < preview.length - 1
+                                    ? `${TRANSIT_MODE_LABELS[mode]}${
+                                        s.minutesToNext != null ? ` ${s.minutesToNext}'` : ''
+                                      }`
+                                    : ''}
                                 </span>
-                              ) : null}
-                            </span>
+                              </span>
+                            </li>
                           )
-                        })
-                      )}
-                      {visits.length > 5 ? (
-                        <span className="muted tiny">+{visits.length - 5}</span>
-                      ) : null}
-                    </div>
+                        })}
+                        {visits.length > preview.length ? (
+                          <li className="day-mini-more">
+                            <span className="day-mini-n">+</span>
+                            <span className="muted tiny">
+                              {visits.length - preview.length} más · abrir día
+                            </span>
+                          </li>
+                        ) : null}
+                      </ol>
+                    )}
                   </button>
                   <div className="day-card-v-actions">
                     <a
