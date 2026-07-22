@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../store'
 import { loadOfflineDay } from '../lib/offlineDay'
 
@@ -12,7 +12,7 @@ export function HomePage() {
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   )
   const offlineSnap = !online ? loadOfflineDay() : null
-  const [moreOpen, setMoreOpen] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const on = () => setOnline(true)
@@ -96,16 +96,6 @@ export function HomePage() {
         </div>
 
         <div className="home-landing-copy">
-          <div className="home-landing-top">
-            <button
-              type="button"
-              className="btn ghost sm home-landing-more"
-              onClick={() => setMoreOpen((v) => !v)}
-              aria-expanded={moreOpen}
-            >
-              Más
-            </button>
-          </div>
           <p className="home-landing-brand">RutaDos</p>
           <h1 className="home-landing-title">El viaje, día a día</h1>
           <p className="home-landing-lede">
@@ -118,33 +108,6 @@ export function HomePage() {
           </div>
         </div>
       </section>
-
-      {moreOpen && (
-        <div className="home-more-bar">
-          <button type="button" className="btn ghost sm" onClick={exportAll}>
-            Exportar
-          </button>
-          <label className="btn ghost sm file-btn">
-            Importar
-            <input
-              type="file"
-              accept="application/json"
-              hidden
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) onImportFile(f)
-              }}
-            />
-          </label>
-          <button
-            type="button"
-            className="btn ghost sm"
-            onClick={() => setView({ name: 'settings' })}
-          >
-            Sync
-          </button>
-        </div>
-      )}
 
       <section className="home-trips-panel">
         <div className="home-trips-head">
@@ -181,18 +144,47 @@ export function HomePage() {
                 </button>
                 <button
                   type="button"
-                  className="btn ghost sm danger home-trip-del"
+                  className="home-trip-del"
                   aria-label={`Borrar viaje a ${t.title}`}
                   onClick={() => {
                     if (confirm(`¿Borrar viaje a ${t.title}?`)) deleteTrip(t.id)
                   }}
                 >
-                  Borrar
+                  Eliminar
                 </button>
               </li>
             ))}
           </ul>
         )}
+
+        <nav className="home-tools" aria-label="Herramientas">
+          <button type="button" className="home-tool-link" onClick={() => setView({ name: 'settings' })}>
+            Ajustes y sync
+          </button>
+          <span className="home-tool-sep" aria-hidden>
+            ·
+          </span>
+          <button type="button" className="home-tool-link" onClick={exportAll}>
+            Exportar
+          </button>
+          <span className="home-tool-sep" aria-hidden>
+            ·
+          </span>
+          <button type="button" className="home-tool-link" onClick={() => fileRef.current?.click()}>
+            Importar
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) onImportFile(f)
+              e.target.value = ''
+            }}
+          />
+        </nav>
       </section>
     </div>
   )

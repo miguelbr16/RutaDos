@@ -209,21 +209,8 @@ a {
   z-index: 1;
   width: min(40rem, calc(100% - var(--page-pad) * 2));
   margin: 0 auto;
-  padding: calc(1rem + env(safe-area-inset-top, 0px)) 0 2rem;
+  padding: calc(5.5rem + env(safe-area-inset-top, 0px)) 0 2rem;
   animation: rise 700ms var(--ease) both;
-}
-
-.home-landing-top {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: clamp(4rem, 18vh, 9rem);
-}
-
-.home-landing-more {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
-  backdrop-filter: blur(8px);
 }
 
 .home-landing-brand {
@@ -267,12 +254,39 @@ a {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
 }
 
-.home-more-bar {
+.home-tools {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  width: min(40rem, calc(100% - var(--page-pad) * 2));
-  margin: 0.85rem auto 0;
+  align-items: center;
+  gap: 0.35rem 0.15rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.home-tool-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0.25rem 0.2rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-color: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+.home-tool-link:hover {
+  color: var(--deep);
+}
+
+.home-tool-sep {
+  color: color-mix(in srgb, var(--muted) 55%, transparent);
+  font-size: 0.82rem;
+  user-select: none;
 }
 
 .home-trips-panel {
@@ -375,7 +389,36 @@ a {
 }
 
 .home-trip-del {
-  opacity: 0.72;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0.55rem 0.35rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--muted) 70%, var(--danger));
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.home-trip-del:hover {
+  opacity: 1;
+  color: var(--danger);
+}
+
+.trip-more-head {
+  margin-bottom: 0.75rem;
+}
+
+.trip-more-head h2 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.02em;
+}
+
+.trip-more-head p {
+  margin: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

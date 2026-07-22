@@ -200,14 +200,20 @@ export function TripPage({ tripId }: { tripId: string }) {
         <button
           type="button"
           className={moreOpen ? 'btn ghost sm on' : 'btn ghost sm'}
+          aria-expanded={moreOpen}
           onClick={() => setMoreOpen((v) => !v)}
         >
-          Más
+          {moreOpen ? 'Cerrar' : 'Opciones'}
         </button>
       </div>
 
       {moreOpen && (
-        <div className="trip-more-panel">
+        <div className="trip-more-panel" role="region" aria-label="Opciones del viaje">
+          <div className="trip-more-head">
+            <h2>Opciones</h2>
+            <p className="muted tiny">Presupuesto, compartir y ajustar el plan.</p>
+          </div>
+
           <div className="budget-box">
             <strong>Presupuesto orientativo</strong>
             <p>
