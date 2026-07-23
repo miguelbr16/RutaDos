@@ -136,9 +136,13 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
   },
 ]
 
-export const FEATURED_DESTINATIONS = QUICK_DESTINATIONS.filter((d) =>
-  ['Londres', 'Roma', 'Madrid', 'Núremberg', 'Japón'].includes(d.label),
-)
+export const FEATURED_DESTINATIONS: QuickDestination[] = [
+  QUICK_DESTINATIONS[0], // Londres
+  QUICK_DESTINATIONS[4], // Roma
+  QUICK_DESTINATIONS[3], // Madrid
+  QUICK_DESTINATIONS[1], // Núremberg
+  QUICK_DESTINATIONS[2], // Japón
+].filter(Boolean)
 
 export function photoForDestination(name: string): string | undefined {
   return QUICK_DESTINATIONS.find(
