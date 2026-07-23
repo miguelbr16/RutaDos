@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RutaDos — Preview light (móvil + PC)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0b1f24;
+      --deep: #12353c;
+      --sea: #1f6f63;
+      --sand: #e08a3c;
+      --mist: #f3f5f4;
+      --foam: #e8efed;
+      --card: #fff;
+      --muted: #5a6e72;
+      --line: rgba(11, 31, 36, 0.1);
+      --shadow: 0 12px 36px rgba(11, 31, 36, 0.08);
+      --radius: 18px;
+      --font-d: "Fraunces", Georgia, serif;
+      --font-b: "Outfit", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-b);
+      color: var(--ink);
+      background:
+        radial-gradient(900px 420px at 8% -8%, rgba(42, 143, 122, 0.12), transparent 55%),
+        radial-gradient(700px 380px at 92% 0%, rgba(224, 138, 60, 0.1), transparent 50%),
+        var(--mist);
+      min-height: 100vh;
+    }
+    .chrome {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.1rem 1.25rem 2rem;
+    }
+    .chrome-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .chrome-top h1 {
+      margin: 0;
+      font-family: var(--font-d);
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+    .chrome-top p {
+      margin: 0.25rem 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      max-width: 40rem;
+      line-height: 1.4;
+    }
+    .seg {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      background: color-mix(in srgb, var(--deep) 5%, #fff);
+      padding: 0.3rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+    .seg button {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      border-radius: 999px;
+      padding: 0.4rem 0.85rem;
+      font: inherit;
+      font-size: 0.85rem;
+      font-weight: 650;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .seg button.on {
+      background: var(--sea);
+      color: #fff;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr minmax(240px, 300px);
+      gap: 1.25rem;
+      align-items: start;
+    }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+    .notes {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 1rem;
+    }
+    .notes .tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--sea);
+      margin-bottom: 0.4rem;
+    }
+    .notes h2 {
+      margin: 0 0 0.45rem;
+      font-family: var(--font-d);
+      font-size: 1.15rem;
+    }
+    .notes ul {
+      margin: 0;
+      padding-left: 1.05rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    /* frames */
+    .frame-mobile, .frame-desktop { display: none; }
+    body[data-device="mobile"] .frame-mobile { display: block; }
+    body[data-device="desktop"] .frame-desktop { display: block; }
+
+    .phone {
+      width: min(100%, 390px);
+      height: 780px;
+      margin: 0 auto;
+      background: var(--foam);
+      border-radius: 36px;
+      border: 10px solid #1a2c30;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 8px; left: 50%;
+      transform: translateX(-50%);
+      width: 110px; height: 22px;
+      background: #1a2c30;
+      border-radius: 12px;
+      z-index: 5;
+    }
+    .desktop {
+      width: 100%;
+      min-height: 640px;
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .desk-chrome {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.55rem 0.85rem;
+      background: #eef1f0;
+      border-bottom: 1px solid var(--line);
+    }
+    .desk-chrome i {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #c9d2d0;
+      display: block;
+    }
+    .desk-chrome .url {
+      flex: 1;
+      margin-left: 0.5rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .screen { height: 100%; overflow: auto; background: var(--mist); }
+    .desktop .screen { height: calc(640px - 38px); }
+
+    .view { display: none; min-height: 100%; }
+    .view.on { display: block; animation: fade .3s ease; }
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .btn {
+      appearance: none; border: 0; border-radius: 14px;
+      padding: 0.7rem 1rem; font: inherit; font-weight: 700; cursor: pointer;
+    }
+    .btn.primary { background: var(--sea); color: #fff; }
+    .btn.ghost { background: var(--card); color: var(--deep); border: 1px solid var(--line); }
+    .btn.sand {
+      background: color-mix(in srgb, var(--sand) 22%, #fff);
+      border: 1px solid color-mix(in srgb, var(--sand) 45%, transparent);
+      color: var(--ink);
+    }
+    .btn.sm { padding: 0.42rem 0.7rem; font-size: 0.82rem; border-radius: 11px; }
+    .muted { color: var(--muted); }
+    .tiny { font-size: 0.78rem; }
+    .brand { font-family: var(--font-d); font-weight: 700; letter-spacing: -0.02em; }
+
+    /* —— shared mobile bits —— */
+    .m-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.55rem 1rem 0.55rem;
+    }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 999px;
+      border: 1px solid var(--line); background: var(--card);
+      display: grid; place-items: center; font-size: 0.85rem;
+    }
+
+    /* HOME mobile */
+    .home-hero {
+      position: relative; height: 320px; margin: 0 0.75rem;
+      border-radius: 22px; overflow: hidden; color: #fff;
+      background:
+        linear-gradient(180deg, rgba(11,31,36,.12), rgba(11,31,36,.72)),
+        url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80") center/cover;
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 1.2rem;
+    }
+    .home-hero h2 {
+      margin: 0.2rem 0 0; font-family: var(--font-d); font-size: 1.5rem; font-weight: 600; max-width: 12ch; line-height: 1.15;
+    }
+    .home-hero p { margin: 0.35rem 0 0.85rem; opacity: .92; font-size: .9rem; max-width: 28ch; }
+    .pad { padding: 1rem; }
+    .dest-row {
+      display: grid; grid-auto-flow: column; grid-auto-columns: 42%; gap: .5rem;
+      overflow-x: auto; padding-bottom: .2rem;
+    }
+    .dest-card { border-radius: 14px; overflow: hidden; background: var(--card); border: 1px solid var(--line); }
+    .dest-card img { width: 100%; height: 84px; object-fit: cover; display: block; }
+    .dest-card span { display: block; padding: .4rem .5rem .5rem; font-size: .82rem; font-weight: 700; }
+    .trip-card {
+      display: grid; grid-template-columns: 72px 1fr; gap: .65rem;
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: .5rem; margin-bottom: .5rem; align-items: center;
+    }
+    .trip-card img { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; }
+    .trip-card strong { display: block; font-size: .95rem; }
+    .trip-card .meta { font-size: .76rem; color: var(--muted); margin-top: .12rem; }
+
+    /* HOME desktop */
+    .d-home-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 1.5rem; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.92);
+    }
+    .d-home-hero {
+      position: relative; min-height: 340px; color: #fff;
+      background:
+        linear-gradient(105deg, rgba(11,31,36,.78) 0%, rgba(11,31,36,.35) 55%, rgba(11,31,36,.2) 100%),
+        url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1600&q=80") center/cover;
+      display: grid; align-items: end; padding: 2.5rem 2rem 2.2rem;
+    }
+    .d-home-hero .inner { max-width: 36rem; }
+    .d-home-hero .brand { font-size: 1.35rem; }
+    .d-home-hero h2 {
+      margin: 0.4rem 0 0; font-family: var(--font-d); font-size: 2.6rem; font-weight: 600; line-height: 1.08;
+    }
+    .d-home-hero p { margin: 0.55rem 0 1.1rem; font-size: 1.05rem; opacity: .92; max-width: 34ch; }
+    .d-home-grid {
+      display: grid; grid-template-columns: 1.35fr 1fr; gap: 1.5rem;
+      padding: 1.5rem 2rem 2rem; max-width: 1100px;
+    }
+    .d-dest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem; }
+    .d-dest-grid .dest-card img { height: 110px; }
+    .sec-h { margin: 0 0 0.65rem; font-family: var(--font-d); font-size: 1.25rem; }
+
+    /* WIZARD mobile */
+    .wiz-head { padding: 1.55rem 1rem .4rem; }
+    .wiz-head h2 { margin: .3rem 0 .2rem; font-family: var(--font-d); font-size: 1.4rem; }
+    .dots { display: flex; gap: .3rem; margin-top: .65rem; }
+    .dots i { width: 26px; height: 4px; border-radius: 99px; background: var(--line); display: block; }
+    .dots i.on { background: var(--sea); }
+    .preset-stack { padding: 0 1rem; display: grid; gap: .45rem; }
+    .preset {
+      text-align: left; border: 1px solid var(--line); border-radius: 16px; padding: .85rem 1rem;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--sea) 8%, #fff), #fff);
+    }
+    .preset.on { border-color: var(--sea); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sea) 28%, transparent); }
+    .preset strong { font-family: var(--font-d); display: block; }
+    .preset span { font-size: .8rem; color: var(--muted); }
+    .vibe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; padding: .75rem 1rem 5rem; }
+    .vibe { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: .8rem .65rem; }
+    .vibe.on { background: color-mix(in srgb, var(--sea) 12%, #fff); border-color: var(--sea); }
+    .vibe strong { font-family: var(--font-d); display: block; }
+    .vibe span { font-size: .72rem; color: var(--muted); }
+    .sticky-foot {
+      position: sticky; bottom: 0; padding: .7rem 1rem 1rem;
+      background: linear-gradient(transparent, var(--mist) 28%);
+      display: grid; grid-template-columns: 1fr 1.4fr; gap: .4rem;
+    }
+
+    /* WIZARD desktop */
+    .d-wiz {
+      display: grid; grid-template-columns: 1.1fr 0.9fr; min-height: 560px;
+    }
+    .d-wiz-main { padding: 1.75rem 1.75rem 1.5rem; }
+    .d-wiz-side {
+      background:
+        linear-gradient(180deg, rgba(11,31,36,.45), rgba(11,31,36,.7)),
+        url("https://images.unsplash.com/photo-1486299267070-83823fcee8dd?auto=format&fit=crop&w=900&q=70") center/cover;
+      color: #fff; padding: 1.75rem; display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .d-wiz-side h3 { margin: 0; font-family: var(--font-d); font-size: 1.6rem; }
+    .d-wiz-side p { margin: .4rem 0 0; opacity: .9; font-size: .92rem; }
+    .d-wiz .preset-stack { padding: 0; margin-top: 1rem; }
+    .d-wiz .vibe-grid { padding: .85rem 0 1rem; }
+    .d-wiz-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .5rem; }
+
+    /* TRIP mobile */
+    .trip-map {
+      height: 210px; margin: .4rem .75rem 0; border-radius: 18px; overflow: hidden; position: relative;
+      background:
+        linear-gradient(180deg, rgba(11,31,36,.05), rgba(11,31,36,.28)),
+        url("https://images.unsplash.com/photo-1520986606214-8b456906c813?auto=format&fit=crop&w=900&q=70") center/cover;
+    }
+    .pin {
+      position: absolute; width: 13px; height: 13px; border-radius: 50%;
+      background: var(--sea); border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    .trip-tabs {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: .2rem;
+      margin: .65rem .75rem 0; background: color-mix(in srgb, var(--deep) 6%, #fff);
+      padding: .28rem; border-radius: 14px;
+    }
+    .trip-tabs span {
+      text-align: center; font-size: .7rem; font-weight: 700; padding: .4rem .15rem;
+      border-radius: 10px; color: var(--muted);
+    }
+    .trip-tabs span.on { background: var(--card); color: var(--deep); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .budget-strip {
+      margin: .55rem .75rem 0; padding: .5rem .7rem; border-radius: 12px;
+      background: var(--card); border: 1px solid var(--line); font-size: .82rem;
+      display: flex; justify-content: space-between;
+    }
+    .day-list { padding: .6rem .75rem 1.1rem; }
+    .day-item {
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: .7rem .75rem; margin-bottom: .5rem;
+    }
+    .day-item .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .45rem; }
+    .day-item .head strong { font-family: var(--font-d); }
+    .pill {
+      font-size: .66rem; font-weight: 700; padding: .16rem .42rem; border-radius: 999px;
+      background: color-mix(in srgb, var(--sand) 25%, #fff);
+    }
+    .mini-tl { list-style: none; margin: 0; padding: 0; }
+    .mini-tl li {
+      display: grid; grid-template-columns: 1.3rem 1fr; gap: .35rem; font-size: .8rem; margin-bottom: .28rem;
+    }
+    .n {
+      width: 1.3rem; height: 1.3rem; border-radius: 999px;
+      background: color-mix(in srgb, var(--sea) 16%, #fff); color: var(--deep);
+      font-size: .66rem; font-weight: 800; display: grid; place-items: center;
+    }
+    .day-actions {
+      display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; margin-top: .5rem;
+      padding-top: .5rem; border-top: 1px solid var(--line);
+    }
+
+    /* TRIP desktop */
+    .d-trip {
+      display: grid; grid-template-columns: 1.25fr 1fr; min-height: 560px;
+    }
+    .d-trip-map {
+      position: relative; min-height: 560px;
+      background:
+        linear-gradient(180deg, rgba(11,31,36,.04), rgba(11,31,36,.2)),
+        url("https://images.unsplash.com/photo-1520986606214-8b456906c813?auto=format&fit=crop&w=1200&q=70") center/cover;
+    }
+    .d-trip-panel { padding: 1.1rem 1.2rem 1.3rem; overflow: auto; background: var(--mist); }
+    .d-trip-panel .title-row {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: .65rem;
+    }
+    .d-trip-panel h2 { margin: 0; font-family: var(--font-d); font-size: 1.45rem; }
+
+    /* DAY YOGO mobile */
+    .day-yogo { display: flex; flex-direction: column; min-height: 760px; position: relative; }
+    .map-fixed {
+      height: 250px; flex-shrink: 0; position: relative;
+      background:
+        linear-gradient(180deg, transparent 40%, rgba(243,245,244,.95)),
+        url("https://images.unsplash.com/photo-1486299267070-83823fcee8dd?auto=format&fit=crop&w=900&q=70") center/cover;
+    }
+    .weather {
+      position: absolute; top: 1.45rem; left: .8rem;
+      background: rgba(255,255,255,.92); border-radius: 12px; padding: .35rem .55rem;
+      font-size: .76rem; font-weight: 600; border: 1px solid var(--line);
+    }
+    .day-body {
+      flex: 1; margin-top: -26px; background: var(--mist); border-radius: 22px 22px 0 0;
+      padding: 1rem 1rem 5.2rem; position: relative; z-index: 1;
+    }
+    .stop-card {
+      display: grid; grid-template-columns: 64px 1fr auto; gap: .6rem;
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: .45rem; margin-bottom: .45rem; align-items: center;
+    }
+    .stop-card img { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; }
+    .stop-card strong { display: block; font-size: .88rem; }
+    .stop-card .meta { font-size: .74rem; color: var(--muted); }
+    .bottom-bar {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+      background: rgba(255,255,255,.95); border-top: 1px solid var(--line);
+      padding: .5rem .55rem .75rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: .25rem;
+    }
+    .bottom-bar button {
+      appearance: none; border: 0; background: transparent; font: inherit;
+      font-size: .66rem; font-weight: 700; color: var(--muted);
+      display: flex; flex-direction: column; align-items: center; gap: .15rem; cursor: pointer;
+    }
+    .bottom-bar button.on { color: var(--sea); }
+    .bottom-bar .ico {
+      width: 28px; height: 28px; border-radius: 10px;
+      background: color-mix(in srgb, var(--deep) 6%, #fff); display: grid; place-items: center;
+    }
+
+    /* DAY desktop */
+    .d-day {
+      display: grid; grid-template-columns: 1.2fr 1fr; min-height: 560px;
+    }
+    .d-day-map {
+      min-height: 560px; position: relative;
+      background:
+        linear-gradient(180deg, rgba(11,31,36,.05), rgba(11,31,36,.25)),
+        url("https://images.unsplash.com/photo-1486299267070-83823fcee8dd?auto=format&fit=crop&w=1200&q=70") center/cover;
+    }
+    .d-day-panel { padding: 1.15rem 1.25rem; background: var(--mist); overflow: auto; }
+    .d-day-actions {
+      display: flex; flex-wrap: wrap; gap: .4rem; margin: .75rem 0 1rem;
+    }
+  </style>
+</head>
+<body data-device="desktop" data-view="home">
+  <div class="chrome">
+    <div class="chrome-top">
+      <div>
+        <h1>RutaDos — Preview light limpio</h1>
+        <p>Mock estático. Cambiá <strong>dispositivo</strong> y <strong>pantalla</strong>. Luego lo montamos en la app real.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.45rem;align-items:flex-end">
+        <div class="seg" id="deviceSeg">
+          <button type="button" data-device="mobile">Móvil</button>
+          <button type="button" class="on" data-device="desktop">PC</button>
+        </div>
+        <div class="seg" id="viewSeg">
+          <button type="button" class="on" data-view="home">Home</button>
+          <button type="button" data-view="wizard">Wizard</button>
+          <button type="button" data-view="trip">Viaje</button>
+          <button type="button" data-view="day">Día</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div>
+        <!-- MOBILE FRAME -->
+        <div class="frame-mobile">
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="screen">
+              <div class="view on" data-v="home">
+                <div class="m-nav"><span class="brand">RutaDos</span><span class="icon-btn">⚙</span></div>
+                <div class="home-hero">
+                  <span class="brand">RutaDos</span>
+                  <h2>Tu viaje, a tu ritmo</h2>
+                  <p>Plan por días con mapa y transporte.</p>
+                  <button type="button" class="btn primary sm" style="background:var(--sand);color:var(--ink)">Nuevo viaje</button>
+                </div>
+                <div class="pad">
+                  <p class="tiny" style="font-weight:700;color:var(--deep);margin:0 0 .5rem">Destinos</p>
+                  <div class="dest-row">
+                    <div class="dest-card"><img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=400&q=70" alt=""/><span>Londres</span></div>
+                    <div class="dest-card"><img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=70" alt=""/><span>París</span></div>
+                    <div class="dest-card"><img src="https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=400&q=70" alt=""/><span>Venecia</span></div>
+                  </div>
+                  <p class="tiny" style="font-weight:700;color:var(--deep);margin:1rem 0 .5rem">Tus viajes</p>
+                  <article class="trip-card">
+                    <img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=200&q=70" alt=""/>
+                    <div><strong>Londres</strong><div class="meta">22–24 jul · 3 días</div></div>
+                  </article>
+                </div>
+              </div>
+              <div class="view" data-v="wizard">
+                <div class="wiz-head">
+                  <span class="muted tiny">Paso 2 de 3</span>
+                  <h2>Qué te apetece</h2>
+                  <div class="dots"><i class="on"></i><i class="on"></i><i></i></div>
+                </div>
+                <div class="preset-stack">
+                  <div class="preset on"><strong>Clásico</strong><span>Iconos y buen comer</span></div>
+                  <div class="preset"><strong>Más local</strong><span>Barrios y secretos</span></div>
+                  <div class="preset"><strong>Foodie</strong><span>Mesas y cafés</span></div>
+                </div>
+                <div class="vibe-grid">
+                  <div class="vibe on"><strong>Cultura</strong><span>Museos</span></div>
+                  <div class="vibe on"><strong>Callejear</strong><span>Barrios</span></div>
+                  <div class="vibe on"><strong>Comer</strong><span>Mesas</span></div>
+                  <div class="vibe"><strong>De noche</strong><span>Paseos</span></div>
+                </div>
+                <div class="sticky-foot">
+                  <button type="button" class="btn ghost">Atrás</button>
+                  <button type="button" class="btn primary">Siguiente</button>
+                </div>
+              </div>
+              <div class="view" data-v="trip">
+                <div class="m-nav"><span class="icon-btn">←</span><span class="brand" style="font-size:1rem">Londres</span><span class="icon-btn">···</span></div>
+                <div class="trip-map">
+                  <span class="pin" style="top:42%;left:48%"></span>
+                  <span class="pin" style="top:55%;left:38%;background:var(--sand)"></span>
+                </div>
+                <div class="trip-tabs"><span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span></div>
+                <div class="budget-strip"><span>~85–120 €/día</span><span class="muted tiny">3 noches</span></div>
+                <div class="day-list">
+                  <article class="day-item">
+                    <div class="head"><strong>mié 22 jul</strong><span class="pill">Llegada</span></div>
+                    <ol class="mini-tl">
+                      <li><span class="n">1</span><span>Charles I</span></li>
+                      <li><span class="n">2</span><span>Big Ben</span></li>
+                    </ol>
+                    <div class="day-actions">
+                      <button type="button" class="btn ghost sm">Maps</button>
+                      <button type="button" class="btn primary sm">En ruta</button>
+                    </div>
+                  </article>
+                </div>
+              </div>
+              <div class="view" data-v="day">
+                <div class="day-yogo">
+                  <div class="map-fixed"><div class="weather">Parcial · 14–21°</div></div>
+                  <div class="day-body">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                      <strong class="brand" style="font-size:1.15rem">jueves 23 jul</strong>
+                      <button type="button" class="btn sand sm">Cansados</button>
+                    </div>
+                    <p class="muted tiny" style="margin:.35rem 0 .7rem">9 sitios · centro</p>
+                    <article class="stop-card">
+                      <img src="https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&w=200&q=70" alt=""/>
+                      <div><strong>National Gallery</strong><div class="meta">09:30 · museo</div></div>
+                      <span class="n">1</span>
+                    </article>
+                    <article class="stop-card">
+                      <img src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?auto=format&fit=crop&w=200&q=70" alt=""/>
+                      <div><strong>Buckingham</strong><div class="meta">11:30 · andar 18'</div></div>
+                      <span class="n">2</span>
+                    </article>
+                  </div>
+                  <nav class="bottom-bar">
+                    <button type="button" class="on"><span class="ico">🗺</span>Maps</button>
+                    <button type="button"><span class="ico">🚇</span>Metro</button>
+                    <button type="button"><span class="ico">🍽</span>Comer</button>
+                    <button type="button"><span class="ico">▶</span>En ruta</button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DESKTOP FRAME -->
+        <div class="frame-desktop">
+          <div class="desktop">
+            <div class="desk-chrome"><i></i><i></i><i></i><div class="url">ruta-dos.vercel.app</div></div>
+            <div class="screen">
+              <div class="view on" data-v="home">
+                <header class="d-home-nav">
+                  <span class="brand">RutaDos</span>
+                  <div style="display:flex;gap:.45rem">
+                    <button type="button" class="btn ghost sm">Ajustes</button>
+                    <button type="button" class="btn primary sm">Nuevo viaje</button>
+                  </div>
+                </header>
+                <section class="d-home-hero">
+                  <div class="inner">
+                    <span class="brand">RutaDos</span>
+                    <h2>Tu viaje,<br/>a tu ritmo</h2>
+                    <p>Plan por días con mapa y transporte — solo o con quien viajéis.</p>
+                    <button type="button" class="btn primary" style="background:var(--sand);color:var(--ink)">Crear viaje</button>
+                  </div>
+                </section>
+                <div class="d-home-grid">
+                  <section>
+                    <h3 class="sec-h">Destinos</h3>
+                    <div class="d-dest-grid">
+                      <div class="dest-card"><img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=400&q=70" alt=""/><span>Londres</span></div>
+                      <div class="dest-card"><img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=70" alt=""/><span>París</span></div>
+                      <div class="dest-card"><img src="https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=400&q=70" alt=""/><span>Venecia</span></div>
+                    </div>
+                  </section>
+                  <section>
+                    <h3 class="sec-h">Tus viajes</h3>
+                    <article class="trip-card">
+                      <img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=200&q=70" alt=""/>
+                      <div><strong>Londres</strong><div class="meta">22–24 jul · 3 días · 15 sitios</div></div>
+                    </article>
+                    <article class="trip-card">
+                      <img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=200&q=70" alt=""/>
+                      <div><strong>Roma</strong><div class="meta">Borrador</div></div>
+                    </article>
+                  </section>
+                </div>
+              </div>
+
+              <div class="view" data-v="wizard">
+                <div class="d-wiz">
+                  <div class="d-wiz-main">
+                    <span class="muted tiny">Paso 2 de 3 · Estilo</span>
+                    <h2 class="brand" style="font-size:1.8rem;margin:.35rem 0 .25rem">Qué te apetece</h2>
+                    <p class="muted tiny">Presets grandes · categorías · afinar después</p>
+                    <div class="dots" style="margin:.75rem 0 1rem"><i class="on"></i><i class="on"></i><i></i></div>
+                    <div class="preset-stack">
+                      <div class="preset on"><strong>Clásico</strong><span>Iconos, museos y buen comer</span></div>
+                      <div class="preset"><strong>Más local</strong><span>Barrios y secretos</span></div>
+                      <div class="preset"><strong>Foodie</strong><span>Mesas y cafés</span></div>
+                    </div>
+                    <div class="vibe-grid">
+                      <div class="vibe on"><strong>Cultura</strong><span>Museos</span></div>
+                      <div class="vibe on"><strong>Callejear</strong><span>Barrios</span></div>
+                      <div class="vibe on"><strong>Comer</strong><span>Mesas</span></div>
+                      <div class="vibe"><strong>De noche</strong><span>Paseos</span></div>
+                    </div>
+                    <div class="d-wiz-actions">
+                      <button type="button" class="btn ghost">Atrás</button>
+                      <button type="button" class="btn primary">Siguiente</button>
+                    </div>
+                  </div>
+                  <aside class="d-wiz-side">
+                    <h3>Londres</h3>
+                    <p>22–24 jul · ritmo tranquilo · iconos</p>
+                  </aside>
+                </div>
+              </div>
+
+              <div class="view" data-v="trip">
+                <div class="d-trip">
+                  <div class="d-trip-map">
+                    <span class="pin" style="top:40%;left:46%"></span>
+                    <span class="pin" style="top:52%;left:38%;background:var(--sand)"></span>
+                    <span class="pin" style="top:34%;left:58%"></span>
+                  </div>
+                  <div class="d-trip-panel">
+                    <div class="title-row">
+                      <h2>Londres</h2>
+                      <button type="button" class="btn ghost sm">Compartir</button>
+                    </div>
+                    <div class="trip-tabs" style="margin:0 0 .65rem">
+                      <span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span>
+                    </div>
+                    <div class="budget-strip" style="margin:0 0 .75rem"><span>~85–120 €/día</span><span class="muted tiny">3 noches</span></div>
+                    <article class="day-item">
+                      <div class="head"><strong>miércoles 22 jul</strong><span class="pill">Llegada</span></div>
+                      <ol class="mini-tl">
+                        <li><span class="n">1</span><span>Charles I · 16:30</span></li>
+                        <li><span class="n">2</span><span>Big Ben · metro</span></li>
+                      </ol>
+                      <div class="day-actions">
+                        <button type="button" class="btn ghost sm">Maps</button>
+                        <button type="button" class="btn primary sm">Abrir día</button>
+                      </div>
+                    </article>
+                    <article class="day-item">
+                      <div class="head"><strong>jueves 23 jul</strong><span class="muted tiny">9 sitios</span></div>
+                      <ol class="mini-tl">
+                        <li><span class="n">1</span><span>National Gallery</span></li>
+                        <li><span class="n">2</span><span>Buckingham</span></li>
+                      </ol>
+                      <div class="day-actions">
+                        <button type="button" class="btn ghost sm">Maps</button>
+                        <button type="button" class="btn primary sm">Abrir día</button>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </div>
+
+              <div class="view" data-v="day">
+                <div class="d-day">
+                  <div class="d-day-map">
+                    <div class="weather" style="top:1rem;left:1rem">Parcial · 14–21°</div>
+                    <span class="pin" style="top:45%;left:48%"></span>
+                    <span class="pin" style="top:58%;left:40%;background:var(--sand)"></span>
+                  </div>
+                  <div class="d-day-panel">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                      <h2 class="brand" style="margin:0;font-size:1.5rem">jueves 23 jul</h2>
+                      <button type="button" class="btn sand sm">Cansados</button>
+                    </div>
+                    <p class="muted tiny">9 sitios · centro</p>
+                    <div class="d-day-actions">
+                      <button type="button" class="btn primary sm">Día en Maps</button>
+                      <button type="button" class="btn ghost sm">Metro</button>
+                      <button type="button" class="btn ghost sm">Comer</button>
+                      <button type="button" class="btn primary sm">En ruta</button>
+                    </div>
+                    <article class="stop-card">
+                      <img src="https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&w=200&q=70" alt=""/>
+                      <div><strong>National Gallery</strong><div class="meta">09:30 · museo · ~1h45</div></div>
+                      <span class="n">1</span>
+                    </article>
+                    <article class="stop-card">
+                      <img src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?auto=format&fit=crop&w=200&q=70" alt=""/>
+                      <div><strong>Buckingham Palace</strong><div class="meta">11:30 · andar 18'</div></div>
+                      <span class="n">2</span>
+                    </article>
+                    <article class="stop-card">
+                      <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=200&q=70" alt=""/>
+                      <div><strong>Café cerca</strong><div class="meta">13:00 · pausa</div></div>
+                      <span class="n">3</span>
+                    </article>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="notes" id="notes">
+        <span class="tag">PC · Home</span>
+        <h2>Landing escritorio</h2>
+        <ul>
+          <li>Hero full-bleed con marca grande + 1 CTA.</li>
+          <li>Debajo: destinos (grid) + viajes (cards TripIt).</li>
+          <li>Nav sticky mínima — no dashboard.</li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const notesCopy = {
+      mobile: {
+        home: ["Hero compacto + CTA.", "Carrusel destinos.", "Viajes en cards con foto."],
+        wizard: ["Presets + 4 categorías.", "Footer sticky.", "Menos encuesta."],
+        trip: ["Mapa arriba.", "Tabs Mapa/Días/Hotel/Comer.", "Días escaneables."],
+        day: ["YOGO: mapa fijo.", "Place cards.", "Barra inferior sticky."]
+      },
+      desktop: {
+        home: ["Hero full-bleed editorial.", "2 columnas: destinos + viajes.", "Nav mínima con CTA."],
+        wizard: ["Formulario + panel lateral foto destino.", "Presets grandes.", "Acciones abajo a la derecha."],
+        trip: ["Mapa dominante izq.", "Panel días der.", "Tabs + presupuesto strip."],
+        day: ["Mapa fijo izq (YOGO desktop).", "Lista paradas der.", "Acciones rápidas arriba."]
+      }
+    };
+    const titles = {
+      home: "Landing", wizard: "Wizard", trip: "Viaje", day: "Día"
+    };
+
+    function sync() {
+      const device = document.body.dataset.device;
+      const view = document.body.dataset.view;
+      document.querySelectorAll("#deviceSeg button").forEach((b) => {
+        b.classList.toggle("on", b.dataset.device === device);
+      });
+      document.querySelectorAll("#viewSeg button").forEach((b) => {
+        b.classList.toggle("on", b.dataset.view === view);
+      });
+      const root = device === "mobile"
+        ? document.querySelector(".frame-mobile")
+        : document.querySelector(".frame-desktop");
+      root.querySelectorAll(".view").forEach((v) => {
+        v.classList.toggle("on", v.getAttribute("data-v") === view);
+      });
+      const items = notesCopy[device][view];
+      document.getElementById("notes").innerHTML =
+        '<span class="tag">' + (device === "mobile" ? "Móvil" : "PC") + " · " + titles[view] + "</span>" +
+        "<h2>" + titles[view] + "</h2><ul>" +
+        items.map((t) => "<li>" + t + "</li>").join("") + "</ul>";
+    }
+
+    document.getElementById("deviceSeg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-device]");
+      if (!b) return;
+      document.body.dataset.device = b.dataset.device;
+      sync();
+    });
+    document.getElementById("viewSeg").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-view]");
+      if (!b) return;
+      document.body.dataset.view = b.dataset.view;
+      sync();
+    });
+    sync();
+  </script>
+</body>
+</html>

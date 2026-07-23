@@ -10,6 +10,15 @@ import {
   type QuickDestination,
 } from '../lib/quickDestinations'
 
+function tripCoverPhoto(cityName: string): string {
+  const hit = FEATURED_DESTINATIONS.find(
+    (d) =>
+      d.name.toLowerCase() === cityName.toLowerCase() ||
+      cityName.toLowerCase().includes(d.name.toLowerCase()),
+  )
+  return hit?.photo ?? HERO_PHOTO
+}
+
 const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
   { icon: 'map', title: 'Mapa del día', text: 'Ruta clara parada a parada' },
   { icon: 'transit', title: 'Transporte real', text: 'Links oficiales metro y bus' },
@@ -120,17 +129,17 @@ export function HomePage() {
         <div className="home-v2-hero-shade" aria-hidden />
         <div className="home-v2-hero-inner rd-layout">
           <div className="home-v2-hero-content">
-            <p className="home-v2-kicker">Planificador de viajes</p>
+            <p className="home-v2-brand-mark">RutaDos</p>
             <h1>
-              Donde vayas,
+              Tu viaje,
               <br />
-              <em>día a día</em>
+              <em>a tu ritmo</em>
             </h1>
             <p className="home-v2-lede">
-              Itinerario, mapa y reservas en un solo sitio — en el móvil o en el navegador.
+              Plan por días con mapa y transporte — solo o con quien viajéis.
             </p>
             <button type="button" className="btn primary home-v2-cta" onClick={startWizard}>
-              Crear viaje
+              Nuevo viaje
             </button>
           </div>
         </div>
@@ -185,24 +194,21 @@ export function HomePage() {
                 </button>
               </div>
             ) : (
-              <ul className="home-v2-trips">
-                {trips.map((t, i) => (
+              <ul className="home-v2-trips photo-cards">
+                {trips.map((t) => (
                   <li key={t.id}>
                     <button
                       type="button"
-                      className="home-v2-trip"
+                      className="home-v2-trip-photo"
                       onClick={() => setView({ name: 'trip', tripId: t.id })}
                     >
-                      <span className={`home-v2-trip-num c-${(i % 5) + 1}`}>{i + 1}</span>
-                      <span className="home-v2-trip-body">
+                      <img src={tripCoverPhoto(t.city.name)} alt="" loading="lazy" />
+                      <span className="home-v2-trip-photo-body">
                         <strong>{t.title}</strong>
                         <span>
-                          {t.startDate.slice(5).replace('-', '/')} – {t.endDate.slice(5).replace('-', '/')} ·{' '}
-                          {t.days.length} días
+                          {t.startDate.slice(5).replace('-', '/')} –{' '}
+                          {t.endDate.slice(5).replace('-', '/')} · {t.days.length} días
                         </span>
-                      </span>
-                      <span className="home-v2-trip-arrow" aria-hidden>
-                        <Icon name="arrow-right" size={18} />
                       </span>
                     </button>
                     <button

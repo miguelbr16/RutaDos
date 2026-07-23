@@ -30,6 +30,8 @@ import { TiredPanel } from '../components/TiredPanel'
 import type { VenueKind } from '../lib/bookingLinks'
 import type { NearbyVenue } from '../lib/nearbyVenues'
 import { hotelBookingUrl } from '../lib/bookingLinks'
+import { getCityGuide } from '../lib/cityGuides'
+import { Icon } from '../components/Icons'
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
@@ -265,7 +267,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   }
 
   return (
-    <div className="page day-page">
+    <div className="page day-page day-yogo">
       <OfflineStatusBanner online={online} pack={offlinePack} />
 
       <button
@@ -276,20 +278,10 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         ← {trip.title}
       </button>
 
-      <header className="day-hero">
-        <p className="brand small">RutaDos</p>
-        <h1>{day.label}</h1>
-        <p className="muted">
-          {ordered.filter((s) => !s.isHotel).length} paradas
-          {day.intensity === 'arrival'
-            ? ' · llegada'
-            : day.intensity === 'departure'
-              ? ' · salida'
-              : ''}
-          {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
-        </p>
+      <div className="day-yogo-map">
+        <TripMap stops={mapStops} route={route} height="280px" showLegend showLegs />
         {weather && (
-          <div className="weather-chip">
+          <div className="day-yogo-weather">
             <strong>
               {weather.label} · {weather.tempMin}–{weather.tempMax}°
             </strong>
@@ -307,41 +299,36 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
             ) : null}
           </div>
         )}
-      </header>
-
-      <div className="day-map-wrap">
-        <TripMap stops={mapStops} route={route} height="240px" showLegend showLegs />
       </div>
 
-      <div className="day-primary-actions">
-        <button
-          type="button"
-          className="btn primary"
-          onClick={() => setView({ name: 'onroute', tripId, dayId })}
-        >
-          En ruta
-        </button>
-        <a
-          className="btn ghost"
-          href={googleMapsDirectionsUrl(ordered)}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Día en Maps
-        </a>
-        <button
-          type="button"
-          className="btn tired-btn"
-          onClick={() => {
-            chaosReplan(tripId, dayId, 'shorter')
-            setTiredOpen(true)
-            setVenueKind(null)
-            setMsg('Día acortado. Elegí un café si querés pausar.')
-          }}
-        >
-          Cansados
-        </button>
-      </div>
+      <div className="day-yogo-sheet">
+        <header className="day-hero day-yogo-head">
+          <div className="day-yogo-title-row">
+            <div>
+              <h1>{day.label}</h1>
+              <p className="muted">
+                {ordered.filter((s) => !s.isHotel).length} paradas
+                {day.intensity === 'arrival'
+                  ? ' · llegada'
+                  : day.intensity === 'departure'
+                    ? ' · salida'
+                    : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn tired-btn sm"
+              onClick={() => {
+                chaosReplan(tripId, dayId, 'shorter')
+                setTiredOpen(true)
+                setVenueKind(null)
+                setMsg('Día acortado. Elegí un café si querés pausar.')
+              }}
+            >
+              Cansados
+            </button>
+          </div>
+        </header>
 
       <div className="chaos-bar day-quick">
         <button
@@ -603,6 +590,59 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           {busy ? '…' : 'Añadir'}
         </button>
       </form>
+      </div>
+
+      <nav className="day-yogo-bar" aria-label="Acciones del día">
+        <a
+          href={googleMapsDirectionsUrl(ordered)}
+          target="_blank"
+          rel="noreferrer"
+          className="day-yogo-bar-item"
+        >
+          <span className="day-yogo-bar-ico" aria-hidden>
+            <Icon name="map" size={18} />
+          </span>
+          Maps
+        </a>
+        <a
+          href={
+            getCityGuide(trip.city.name)?.transportPlannerUrl ??
+            `https://www.google.com/search?q=${encodeURIComponent(trip.city.name + ' metro journey planner')}`
+          }
+          target="_blank"
+          rel="noreferrer"
+          className="day-yogo-bar-item"
+        >
+          <span className="day-yogo-bar-ico" aria-hidden>
+            <Icon name="transit" size={18} />
+          </span>
+          Metro
+        </a>
+        <button
+          type="button"
+          className="day-yogo-bar-item"
+          onClick={() => {
+            setTiredOpen(false)
+            setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))
+            setMealNear(null)
+          }}
+        >
+          <span className="day-yogo-bar-ico" aria-hidden>
+            <Icon name="dining" size={18} />
+          </span>
+          Comer
+        </button>
+        <button
+          type="button"
+          className="day-yogo-bar-item on"
+          onClick={() => setView({ name: 'onroute', tripId, dayId })}
+        >
+          <span className="day-yogo-bar-ico" aria-hidden>
+            <Icon name="arrow-right" size={18} />
+          </span>
+          En ruta
+        </button>
+      </nav>
     </div>
   )
 }

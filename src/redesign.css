@@ -1186,3 +1186,259 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* —— Light limpio v3 (jul 2026) —— */
+.home-v2-brand-mark {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.home-v2-cta {
+  background: var(--sand) !important;
+  color: var(--ink) !important;
+  border: 0 !important;
+}
+
+.home-v2-trips.photo-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.home-v2-trips.photo-cards > li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  align-items: stretch;
+}
+
+.home-v2-trip-photo {
+  appearance: none;
+  border: 1px solid var(--v2-line);
+  background: var(--v2-card);
+  border-radius: 16px;
+  padding: 0.45rem;
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 0.7rem;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+}
+
+.home-v2-trip-photo img {
+  width: 76px;
+  height: 76px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.home-v2-trip-photo-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.home-v2-trip-photo-body strong {
+  font-size: 1rem;
+}
+
+.home-v2-trip-photo-body span {
+  font-size: 0.8rem;
+  color: var(--v2-muted);
+}
+
+.trip-v2-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+  margin: 0.65rem 0 0.85rem;
+  padding: 0.3rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--deep) 6%, #fff);
+}
+
+.trip-v2-tabs button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  padding: 0.5rem 0.25rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--v2-muted);
+  cursor: pointer;
+}
+
+.trip-v2-tabs button.on {
+  background: var(--v2-card);
+  color: var(--deep);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.trip-v2-layout.map-focus {
+  grid-template-columns: 1fr;
+}
+
+.trip-map-hint {
+  margin: 0 0 0.75rem;
+}
+
+/* Day YOGO */
+.day-page.day-yogo {
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  max-width: none;
+  width: min(var(--layout-max), calc(100% - var(--page-pad) * 2));
+}
+
+.day-yogo-map {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.day-yogo-weather {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.day-yogo-sheet {
+  margin-top: -1.25rem;
+  position: relative;
+  z-index: 2;
+  background: var(--mist);
+  border-radius: 22px 22px 0 0;
+  padding: 1rem 0 0.5rem;
+}
+
+.day-yogo-head {
+  margin-bottom: 0.5rem;
+}
+
+.day-yogo-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.day-yogo-title-row h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.day-yogo-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+  padding: 0.45rem 0.55rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.day-yogo-bar-item {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.day-yogo-bar-item.on {
+  color: var(--sea);
+}
+
+.day-yogo-bar-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--deep) 6%, #fff);
+  display: grid;
+  place-items: center;
+}
+
+.day-yogo-bar-item.on .day-yogo-bar-ico {
+  background: color-mix(in srgb, var(--sea) 18%, #fff);
+}
+
+@media (min-width: 900px) {
+  .day-page.day-yogo {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 1rem;
+    align-items: start;
+    padding-bottom: var(--page-pad);
+  }
+
+  .day-yogo .back,
+  .day-yogo .offline-banner {
+    grid-column: 1 / -1;
+  }
+
+  .day-yogo-map {
+    position: sticky;
+    top: 1rem;
+    margin: 0;
+  }
+
+  .day-yogo-sheet {
+    margin-top: 0;
+    border-radius: 18px;
+    padding: 0.85rem 1rem 1rem;
+    background: #fff;
+    border: 1px solid var(--v2-line);
+  }
+
+  .day-yogo-bar {
+    position: static;
+    grid-column: 2;
+    border-radius: 14px;
+    border: 1px solid var(--v2-line);
+    margin-top: 0.5rem;
+    order: 3;
+  }
+
+  .day-yogo-sheet {
+    order: 2;
+  }
+}
