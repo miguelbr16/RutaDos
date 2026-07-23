@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import {
   CATEGORY_LABELS,
   DAY_FOCUS_LABELS,
@@ -267,7 +267,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   }
 
   return (
-    <div className="page day-page day-yogo">
+    <div className="page r3-day">
       <OfflineStatusBanner online={online} pack={offlinePack} />
 
       <button
@@ -278,10 +278,10 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         ← {trip.title}
       </button>
 
-      <div className="day-yogo-map">
+      <div className="r3-day-map">
         <TripMap stops={mapStops} route={route} height="340px" showLegend showLegs />
         {weather && (
-          <div className="day-yogo-weather">
+          <div className="r3-day-weather">
             <strong>
               {weather.label} · {weather.tempMin}–{weather.tempMax}°
             </strong>
@@ -301,9 +301,9 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         )}
       </div>
 
-      <div className="day-yogo-sheet">
-        <header className="day-hero day-yogo-head">
-          <div className="day-yogo-title-row">
+      <div className="r3-day-sheet">
+        <header className="day-hero r3-day-head">
+          <div className="r3-day-title-row">
             <div>
               <h1>{day.label}</h1>
               <p className="muted">
@@ -592,14 +592,14 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       </form>
       </div>
 
-      <nav className="day-yogo-bar" aria-label="Acciones del día">
+      <nav className="r3-day-bar" aria-label="Acciones del día">
         <a
           href={googleMapsDirectionsUrl(ordered)}
           target="_blank"
           rel="noreferrer"
-          className="day-yogo-bar-item"
+          className="r3-day-bar-item"
         >
-          <span className="day-yogo-bar-ico" aria-hidden>
+          <span className="r3-day-bar-ico" aria-hidden>
             <Icon name="map" size={18} />
           </span>
           Maps
@@ -611,33 +611,33 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           }
           target="_blank"
           rel="noreferrer"
-          className="day-yogo-bar-item"
+          className="r3-day-bar-item"
         >
-          <span className="day-yogo-bar-ico" aria-hidden>
+          <span className="r3-day-bar-ico" aria-hidden>
             <Icon name="transit" size={18} />
           </span>
           Metro
         </a>
         <button
           type="button"
-          className="day-yogo-bar-item"
+          className="r3-day-bar-item"
           onClick={() => {
             setTiredOpen(false)
             setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))
             setMealNear(null)
           }}
         >
-          <span className="day-yogo-bar-ico" aria-hidden>
+          <span className="r3-day-bar-ico" aria-hidden>
             <Icon name="dining" size={18} />
           </span>
           Comer
         </button>
         <button
           type="button"
-          className="day-yogo-bar-item on"
+          className="r3-day-bar-item on"
           onClick={() => setView({ name: 'onroute', tripId, dayId })}
         >
-          <span className="day-yogo-bar-ico" aria-hidden>
+          <span className="r3-day-bar-ico" aria-hidden>
             <Icon name="arrow-right" size={18} />
           </span>
           En ruta

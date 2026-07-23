@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Icon } from '../components/Icons'
 import {
   DEFAULT_PREFERENCES,
@@ -230,11 +230,11 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   return (
-    <div className="page trip-page trip-v2">
-      <div className="trip-v2-top">
+    <div className="page r3-trip">
+      <div className="r3-trip-top">
         <button
           type="button"
-          className="trip-v2-back"
+          className="r3-trip-back"
           aria-label="Volver"
           onClick={() => setView({ name: 'home' })}
         >
@@ -242,7 +242,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         </button>
         <button
           type="button"
-          className={moreOpen ? 'trip-v2-opt on' : 'trip-v2-opt'}
+          className={moreOpen ? 'r3-trip-opt on' : 'r3-trip-opt'}
           aria-expanded={moreOpen}
           aria-label={moreOpen ? 'Cerrar opciones' : 'Opciones'}
           onClick={() => setMoreOpen((v) => !v)}
@@ -444,7 +444,7 @@ export function TripPage({ tripId }: { tripId: string }) {
         </div>
       )}
 
-      <header className="trip-v2-head">
+      <header className="r3-trip-head">
         <h1>{trip.title}</h1>
         <p>
           {trip.startDate} → {trip.endDate}
@@ -452,17 +452,17 @@ export function TripPage({ tripId }: { tripId: string }) {
         </p>
       </header>
 
-      <div className="trip-v2-budget">
-        <span className="trip-v2-budget-label">Presupuesto orientativo</span>
+      <div className="r3-trip-budget">
+        <span className="r3-trip-budget-label">Presupuesto orientativo</span>
         <strong>
           ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/día
         </strong>
-        <span className="trip-v2-budget-sub">
+        <span className="r3-trip-budget-sub">
           total ~{budget.totalMin}–{budget.totalMax} € · {budget.nights} noches
         </span>
       </div>
 
-      <nav className="trip-v2-tabs" aria-label="Secciones del viaje">
+      <nav className="r3-trip-tabs" aria-label="Secciones del viaje">
         {(
           [
             { id: 'overview' as const, label: 'Plan' },
@@ -486,10 +486,10 @@ export function TripPage({ tripId }: { tripId: string }) {
         ))}
       </nav>
 
-      <div className="trip-v2-layout">
-        <div className="trip-v2-map-col">
-          <div className="trip-v2-map-wrap">
-            <div className="trip-v2-map-inner">
+      <div className="r3-trip-layout">
+        <div className="r3-trip-map-col">
+          <div className="r3-trip-map-wrap">
+            <div className="r3-trip-map-inner">
               <TripMap
                 stops={mapStops.length ? mapStops : allStops.slice(0, 40)}
                 height="360px"
@@ -499,7 +499,7 @@ export function TripPage({ tripId }: { tripId: string }) {
           </div>
         </div>
 
-        <div className="trip-v2-body">
+        <div className="r3-trip-body">
           {tripTab === 'overview' ? null : (
             <p className="muted tiny trip-map-hint">
               El mapa sigue visible a la izquierda / arriba. Acá: {tripTab === 'hotel' ? 'hoteles' : 'restaurantes'}.
@@ -670,12 +670,12 @@ export function TripPage({ tripId }: { tripId: string }) {
           )}
 
         {tripTab === 'overview' && (
-        <section className="trip-v2-days">
+        <section className="r3-trip-days">
           <h2>Días del viaje</h2>
-          <p className="trip-v2-days-sub">
+          <p className="r3-trip-days-sub">
             {trip.days.length} días · {visitStops.length} paradas · tocá un día para el mapa detalle
           </p>
-          <ul className="trip-v2-day-list">
+          <ul className="r3-trip-day-list">
             {trip.days.map((day) => {
               const visits = [...day.stops]
                 .filter((s) => !s.isHotel)
@@ -688,7 +688,7 @@ export function TripPage({ tripId }: { tripId: string }) {
                     : null
               return (
                 <li key={day.id}>
-                  <article className={`trip-v2-day c-${(trip.days.indexOf(day) % 5) + 1}`}>
+                  <article className={`r3-trip-day c-${(trip.days.indexOf(day) % 5) + 1}`}>
                     <button
                       type="button"
                       className="day-summary-main"

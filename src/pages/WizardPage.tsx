@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_PREFERENCES,
   PREFERENCE_LABELS,
@@ -488,9 +488,9 @@ export function WizardPage() {
   function renderCityHighlights(className?: string) {
     if (!wizard.cityPick || !typicalSites.length) return null
     return (
-      <div className={className ?? 'wiz-v2-highlights-block'}>
-        <p className="wiz-v2-section-label">Sitios típicos</p>
-        <ul className="wiz-v2-highlights">
+      <div className={className ?? 'r3-wiz-highlights-block'}>
+        <p className="r3-wiz-section-label">Sitios típicos</p>
+        <ul className="r3-wiz-highlights">
           {typicalSites.map((site) => {
             const picked = site.canAdd
               ? (wizard.mustVisits ?? []).some(
@@ -501,7 +501,7 @@ export function WizardPage() {
               <li key={site.name}>
                 <button
                   type="button"
-                  className={picked ? 'wiz-v2-highlight on' : 'wiz-v2-highlight'}
+                  className={picked ? 'r3-wiz-highlight on' : 'r3-wiz-highlight'}
                   disabled={!site.canAdd}
                   title={site.canAdd ? 'Priorizar en el plan' : undefined}
                   onClick={() => addTypicalSite(site)}
@@ -522,15 +522,15 @@ export function WizardPage() {
   }
 
   return (
-    <div className="page wizard-page wizard-v2">
-      <div className="wiz-v2-top">
-        <button type="button" className="wiz-v2-back" aria-label="Inicio" onClick={() => setView({ name: 'home' })}>
+    <div className="page r3-wiz">
+      <div className="r3-wiz-top">
+        <button type="button" className="r3-wiz-back" aria-label="Inicio" onClick={() => setView({ name: 'home' })}>
           <Icon name="chevron-left" size={20} />
         </button>
-        <span className="wiz-v2-step-label">
+        <span className="r3-wiz-step-label">
           {step === 0 ? 'Destino' : step === 1 ? 'Estilo' : 'Confirmar'}
         </span>
-        <nav className="wiz-v2-dots" aria-label="Progreso">
+        <nav className="r3-wiz-dots" aria-label="Progreso">
           {[0, 1, 2].map((i) => (
             <span key={i} className={i <= step ? 'on' : ''} aria-hidden />
           ))}
@@ -539,7 +539,7 @@ export function WizardPage() {
 
       {wizard.cityPick && step < 2 ? (
         <div
-          className="wiz-v2-banner"
+          className="r3-wiz-banner"
           style={
             photoForDestination(wizard.cityPick.name)
               ? { backgroundImage: `url("${photoForDestination(wizard.cityPick.name)}")` }
@@ -551,14 +551,14 @@ export function WizardPage() {
       ) : null}
 
       {step === 0 && (
-        <section className="wiz-v2-stage">
-          <header className="wiz-v2-head">
+        <section className="r3-wiz-stage">
+          <header className="r3-wiz-head">
             <h2>¿A dónde vas?</h2>
             <p>Elegí ciudad abajo o buscá. Después: fechas y hotel (opcional).</p>
           </header>
 
-          <div className="wiz-v2-panel">
-            <div className="wiz-v2-search">
+          <div className="r3-wiz-panel">
+            <div className="r3-wiz-search">
               <input
                 value={wizard.cityQuery}
                 onChange={(e) =>
@@ -631,7 +631,7 @@ export function WizardPage() {
               </div>
             ) : null}
 
-            <p className="wiz-v2-section-label">Destinos populares</p>
+            <p className="r3-wiz-section-label">Destinos populares</p>
             <DestinationGrid
               destinations={FEATURED_DESTINATIONS}
               onPick={pickQuickDestination}
@@ -661,7 +661,7 @@ export function WizardPage() {
             </div>
           ) : null}
 
-          <div className="wiz-v2-panel wiz-v2-dates">
+          <div className="r3-wiz-panel r3-wiz-dates">
             <TripDateFields label="Llegada" value={wizard.startDate} onChange={setStartDate} />
             <TripDateFields
               label="Salida"
@@ -670,7 +670,7 @@ export function WizardPage() {
               onChange={setEndDate}
             />
             {nights > 0 ? (
-              <p className="wiz-v2-nights">
+              <p className="r3-wiz-nights">
                 {nights === 1 ? '1 noche' : `${nights} noches`} · {nights + 1} días
               </p>
             ) : null}
@@ -862,20 +862,20 @@ export function WizardPage() {
       )}
 
       {step === 1 && (
-        <section className="wiz-v2-stage">
-          <header className="wiz-v2-head">
+        <section className="r3-wiz-stage">
+          <header className="r3-wiz-head">
             <h2>¿Cómo querés el viaje?</h2>
             <p>Elegí un perfil: define ritmo, sitios y transporte. Podés afinar después.</p>
           </header>
 
-          <div className="wiz-v2-step1-grid">
-            <div className="wiz-v2-step1-main">
-          <div className="wiz-v2-presets">
+          <div className="r3-wiz-step1-grid">
+            <div className="r3-wiz-step1-main">
+          <div className="r3-wiz-presets">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                className={selectedPreset === p.id ? 'wiz-v2-preset on' : 'wiz-v2-preset'}
+                className={selectedPreset === p.id ? 'r3-wiz-preset on' : 'r3-wiz-preset'}
                 onClick={() => {
                   setSelectedPreset(p.id)
                   patchWizard({
@@ -890,7 +890,7 @@ export function WizardPage() {
                   })
                 }}
               >
-                <span className="wiz-v2-preset-icon" aria-hidden>
+                <span className="r3-wiz-preset-icon" aria-hidden>
                   <Icon name={p.icon} size={20} />
                 </span>
                 <span>
@@ -901,7 +901,7 @@ export function WizardPage() {
             ))}
           </div>
 
-          <div className="wiz-v2-segment">
+          <div className="r3-wiz-segment">
             <span>Moverse</span>
             <div>
               {MOBILITY_OPTIONS.map((o) => (
@@ -919,7 +919,7 @@ export function WizardPage() {
             </div>
           </div>
 
-          <div className="wiz-v2-segment">
+          <div className="r3-wiz-segment">
             <span>Comida</span>
             <div>
               {FOOD_OPTIONS.map((o) => (
@@ -1055,50 +1055,50 @@ export function WizardPage() {
           </details>
             </div>
 
-            <aside className="wiz-v2-side-card">
+            <aside className="r3-wiz-side-card">
               {wizard.cityPick && photoForDestination(wizard.cityPick.name) ? (
                 <img
-                  className="wiz-v2-side-photo"
+                  className="r3-wiz-side-photo"
                   src={photoForDestination(wizard.cityPick.name)}
                   alt=""
                 />
               ) : null}
               <strong>{wizard.cityPick?.name}</strong>
-              {renderCityHighlights('wiz-v2-highlights-block compact')}
+              {renderCityHighlights('r3-wiz-highlights-block compact')}
             </aside>
           </div>
         </section>
       )}
 
       {step === 2 && (
-        <section className="wiz-v2-stage">
-          <header className="wiz-v2-head">
+        <section className="r3-wiz-stage">
+          <header className="r3-wiz-head">
             <h2>Listo para armar</h2>
             <p>Revisá el resumen. El plan sale con mapa y días numerados.</p>
           </header>
 
-          <article className="wiz-v2-boarding">
+          <article className="r3-wiz-boarding">
             {wizard.cityPick && photoForDestination(wizard.cityPick.name) ? (
               <img
-                className="wiz-v2-boarding-photo"
+                className="r3-wiz-boarding-photo"
                 src={photoForDestination(wizard.cityPick.name)}
                 alt=""
               />
             ) : null}
-            <div className="wiz-v2-boarding-body">
-              <p className="wiz-v2-boarding-k">Destino</p>
+            <div className="r3-wiz-boarding-body">
+              <p className="r3-wiz-boarding-k">Destino</p>
               <strong>{wizard.cityPick?.name ?? wizard.cityQuery}</strong>
-              <p className="wiz-v2-boarding-k">Fechas</p>
+              <p className="r3-wiz-boarding-k">Fechas</p>
               <span>
                 {wizard.startDate} → {wizard.endDate}
                 {nights > 0 ? ` · ${nights} noches` : ''}
               </span>
-              <p className="wiz-v2-boarding-k">Estilo</p>
+              <p className="r3-wiz-boarding-k">Estilo</p>
               <span>{preview}</span>
             </div>
           </article>
 
-          <ul className="wiz-v2-checklist">
+          <ul className="r3-wiz-checklist">
             <li>
               <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
                 <span className="wiz-summary-k">Destino</span>
@@ -1247,12 +1247,12 @@ export function WizardPage() {
         </section>
       )}
 
-      <div className="wiz-v2-footer">
-        <div className="wiz-v2-footer-inner">
+      <div className="r3-wiz-footer">
+        <div className="r3-wiz-footer-inner">
           {step === 0 ? (
             <button
               type="button"
-              className="btn primary wiz-v2-cta"
+              className="btn primary r3-wiz-cta"
               disabled={!wizard.cityPick || wizard.endDate < wizard.startDate}
               onClick={() => go(1)}
             >
@@ -1266,7 +1266,7 @@ export function WizardPage() {
               </button>
               <button
                 type="button"
-                className="btn primary wiz-v2-cta"
+                className="btn primary r3-wiz-cta"
                 disabled={activePrefs.length === 0 || !styleReady}
                 onClick={() => go(2)}
               >
@@ -1281,7 +1281,7 @@ export function WizardPage() {
               </button>
               <button
                 type="button"
-                className="btn primary wiz-v2-cta"
+                className="btn primary r3-wiz-cta"
                 onClick={() => void generateTrip()}
                 disabled={generating || !wizard.cityPick}
               >

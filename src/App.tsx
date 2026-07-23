@@ -75,7 +75,7 @@ export default function App() {
 
   return (
     <div
-      className={`app-shell${view.name === 'home' || view.name === 'wizard' || view.name === 'trip' ? ' app-v2' : ''}`}
+      className={`app-shell${view.name === 'home' || view.name === 'wizard' || view.name === 'trip' || view.name === 'day' ? ' app-r3' : ''}`}
     >
       {view.name !== 'home' && view.name !== 'wizard' && view.name !== 'trip' ? (
         <div className="atmosphere" aria-hidden />

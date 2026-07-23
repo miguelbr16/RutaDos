@@ -20,9 +20,9 @@ function tripCoverPhoto(cityName: string): string {
 }
 
 const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
-  { icon: 'map', title: 'Mapa siempre visible', text: 'Plan y ruta juntos, día a día' },
-  { icon: 'transit', title: 'Cómo moverse', text: 'Metro, bus y links oficiales' },
-  { icon: 'dining', title: 'Hotel y mesa', text: 'Reservar cerca de la ruta' },
+  { icon: 'map', title: 'Mapa siempre a la vista', text: 'Plan y ruta juntos, día a día' },
+  { icon: 'transit', title: 'Transporte real', text: 'Metro, bus y links oficiales' },
+  { icon: 'dining', title: 'Si el día cambia', text: 'Cansados, lluvia o tarde → replan' },
 ]
 
 const HERO_FEATURE = FEATURED_DESTINATIONS[0]
@@ -90,7 +90,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="home-page home-v2 home-v3">
+    <div className="r3-home">
       {!online && (
         <p className="offline-banner home-offline">
           Sin conexión.
@@ -100,15 +100,15 @@ export function HomePage() {
         </p>
       )}
 
-      <header className="home-v2-nav">
-        <div className="rd-layout home-v2-top">
-          <span className="home-v2-logo">
-            <span className="home-v2-logo-mark" aria-hidden />
+      <header className="r3-nav">
+        <div className="r3-wrap r3-nav-inner">
+          <span className="r3-logo">
+            <span className="r3-logo-dot" aria-hidden />
             RutaDos
           </span>
           <button
             type="button"
-            className="home-v2-icon-btn"
+            className="r3-icon-btn"
             aria-label="Ajustes"
             onClick={() => setView({ name: 'settings' })}
           >
@@ -117,38 +117,47 @@ export function HomePage() {
         </div>
       </header>
 
-      <section className="home-v3-hero rd-layout">
-        <div className="home-v3-hero-copy">
-          <p className="home-v3-kicker">Planificador de viajes</p>
+      <section className="r3-wrap r3-hero">
+        <div>
+          <p className="r3-kicker">Planificador de viajes</p>
           <h1>
-            Tu viaje,
+            Un plan que se adapta
             <br />
-            <em>a tu ritmo</em>
+            <em>cuando el día cambia</em>
           </h1>
-          <p className="home-v3-lede">
-            Itinerario por días con mapa siempre a la vista — solo o acompañado.
+          <p className="r3-lede">
+            Itinerario con mapa, transporte oficial y replan in situ — solo o acompañado.
           </p>
-          <div className="home-v3-cta-row">
-            <button type="button" className="btn primary home-v3-cta" onClick={startWizard}>
+          <div className="r3-cta-row">
+            <button type="button" className="btn primary" onClick={startWizard}>
               Nuevo viaje
             </button>
             <button
               type="button"
               className="btn ghost"
               onClick={() => {
-                const el = document.getElementById('home-destinos')
-                el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                document.getElementById('home-destinos')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start',
+                })
               }}
             >
               Explorar destinos
             </button>
           </div>
+          <aside className="r3-diff">
+            <strong>Lo que nos diferencia</strong>
+            <p>
+              Cansados, lluvia o vais tarde → el día se reordena. Copiloto Telegram con tu
+              ubicación. Offline del día.
+            </p>
+          </aside>
         </div>
-        <div className="home-v3-hero-visual">
-          {heroOk ? (
+        <div>
+          {heroOk && HERO_FEATURE ? (
             <button
               type="button"
-              className="home-v3-hero-card"
+              className="r3-hero-card"
               onClick={() => startWithDestination(HERO_FEATURE)}
             >
               <img
@@ -158,25 +167,29 @@ export function HomePage() {
                 fetchPriority="high"
                 onError={() => setHeroOk(false)}
               />
-              <span className="home-v3-hero-card-meta">
+              <span className="r3-hero-card-meta">
                 <strong>{HERO_FEATURE.label}</strong>
                 <span>{HERO_FEATURE.tagline ?? 'Empezar aquí'}</span>
               </span>
             </button>
           ) : (
-            <div className="home-v3-hero-fallback" aria-hidden />
+            <div
+              className="r3-hero-card"
+              style={{ minHeight: '12rem', background: 'var(--r3-foam)' }}
+              aria-hidden
+            />
           )}
         </div>
       </section>
 
-      <main className="home-v2-main rd-layout">
-        <ul className="home-v2-features">
+      <main className="r3-wrap r3-main">
+        <ul className="r3-features">
           {FEATURES.map((f) => (
             <li key={f.title}>
-              <span className="home-v2-feature-icon" aria-hidden>
+              <span className="r3-feature-ico" aria-hidden>
                 <Icon name={f.icon} size={20} />
               </span>
-              <div className="home-v2-feature-body">
+              <div>
                 <strong>{f.title}</strong>
                 <span>{f.text}</span>
               </div>
@@ -184,9 +197,9 @@ export function HomePage() {
           ))}
         </ul>
 
-        <div className="home-v2-columns">
-          <section className="home-v2-section" id="home-destinos">
-            <div className="home-v2-section-head">
+        <div className="r3-cols">
+          <section id="home-destinos">
+            <div className="r3-sec-head">
               <h2>Explorar destinos</h2>
               <p>Elegí una ciudad o buscá otra en el wizard</p>
             </div>
@@ -197,8 +210,8 @@ export function HomePage() {
             />
           </section>
 
-          <section className="home-v2-section">
-            <div className="home-v2-section-head home-v2-section-row">
+          <section>
+            <div className="r3-sec-head r3-sec-row">
               <div>
                 <h2>Mis viajes</h2>
                 {trips.length > 0 ? <p>{trips.length} guardados</p> : null}
@@ -211,23 +224,23 @@ export function HomePage() {
             </div>
 
             {!trips.length ? (
-              <div className="home-v2-empty">
+              <div className="r3-empty">
                 <p>Todavía no hay viajes.</p>
                 <button type="button" className="btn primary sm" onClick={startWizard}>
                   Planificar el primero
                 </button>
               </div>
             ) : (
-              <ul className="home-v2-trips photo-cards">
+              <ul className="r3-trips">
                 {trips.map((t) => (
                   <li key={t.id}>
                     <button
                       type="button"
-                      className="home-v2-trip-photo"
+                      className="r3-trip"
                       onClick={() => setView({ name: 'trip', tripId: t.id })}
                     >
                       <img src={tripCoverPhoto(t.city.name)} alt="" loading="lazy" />
-                      <span className="home-v2-trip-photo-body">
+                      <span>
                         <strong>{t.title}</strong>
                         <span>
                           {t.startDate.slice(5).replace('-', '/')} –{' '}
@@ -237,7 +250,7 @@ export function HomePage() {
                     </button>
                     <button
                       type="button"
-                      className="home-v2-trip-del"
+                      className="r3-trip-del"
                       aria-label={`Borrar ${t.title}`}
                       onClick={() => {
                         if (confirm(`¿Borrar viaje a ${t.title}?`)) deleteTrip(t.id)
@@ -252,7 +265,7 @@ export function HomePage() {
           </section>
         </div>
 
-        <footer className="home-v2-foot">
+        <footer className="r3-foot">
           <button type="button" onClick={exportAll}>
             Exportar
           </button>
