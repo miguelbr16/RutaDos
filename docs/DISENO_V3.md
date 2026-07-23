@@ -3,17 +3,13 @@
 **Fecha:** 23 jul 2026  
 **Backup:** `backup/pre-full-redesign` · tag `backup-pre-full-redesign`
 
-## Diferencial (lo que nos separa)
+## Diferencial (decisión pendiente)
 
-La mayoría de planners (Atlas, YOGO, TripForge, Wanderlog…) brillan **antes** del viaje.  
-RutaDos se diferencia en **durante el viaje**:
+Ver **`docs/DIFERENCIAL.md`** — workshop con 3 propuestas concretas.
 
-1. **Adaptación in situ** — botones Cansados / Lluvia / Vamos tarde que rehacen el día
-2. **Copiloto Telegram** — ayuda con ubicación real, no solo chat en la app
-3. **Mapa siempre visible** + transporte oficial de la ciudad (metro/bus)
-4. **Offline del día** — el plan del día sigue usable sin red
+**Recomendación:** cuña **A — «Rescatá la tarde»** (replan in situ) + patrón visual **B** (Day YOGO, una pantalla clara).
 
-Hero message: *“Un plan que se adapta cuando el día cambia.”*
+La lista Adapt / Navigate / Assist / Offline describe features, no marca. El rediseño greenfield espera confirmar la cuña.
 
 ## Síntesis visual (Behance + Dribbble)
 

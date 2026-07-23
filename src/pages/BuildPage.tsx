@@ -47,9 +47,9 @@ export function BuildPage({ tripId, dayId }: { tripId: string; dayId?: string })
   if (!trip) {
     return (
       <div className="page">
-        <p>Viaje no encontrado.</p>
-        <button type="button" className="btn" onClick={() => setView({ name: 'home' })}>
-          Inicio
+        <p>No encontramos este viaje. Puede que se haya borrado en este dispositivo.</p>
+        <button type="button" className="btn primary" onClick={() => setView({ name: 'trips' })}>
+          Volver a Viajes
         </button>
       </div>
     )
@@ -80,7 +80,7 @@ export function BuildPage({ tripId, dayId }: { tripId: string; dayId?: string })
   function apply() {
     if (!selectedDayId || !picked.length) return
     setCustomDayPlaces(tripId, selectedDayId, picked)
-    setView({ name: 'day', tripId, dayId: selectedDayId })
+    setView({ name: 'today', tripId, dayId: selectedDayId })
   }
 
   const cityCenter = { lat: trip.city.lat, lng: trip.city.lng }
@@ -90,7 +90,7 @@ export function BuildPage({ tripId, dayId }: { tripId: string; dayId?: string })
       <button
         type="button"
         className="btn ghost sm back"
-        onClick={() => setView({ name: 'trip', tripId })}
+        onClick={() => setView({ name: 'plan', tripId })}
       >
         ← {trip.title}
       </button>

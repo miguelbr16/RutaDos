@@ -125,16 +125,19 @@ interface WizardDraft {
   mustVisitQuery: string
 }
 
+/**
+ * Navegación v2 — 3 hubs + Ajustes (docs/VISION_APP_V2.md §3.2):
+ * trips (Viajes) · plan (Plan del viaje) · today (Hoy: día + en ruta + copiloto) · settings (Ajustes)
+ * 'build' (Editar día a mano) se abre desde "Ajustar día" en Hoy — sin entrada propia en la tab bar.
+ * 'guides' se fusionó dentro de Plan → "Más opciones" → Guía de la ciudad (museos/shows/monumentos).
+ */
 type View =
-  | { name: 'home' }
+  | { name: 'trips' }
   | { name: 'wizard'; step: number }
-  | { name: 'trip'; tripId: string }
-  | { name: 'day'; tripId: string; dayId: string }
-  | { name: 'onroute'; tripId: string; dayId: string }
-  | { name: 'guides'; tripId: string }
+  | { name: 'plan'; tripId: string }
+  | { name: 'today'; tripId: string; dayId?: string }
   | { name: 'build'; tripId: string; dayId?: string }
   | { name: 'share'; token: string }
-  | { name: 'copilot'; tripId?: string; dayId?: string }
   | { name: 'auth' }
   | { name: 'settings' }
 
@@ -266,7 +269,7 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       trips: [],
       activeTripId: null,
-      view: { name: 'home' },
+      view: { name: 'trips' },
       wizard: initialWizard(),
       generating: false,
       error: null,
@@ -474,7 +477,7 @@ export const useAppStore = create<AppState>()(
             trips: [trip, ...s.trips],
             activeTripId: trip.id,
             generating: false,
-            view: { name: 'trip', tripId: trip.id },
+            view: { name: 'plan', tripId: trip.id },
             wizard: initialWizard(),
           }))
           scheduleSync(trip)
@@ -490,7 +493,7 @@ export const useAppStore = create<AppState>()(
         set((s) => ({
           trips: s.trips.filter((t) => t.id !== id),
           activeTripId: s.activeTripId === id ? null : s.activeTripId,
-          view: { name: 'home' },
+          view: { name: 'trips' },
         }))
         scheduleDelete(id)
       },

@@ -52,8 +52,8 @@ export function SharePage({ token }: { token: string }) {
         <p className="brand small">RutaDos</p>
         <h1>Link no disponible</h1>
         <p className="error">{error ?? 'No encontrado'}</p>
-        <button type="button" className="btn primary" onClick={() => setView({ name: 'home' })}>
-          Ir al inicio
+        <button type="button" className="btn primary" onClick={() => setView({ name: 'trips' })}>
+          Ir a Viajes
         </button>
       </div>
     )
@@ -123,13 +123,13 @@ export function SharePage({ token }: { token: string }) {
                 updatedAt: new Date().toISOString(),
               },
             ])
-            setView({ name: 'trip', tripId: id })
+            setView({ name: 'plan', tripId: id })
           }}
         >
           Guardar una copia en mi app
         </button>
-        <button type="button" className="btn ghost" onClick={() => setView({ name: 'home' })}>
-          Inicio
+        <button type="button" className="btn ghost" onClick={() => setView({ name: 'trips' })}>
+          Viajes
         </button>
       </div>
       <p className="muted tiny">

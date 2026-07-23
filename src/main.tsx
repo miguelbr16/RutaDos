@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import './redesign.css'
+import './ui/app.css'
 import App from './App'
 
 /** Evita que la PWA sirva un JS viejo (calendario antiguo, etc.) */

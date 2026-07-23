@@ -1,19 +1,22 @@
 import { useEffect } from 'react'
 import { useAppStore } from './store'
 import { useAuthStore } from './authStore'
-import { HomePage } from './pages/HomePage'
+import { TripsPage } from './pages/TripsPage'
 import { WizardPage } from './pages/WizardPage'
-import { TripPage } from './pages/TripPage'
-import { DayPage } from './pages/DayPage'
-import { OnRoutePage } from './pages/OnRoutePage'
-import { GuidesPage } from './pages/GuidesPage'
+import { PlanPage } from './pages/PlanPage'
+import { TodayPage } from './pages/TodayPage'
 import { BuildPage } from './pages/BuildPage'
 import { AuthPage } from './pages/AuthPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SharePage } from './pages/SharePage'
-import { CopilotPage, TelegramCopilotFab } from './pages/CopilotPage'
+import { TabBar, TelegramFab } from './ui'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { mergeTrips, pullTrips, rowToTrip, type TripRow } from './lib/sync'
+
+/** Hubs con tab bar fija (VISION_APP_V2.md §3.2). El resto son pantallas de utilidad sin tab bar. */
+const TABBED_VIEWS = new Set(['trips', 'plan', 'today', 'settings'])
+/** Vistas con look & feel del sistema de diseño v2 (fondo claro editorial). */
+const UI_VIEWS = new Set(['trips', 'wizard', 'plan', 'today', 'settings'])
 
 export default function App() {
   const view = useAppStore((s) => s.view)
@@ -73,27 +76,22 @@ export default function App() {
     }
   }, [coupleId])
 
+  const showTabBar = TABBED_VIEWS.has(view.name)
+  const showTelegramFab = view.name !== 'wizard' && view.name !== 'auth' && view.name !== 'share'
+
   return (
-    <div
-      className={`app-shell${view.name === 'home' || view.name === 'wizard' || view.name === 'trip' || view.name === 'day' ? ' app-r3' : ''}`}
-    >
-      {view.name !== 'home' && view.name !== 'wizard' && view.name !== 'trip' ? (
-        <div className="atmosphere" aria-hidden />
-      ) : null}
-      {view.name === 'home' && <HomePage />}
+    <div className={`app-shell${UI_VIEWS.has(view.name) ? ' app-ui' : ''}`}>
+      {!UI_VIEWS.has(view.name) ? <div className="atmosphere" aria-hidden /> : null}
+      {view.name === 'trips' && <TripsPage />}
       {view.name === 'wizard' && <WizardPage />}
-      {view.name === 'trip' && <TripPage tripId={view.tripId} />}
-      {view.name === 'day' && <DayPage tripId={view.tripId} dayId={view.dayId} />}
-      {view.name === 'onroute' && <OnRoutePage tripId={view.tripId} dayId={view.dayId} />}
-      {view.name === 'guides' && <GuidesPage tripId={view.tripId} />}
+      {view.name === 'plan' && <PlanPage tripId={view.tripId} />}
+      {view.name === 'today' && <TodayPage tripId={view.tripId} dayId={view.dayId} />}
       {view.name === 'build' && <BuildPage tripId={view.tripId} dayId={view.dayId} />}
       {view.name === 'share' && <SharePage token={view.token} />}
-      {view.name === 'copilot' && (
-        <CopilotPage tripId={view.tripId} dayId={view.dayId} />
-      )}
       {view.name === 'auth' && <AuthPage />}
       {view.name === 'settings' && <SettingsPage />}
-      <TelegramCopilotFab />
+      {showTabBar && <TabBar />}
+      {showTelegramFab && <TelegramFab />}
     </div>
   )
 }

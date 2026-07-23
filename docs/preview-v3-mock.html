@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RutaDos — Mock v3 · Claro / Oscuro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --surface-blur: rgba(255, 255, 255, 0.88);
+    --ink: #0f1419;
+    --muted: #6b7280;
+    --line: rgba(15, 20, 25, 0.08);
+    --accent: #ff5a3c;
+    --accent-ink: #ffffff;
+    --accent-2: #1a2b4a;
+    --accent-soft: rgba(255, 90, 60, 0.12);
+    --map-shadow: 0 10px 34px rgba(26, 43, 74, 0.14);
+    --card-shadow: 0 4px 20px rgba(15, 20, 25, 0.07);
+    --radius-sm: 12px;
+    --radius: 20px;
+    --radius-lg: 26px;
+    --font: "Plus Jakarta Sans", system-ui, sans-serif;
+    --display: "Instrument Serif", Georgia, serif;
+    --cat-monument: #c2703b;
+    --cat-museum: #6366f1;
+    --cat-food: #f59e0b;
+    --cat-park: #22c55e;
+    --cat-view: #0ea5e9;
+    --cat-market: #d4a017;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    color: #14181d;
+    background: #eef0f3;
+    min-height: 100vh;
+  }
+
+  .chrome { max-width: 1480px; margin: 0 auto; padding: 1.1rem 1.25rem 3rem; }
+  .chrome-top {
+    display: flex; flex-wrap: wrap; gap: 0.75rem 1rem;
+    align-items: flex-end; justify-content: space-between; margin-bottom: 1.1rem;
+  }
+  .chrome-top h1 { margin: 0; font-family: var(--display); font-size: 1.6rem; font-weight: 400; }
+  .chrome-top p { margin: 0.3rem 0 0; color: #5b6470; font-size: 0.88rem; max-width: 46rem; line-height: 1.45; }
+
+  .segs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .seg {
+    display: flex; flex-wrap: wrap; gap: 0.3rem; background: #fff; padding: 0.3rem;
+    border-radius: 999px; border: 1px solid rgba(15,20,25,0.08); box-shadow: 0 4px 16px rgba(15,20,25,0.06);
+  }
+  .seg button {
+    appearance: none; border: 0; background: transparent; border-radius: 999px; padding: 0.42rem 0.85rem;
+    font: inherit; font-size: 0.8rem; font-weight: 600; color: #6b7280; cursor: pointer;
+  }
+  .seg button.on { background: var(--accent-2); color: #fff; }
+  .seg.theme button.on { background: var(--accent); }
+
+  .layout { display: grid; grid-template-columns: 1fr minmax(250px, 300px); gap: 1.25rem; align-items: start; }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+  .notes {
+    background: #fff; border: 1px solid rgba(15,20,25,0.08); border-radius: 20px; padding: 1rem 1.1rem;
+    box-shadow: 0 4px 16px rgba(15,20,25,0.06); position: sticky; top: 1rem; font-size: 0.84rem;
+  }
+  .notes .tag { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.35rem; }
+  .notes h2 { margin: 0 0 0.5rem; font-family: var(--display); font-size: 1.15rem; font-weight: 400; }
+  .notes ul { margin: 0; padding-left: 1.05rem; color: #5b6470; line-height: 1.6; }
+  .notes li { margin-bottom: 0.3rem; }
+  .notes .swatches { display: flex; gap: 0.35rem; margin-top: 0.5rem; }
+  .notes .swatches span { width: 26px; height: 26px; border-radius: 8px; border: 1px solid rgba(15,20,25,0.08); }
+
+  .frames-wrap { min-width: 0; }
+  .frame-mobile, .frame-desktop, .frame-both { display: none; }
+  body[data-device="mobile"] .frame-mobile { display: block; }
+  body[data-device="desktop"] .frame-desktop { display: block; }
+  body[data-device="both"] .frame-both { display: grid; }
+  .frame-both { grid-template-columns: minmax(280px, 380px) 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 900px) { .frame-both { grid-template-columns: 1fr; } }
+  .frame-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #7a8390; margin: 0 0 0.45rem 0.25rem; display: flex; align-items: center; gap: 0.4rem; }
+  .frame-label .pill { background: #e7e9ec; color: #4b5563; border-radius: 999px; padding: 0.05rem 0.5rem; font-weight: 700; }
+
+  .phone {
+    width: min(100%, 380px); height: 824px; margin: 0 auto; border-radius: 42px; border: 10px solid #111;
+    box-shadow: 0 24px 60px rgba(26, 43, 74, 0.2); overflow: hidden; position: relative; background: var(--bg);
+    transition: background 0.25s ease;
+  }
+  .phone-notch { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 118px; height: 26px; background: #111; border-radius: 14px; z-index: 50; }
+
+  .browser {
+    width: 100%; min-width: 0; background: var(--bg); border-radius: var(--radius); border: 1px solid rgba(15,20,25,0.1);
+    box-shadow: var(--map-shadow); overflow: hidden; transition: background 0.25s ease;
+  }
+  .browser.wide { min-height: 740px; }
+  .desk-chrome { display: flex; align-items: center; gap: 0.45rem; padding: 0.55rem 0.85rem; background: #f4f5f7; border-bottom: 1px solid rgba(15,20,25,0.08); }
+  .desk-chrome i { width: 10px; height: 10px; border-radius: 50%; background: #d1d5db; display: block; }
+  .desk-chrome .url { flex: 1; margin-left: 0.5rem; background: #fff; border: 1px solid rgba(15,20,25,0.08); border-radius: 8px; padding: 0.25rem 0.65rem; font-size: 0.75rem; color: #8a94a3; }
+
+  .screen { height: 804px; overflow: auto; background: var(--bg); position: relative; color: var(--ink); }
+  .browser.wide .screen { height: 700px; }
+  .view { display: none; min-height: 100%; }
+  .view.on { display: block; animation: rise 0.32s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* —— base v3 components —— */
+  .btn3 { appearance: none; border: 0; border-radius: 999px; padding: 0.7rem 1.15rem; font: inherit; font-weight: 700; font-size: 0.88rem; cursor: pointer; }
+  .btn3.primary { background: var(--accent); color: #fff; box-shadow: 0 8px 22px rgba(255,90,60,0.3); }
+  .btn3.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+  .btn3.sm { padding: 0.42rem 0.8rem; font-size: 0.78rem; }
+  .btn3.full { width: 100%; }
+  .btn3.icon { width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border-radius: 12px; }
+
+  .chip3 { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.76rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); white-space: nowrap; }
+  .chip3.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .fab3 { position: absolute; right: 1rem; bottom: 5.3rem; z-index: 30; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; font-size: 1.5rem; box-shadow: 0 10px 26px rgba(255, 90, 60, 0.4); cursor: pointer; }
+
+  .tabbar3 {
+    position: absolute; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(4, 1fr);
+    padding: 0.5rem 0.5rem calc(0.55rem + env(safe-area-inset-bottom, 0)); background: var(--surface-blur);
+    backdrop-filter: blur(18px); border-top: 1px solid var(--line); z-index: 40;
+  }
+  .tabbar3 button { appearance: none; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 0.18rem; font: inherit; font-size: 0.62rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .tabbar3 button.on { color: var(--accent); }
+  .tabbar3 .ico { width: 22px; height: 22px; border-radius: 8px; display: grid; place-items: center; font-size: 0.9rem; }
+  .tabbar3 button.on .ico { background: var(--accent-soft); }
+
+  .seg3 { display: flex; gap: 0.2rem; padding: 0.22rem; background: rgba(120,130,150,0.12); border-radius: 12px; }
+  .seg3 span { flex: 1; text-align: center; padding: 0.42rem 0.35rem; border-radius: 10px; font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+  .seg3 span.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+
+  /* tema oscuro — se aplica en .phone / .browser vía data-theme, cascada a todo lo de dentro */
+  .phone[data-theme="dark"], .browser[data-theme="dark"] {
+    --bg: #0d1420;
+    --surface: #16213a;
+    --surface-blur: rgba(22, 33, 58, 0.86);
+    --ink: #f5f7fa;
+    --muted: #93a0b8;
+    --line: rgba(255, 255, 255, 0.1);
+    --map-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.38);
+    --accent-2: #2a3b5c;
+    --accent-soft: rgba(255, 90, 60, 0.22);
+    background: var(--bg);
+  }
+  .phone[data-theme="dark"] .desk-chrome, .browser[data-theme="dark"] .desk-chrome { background: #10182a; border-color: rgba(255,255,255,0.08); }
+  .phone[data-theme="dark"] .desk-chrome .url, .browser[data-theme="dark"] .desk-chrome .url { background: #1a2438; border-color: rgba(255,255,255,0.1); color: #93a0b8; }
+  .phone[data-theme="dark"] .trip-xl3 img, .browser[data-theme="dark"] .trip-xl3 img,
+  .phone[data-theme="dark"] .place-card3 .photo, .browser[data-theme="dark"] .place-card3 .photo,
+  .phone[data-theme="dark"] .trip-card3 img, .browser[data-theme="dark"] .trip-card3 img { filter: brightness(0.92) saturate(1.05); }
+
+  .map3 { border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--map-shadow); background: linear-gradient(135deg, #dce8f5 0%, #c5d9ea 40%, #b8cfe0 100%); position: relative; }
+  [data-theme="dark"] .map3 { background: linear-gradient(135deg, #1c2c46 0%, #142238 45%, #0d1729 100%); }
+  .map3 .route { position: absolute; inset: 0; background: radial-gradient(circle at 35% 45%, rgba(255,90,60,0.28) 0, transparent 8%), radial-gradient(circle at 55% 55%, rgba(26,43,74,0.22) 0, transparent 7%), radial-gradient(circle at 48% 38%, rgba(26,43,74,0.16) 0, transparent 6%); }
+  [data-theme="dark"] .map3 .route { background: radial-gradient(circle at 35% 45%, rgba(255,107,74,0.35) 0, transparent 8%), radial-gradient(circle at 55% 55%, rgba(255,255,255,0.14) 0, transparent 7%), radial-gradient(circle at 48% 38%, rgba(255,255,255,0.1) 0, transparent 6%); }
+  .map3 .pin { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 2px 8px rgba(26,43,74,0.25); }
+  .map3 .pin.alt { background: var(--accent-2); }
+  [data-theme="dark"] .map3 .pin.alt { background: #fff; }
+
+  .display { font-family: var(--display); font-weight: 400; }
+  .muted { color: var(--muted); }
+  .tiny { font-size: 0.76rem; }
+  .sec-label { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.55rem; }
+  .dest-snapshot { margin: 0.15rem 0 0; font-size: 0.82rem; color: var(--muted); }
+
+  /* category icon badges */
+  .cat-ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 0.95rem; color: #fff; flex-shrink: 0; box-shadow: 0 3px 8px rgba(0,0,0,0.18); }
+  .cat-ico.monument { background: var(--cat-monument); }
+  .cat-ico.museum { background: var(--cat-museum); }
+  .cat-ico.food { background: var(--cat-food); }
+  .cat-ico.park { background: var(--cat-park); }
+  .cat-ico.view { background: var(--cat-view); }
+  .cat-ico.market { background: var(--cat-market); }
+  .cat-ico.sm { width: 26px; height: 26px; font-size: 0.75rem; }
+
+  /* trip cards */
+  .trip-xl3 { display: block; width: 100%; border: 0; padding: 0; border-radius: var(--radius-lg); overflow: hidden; position: relative; height: 210px; margin-bottom: 1rem; cursor: pointer; box-shadow: var(--map-shadow); text-align: left; }
+  .trip-xl3 img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .trip-xl3 .overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 25%, rgba(10,14,20,0.82)); display: flex; flex-direction: column; justify-content: flex-end; padding: 1.15rem; color: #fff; }
+  .trip-xl3 .badge { display: inline-block; font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; background: var(--accent); padding: 0.2rem 0.55rem; border-radius: 999px; margin-bottom: 0.4rem; width: fit-content; }
+  .trip-xl3 h3 { margin: 0; font-family: var(--display); font-size: 1.85rem; font-weight: 400; }
+  .trip-xl3 p { margin: 0.2rem 0 0; font-size: 0.85rem; opacity: 0.92; }
+  .trip-xl3 .vibe { margin: 0.3rem 0 0; font-size: 0.76rem; opacity: 0.8; font-weight: 600; }
+
+  .trip-row3 { display: flex; gap: 0.65rem; overflow-x: auto; padding-bottom: 0.35rem; margin-bottom: 1.25rem; scrollbar-width: none; }
+  .trip-row3::-webkit-scrollbar { display: none; }
+  .trip-card3 { flex: 0 0 165px; border: 0; padding: 0; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--card-shadow); text-align: left; cursor: pointer; border: 1px solid var(--line); }
+  .trip-card3 img { width: 100%; height: 96px; object-fit: cover; display: block; }
+  .trip-card3 .body { padding: 0.65rem 0.75rem 0.75rem; }
+  .trip-card3 strong { display: block; font-size: 0.92rem; }
+  .trip-card3 span { display: block; font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
+  .chip-row3 { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; flex-wrap: wrap; }
+
+  /* budget bar */
+  .budget-card3 { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.85rem 0.95rem; box-shadow: var(--card-shadow); margin-bottom: 0.9rem; }
+  .budget-card3 .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.55rem; }
+  .budget-card3 .top strong { font-size: 1.1rem; }
+  .budget-bar3 { display: flex; height: 9px; border-radius: 99px; overflow: hidden; margin-bottom: 0.55rem; }
+  .budget-bar3 span { display: block; height: 100%; }
+  .budget-legend3 { display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem; font-size: 0.72rem; color: var(--muted); }
+  .budget-legend3 i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.3rem; }
+
+  .day-pills3 { display: flex; gap: 0.45rem; overflow-x: auto; margin-bottom: 0.85rem; scrollbar-width: none; }
+  .day-pill3 { flex: 0 0 auto; padding: 0.55rem 0.85rem; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 0.8rem; font-weight: 700; color: var(--ink); }
+  .day-pill3.on { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  [data-theme="dark"] .day-pill3.on { background: var(--accent); border-color: var(--accent); }
+  .day-pill3 small { display: block; font-size: 0.66rem; font-weight: 600; opacity: 0.75; margin-top: 0.1rem; }
+
+  .plan-stop3 { display: flex; gap: 0.65rem; align-items: center; padding: 0.65rem 0; border-bottom: 1px solid var(--line); }
+  .plan-stop3 strong { display: block; font-size: 0.88rem; }
+  .plan-stop3 span { font-size: 0.74rem; color: var(--muted); }
+
+  /* place card v3 — foto grande + transporte tipo rail */
+  .place-card3 { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: var(--card-shadow); margin-bottom: 0.85rem; }
+  .place-card3 .photo { width: 100%; height: 128px; object-fit: cover; display: block; }
+  .place-card3 .body { padding: 0.75rem 0.85rem 0.85rem; }
+  .place-card3 .row-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+  .place-card3 .time-badge { font-size: 0.72rem; font-weight: 800; color: var(--accent); background: var(--accent-soft); padding: 0.18rem 0.55rem; border-radius: 8px; white-space: nowrap; }
+  .place-card3 h4 { margin: 0.45rem 0 0.05rem; font-size: 1rem; }
+  .place-card3 .cat-row { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.3rem; }
+  .place-card3 .cat-row span { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
+
+  .transport-rail3 { display: flex; gap: 0.4rem; overflow-x: auto; margin: 0.7rem 0 0; padding-bottom: 0.1rem; scrollbar-width: none; }
+  .transport-pill3 { flex: 0 0 auto; display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.65rem; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); font-size: 0.74rem; font-weight: 700; color: var(--muted); }
+  .transport-pill3 .t-ico { font-size: 0.85rem; }
+  .transport-pill3 .t-val { color: var(--ink); }
+  .transport-pill3.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .transport-pill3.on .t-val { color: #fff; }
+
+  .replan-row3 { display: flex; gap: 0.35rem; margin: 0.65rem 0 0.85rem; overflow-x: auto; scrollbar-width: none; }
+
+  .v3-input { width: 100%; padding: 1rem 1.1rem; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 1rem; margin-bottom: 0.65rem; }
+
+  /* wordmark */
+  .wordmark3 { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; color: inherit; }
+  .logo-mark3 { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #ff8066); color: #fff; font-size: 0.72rem; font-weight: 800; letter-spacing: -0.03em; display: grid; place-items: center; box-shadow: 0 4px 12px rgba(255,90,60,0.3); }
+  .logo-mark3.lg { width: 36px; height: 36px; border-radius: 11px; font-size: 0.78rem; }
+  .logo-text3 { font-weight: 800; font-size: 1.05rem; letter-spacing: -0.03em; color: var(--ink); }
+  .logo-text3 em { font-style: normal; color: var(--accent); }
+  .d-topnav .logo-text3 { font-size: 1.15rem; }
+
+  /* ═══ MÓVIL ═══ */
+  .m-trips3 { padding: 3rem 1rem 5.5rem; }
+  .m-trips3-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+  .m-trips3-head h2 { margin: 0; font-size: 1.65rem; font-family: var(--display); }
+
+  .m-wiz3 {
+    position: absolute; inset: 0; display: flex; flex-direction: column; color: #fff; background-color: #0f1419;
+    background-image: linear-gradient(180deg, rgba(15,20,25,0.2) 0%, rgba(15,20,25,0.4) 32%, rgba(15,20,25,0.93) 72%, rgba(15,20,25,0.98) 100%),
+      url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80");
+    background-size: cover; background-position: center;
+  }
+  .m-wiz3-progress { height: 3px; background: rgba(255,255,255,0.22); margin: 3rem 1rem 0; border-radius: 99px; overflow: hidden; flex-shrink: 0; }
+  .m-wiz3-progress i { display: block; height: 100%; width: 50%; background: var(--accent); border-radius: 99px; }
+  .m-wiz3-body { flex: 1; padding: 0 1rem 1.5rem; display: flex; flex-direction: column; justify-content: flex-end; }
+  .m-wiz3-body .step { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.8; margin-bottom: 0.5rem; }
+  .m-wiz3-body h2 { margin: 0 0 0.35rem; font-family: var(--display); font-size: 2.05rem; line-height: 1.1; }
+  .m-wiz3-body > p { margin: 0 0 1.25rem; opacity: 0.88; font-size: 0.9rem; }
+  .m-wiz3-body .v3-input { border-color: rgba(255,255,255,0.22); background: rgba(255,255,255,0.14); backdrop-filter: blur(12px); color: #fff; }
+  .m-wiz3-body .v3-input::placeholder { color: rgba(255,255,255,0.55); }
+  .m-wiz3-body .btn3.primary { margin-top: 0.85rem; }
+
+  .m-plan3 { padding: 3rem 1rem 5.5rem; }
+  .m-plan3-head h2 { margin: 0; font-family: var(--display); font-size: 1.65rem; }
+  .m-plan3-head p { margin: 0.2rem 0 0.85rem; font-size: 0.85rem; }
+  .m-plan3 .map3 { height: 210px; margin-bottom: 0.85rem; }
+
+  .m-hoy3 { display: flex; flex-direction: column; height: 100%; min-height: 760px; }
+  .m-hoy3-map { flex: 0 0 34vh; min-height: 250px; margin: 2.6rem 0.75rem 0; position: relative; }
+  .m-hoy3-map .map3 { height: 100%; }
+  .m-hoy3-map .weather { position: absolute; top: 0.75rem; left: 0.75rem; padding: 0.35rem 0.65rem; background: rgba(255,255,255,0.16); backdrop-filter: blur(10px); color: #fff; border-radius: 999px; font-size: 0.72rem; font-weight: 700; z-index: 2; }
+  .sheet3 { flex: 1; margin-top: -20px; background: var(--bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0; box-shadow: 0 -10px 32px rgba(0,0,0,0.25); padding: 0.5rem 1rem 5.5rem; position: relative; z-index: 5; }
+  .sheet3-handle { width: 36px; height: 4px; background: var(--line); border-radius: 99px; margin: 0.35rem auto 0.85rem; }
+  .sheet3 h3 { margin: 0 0 0.15rem; font-family: var(--display); font-size: 1.35rem; }
+  .daybar3 { position: absolute; bottom: 4.2rem; left: 0.75rem; right: 0.75rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.35rem; padding: 0.45rem; background: var(--surface-blur); backdrop-filter: blur(18px); border-radius: 18px; box-shadow: var(--map-shadow); z-index: 20; }
+  .daybar3 button { appearance: none; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 0.1rem; font: inherit; font-size: 0.6rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .daybar3 button.on { color: var(--accent); }
+  .daybar3 .ico { font-size: 1rem; }
+
+  /* ═══ PC ═══ */
+  .d-topnav { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.75rem; background: var(--surface-blur); backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+  .d-nav-tabs { display: flex; gap: 0.25rem; }
+  .d-nav-tabs button { appearance: none; border: 0; background: transparent; padding: 0.45rem 0.85rem; border-radius: 999px; font: inherit; font-size: 0.85rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .d-nav-tabs button.on { background: var(--accent-2); color: #fff; }
+  [data-theme="dark"] .d-nav-tabs button.on { background: var(--accent); }
+
+  .d-trips3 { padding: 1.75rem 2rem 2rem; max-width: 1180px; margin: 0 auto; }
+  .d-trips3-top { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.25rem; }
+  .d-trips3-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1.5rem; }
+  .d-trips3 .trip-xl3 { height: 310px; margin: 0; }
+  .d-trip-stack3 { display: grid; gap: 0.65rem; align-content: start; }
+  .d-trip-stack3 .trip-card3 { flex: none; width: 100%; display: grid; grid-template-columns: 110px 1fr; }
+  .d-trip-stack3 .trip-card3 img { height: 88px; }
+  .d-trips3-bottom { margin-top: 1.5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem; }
+  .d-trips3-bottom .trip-card3 { flex: none; width: 100%; }
+
+  .d-plan3 { display: grid; grid-template-columns: 3fr 2fr; min-height: 640px; align-items: start; }
+  .d-plan3-map { padding: 1.25rem 0 1.25rem 1.25rem; position: sticky; top: 3.5rem; }
+  .d-plan3-map .map3 { height: calc(640px - 2.5rem); min-height: 580px; }
+  .d-plan3-panel { padding: 1.25rem 1.5rem 1.5rem 0.75rem; max-height: 640px; overflow: auto; }
+  .d-plan3-toolbar { display: flex; gap: 0.35rem; margin: 0.75rem 0; flex-wrap: wrap; }
+
+  .d-hoy3 { display: grid; grid-template-areas: "top top" "map panel"; grid-template-columns: 1.1fr 0.9fr; grid-template-rows: auto 1fr; min-height: 640px; }
+  .d-hoy3-topbar { grid-area: top; display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.5rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .d-hoy3-topbar .actions { display: flex; gap: 0.35rem; }
+  .d-hoy3-map { grid-area: map; padding: 1.25rem 0 1.25rem 1.25rem; position: sticky; top: 3.5rem; align-self: start; }
+  .d-hoy3-map .map3 { height: 540px; }
+  .d-hoy3-panel { grid-area: panel; padding: 1rem 1.5rem 1.5rem 0.75rem; overflow: auto; max-height: 600px; }
+
+  .d-wiz3 { display: grid; grid-template-columns: 1fr 1fr; min-height: 640px; }
+  .d-wiz3-photo { position: sticky; top: 3.5rem; align-self: start; min-height: 640px; background: linear-gradient(180deg, transparent, rgba(15,20,25,0.6)), url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80") center/cover; position: relative; }
+  .d-wiz3-photo-caption { position: absolute; bottom: 0; left: 0; right: 0; padding: 2rem; color: #fff; }
+  .d-wiz3-photo-caption h3 { margin: 0; font-family: var(--display); font-size: 2.25rem; }
+  .d-wiz3-form { padding: 2.5rem 2.5rem 2rem 2.5rem; display: flex; flex-direction: column; justify-content: center; max-width: 480px; }
+  .d-wiz3-form h2 { margin: 0.25rem 0 0.5rem; font-family: var(--display); font-size: 2.25rem; }
+
+  /* footer note */
+  .foot-note { margin-top: 1.5rem; font-size: 0.8rem; color: #6b7280; max-width: 60rem; }
+</style>
+</head>
+<body data-device="both">
+  <div class="chrome">
+    <div class="chrome-top">
+      <div>
+        <h1>RutaDos — Mock v3 · Claro / Oscuro</h1>
+        <p>Foto-forward + iconos de categoría en color + presupuesto visual + rail de transporte con tiempo/precio. Modo <strong>Auto</strong>: Viajes/Wizard/Plan en claro, Hoy en oscuro navy (mejor lectura en calle/de noche). Podés forzar Claro u Oscuro en cualquier pantalla para comparar.</p>
+      </div>
+      <div class="segs">
+        <div class="seg" id="deviceSeg">
+          <button type="button" data-device="mobile">Móvil</button>
+          <button type="button" data-device="desktop">PC</button>
+          <button type="button" class="on" data-device="both">Ambos</button>
+        </div>
+        <div class="seg" id="viewSeg">
+          <button type="button" class="on" data-view="trips">Viajes</button>
+          <button type="button" data-view="wizard">Wizard</button>
+          <button type="button" data-view="plan">Plan</button>
+          <button type="button" data-view="hoy">Hoy</button>
+        </div>
+        <div class="seg theme" id="themeSeg">
+          <button type="button" class="on" data-theme-mode="auto">Auto</button>
+          <button type="button" data-theme-mode="light">Claro</button>
+          <button type="button" data-theme-mode="dark">Oscuro</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="frames-wrap">
+        <div class="frame-mobile">
+          <p class="frame-label">Móvil · 390px <span class="pill" id="themeLabelMobile">auto</span></p>
+          <div class="phone" id="phone-mobile"><div class="phone-notch"></div><div class="screen" id="screen-mobile"></div></div>
+        </div>
+
+        <div class="frame-desktop">
+          <p class="frame-label">PC · 1280px <span class="pill" id="themeLabelDesktop">auto</span></p>
+          <div class="browser wide" id="browser-desktop">
+            <div class="desk-chrome"><i></i><i></i><i></i><div class="url">localhost:5173 — desktop ≥1024px</div></div>
+            <div class="screen" id="screen-desktop"></div>
+          </div>
+        </div>
+
+        <div class="frame-both">
+          <div>
+            <p class="frame-label">Móvil <span class="pill" id="themeLabelBothMobile">auto</span></p>
+            <div class="phone" id="phone-both-mobile"><div class="phone-notch"></div><div class="screen" id="screen-both-mobile"></div></div>
+          </div>
+          <div>
+            <p class="frame-label">PC <span class="pill" id="themeLabelBothDesktop">auto</span></p>
+            <div class="browser wide" id="browser-both-desktop">
+              <div class="desk-chrome"><i></i><i></i><i></i><div class="url">localhost:5173</div></div>
+              <div class="screen" id="screen-both-desktop"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ TEMPLATES ══ -->
+        <template id="tpl-mobile-trips">
+          <div class="view on" data-v="trips">
+            <div class="m-trips3">
+              <div class="m-trips3-head">
+                <a class="wordmark3" href="#"><span class="logo-mark3">RD</span><span class="logo-text3">Ruta<em>Dos</em></span></a>
+                <button type="button" class="btn3 ghost icon">⚙</button>
+              </div>
+              <h2 class="display" style="margin:0 0 1.25rem;font-size:1.65rem">Tus viajes</h2>
+              <button type="button" class="trip-xl3">
+                <img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80" alt="" />
+                <div class="overlay"><span class="badge">Activo</span><h3>Londres</h3><p>22–24 jul · 3 días · 15 paradas</p><p class="vibe">Ritmo tranquilo · iconos primero</p></div>
+              </button>
+              <p class="sec-label">Otros viajes</p>
+              <div class="trip-row3">
+                <button type="button" class="trip-card3"><img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>Roma</strong><span>Borrador · 4 días</span></div></button>
+                <button type="button" class="trip-card3"><img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>París</strong><span>Ago · 2 días</span></div></button>
+              </div>
+              <p class="sec-label">Explorar</p>
+              <div class="chip-row3"><span class="chip3 on">Londres</span><span class="chip3">París</span><span class="chip3">Roma</span><span class="chip3">Barcelona</span></div>
+            </div>
+            <button type="button" class="fab3">+</button>
+            <nav class="tabbar3"><button type="button" class="on"><span class="ico">✈</span>Viajes</button><button type="button"><span class="ico">📋</span>Plan</button><button type="button"><span class="ico">📍</span>Hoy</button><button type="button"><span class="ico">⚙</span>Ajustes</button></nav>
+          </div>
+        </template>
+
+        <template id="tpl-mobile-wizard">
+          <div class="view on" data-v="wizard">
+            <div class="m-wiz3">
+              <div class="m-wiz3-progress"><i></i></div>
+              <div class="m-wiz3-body">
+                <span class="step">Paso 1 de 2</span>
+                <h2 class="display">¿A dónde vas?</h2>
+                <p>Destino y fechas. Todo sobre la foto — sin bloque blanco.</p>
+                <input class="v3-input" value="Londres" placeholder="Ciudad" />
+                <input class="v3-input" value="22 – 24 jul 2026" placeholder="Fechas" />
+                <button type="button" class="btn3 primary full">Continuar</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template id="tpl-mobile-plan">
+          <div class="view on" data-v="plan">
+            <div class="m-plan3">
+              <div class="m-plan3-head"><h2 class="display">Londres</h2><p class="dest-snapshot">22–24 jul · 3 días · ritmo tranquilo, iconos primero</p></div>
+              <div class="map3"><div class="route"></div><span class="pin" style="top:38%;left:42%"></span><span class="pin alt" style="top:52%;left:55%"></span></div>
+              <div class="seg3" style="margin:0.75rem 0"><span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span></div>
+              <div class="budget-card3">
+                <div class="top"><strong>~102 €/día</strong><span class="muted tiny">3 noches · ~306 €</span></div>
+                <div class="budget-bar3"><span style="width:38%;background:var(--cat-museum)"></span><span style="width:30%;background:var(--cat-food)"></span><span style="width:22%;background:var(--cat-view)"></span><span style="width:10%;background:var(--cat-monument)"></span></div>
+                <div class="budget-legend3"><span><i style="background:var(--cat-museum)"></i>Alojamiento</span><span><i style="background:var(--cat-food)"></i>Comida</span><span><i style="background:var(--cat-view)"></i>Transporte</span><span><i style="background:var(--cat-monument)"></i>Entradas</span></div>
+              </div>
+              <div class="day-pills3"><div class="day-pill3 on">Día 1<small>Llegada</small></div><div class="day-pill3">Día 2<small>9 paradas</small></div><div class="day-pill3">Día 3</div></div>
+              <div class="plan-stop3"><span class="cat-ico monument sm">🏛</span><div><strong>Big Ben</strong><span>16:30 · Monumento</span></div></div>
+              <div class="plan-stop3"><span class="cat-ico view sm">👁</span><div><strong>London Eye</strong><span>18:00 · Mirador</span></div></div>
+            </div>
+            <nav class="tabbar3"><button type="button"><span class="ico">✈</span>Viajes</button><button type="button" class="on"><span class="ico">📋</span>Plan</button><button type="button"><span class="ico">📍</span>Hoy</button><button type="button"><span class="ico">⚙</span>Ajustes</button></nav>
+          </div>
+        </template>
+
+        <template id="tpl-mobile-hoy">
+          <div class="view on" data-v="hoy">
+            <div class="m-hoy3">
+              <div class="m-hoy3-map"><span class="weather">☁ 14–21°</span><div class="map3"><div class="route"></div><span class="pin" style="top:40%;left:44%"></span><span class="pin alt" style="top:55%;left:52%"></span></div></div>
+              <nav class="daybar3"><button type="button" class="on"><span class="ico">🗺</span>Maps</button><button type="button"><span class="ico">🚇</span>Metro</button><button type="button"><span class="ico">🍽</span>Comer</button><button type="button"><span class="ico">▶</span>En ruta</button></nav>
+              <div class="sheet3">
+                <div class="sheet3-handle"></div>
+                <h3 class="display">Jueves 23 jul</h3>
+                <p class="muted tiny">9 paradas · llueve a partir de las 17:00</p>
+                <div class="replan-row3"><span class="chip3">😴 Cansados</span><span class="chip3">🌧 Lluvia</span><span class="chip3">⏱ Tarde</span></div>
+                <article class="place-card3">
+                  <img class="photo" src="https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=500&q=70" alt="" />
+                  <div class="body">
+                    <div class="row-top"><h4 style="margin:0">National Gallery</h4><span class="time-badge">10:00</span></div>
+                    <div class="cat-row"><span class="cat-ico museum sm">🖼</span><span>Museo · Trafalgar Sq</span></div>
+                    <div class="transport-rail3">
+                      <div class="transport-pill3 on"><span class="t-ico">🚶</span><span class="t-val">12 min</span></div>
+                      <div class="transport-pill3"><span class="t-ico">🚇</span><span class="t-val">8 min</span></div>
+                      <div class="transport-pill3"><span class="t-ico">🚕</span><span class="t-val">6 min · €8</span></div>
+                    </div>
+                  </div>
+                </article>
+                <article class="place-card3">
+                  <img class="photo" src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?auto=format&fit=crop&w=500&q=70" alt="" />
+                  <div class="body">
+                    <div class="row-top"><h4 style="margin:0">Buckingham Palace</h4><span class="time-badge">11:30</span></div>
+                    <div class="cat-row"><span class="cat-ico monument sm">🏛</span><span>Monumento · 0.8 km</span></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+            <nav class="tabbar3"><button type="button"><span class="ico">✈</span>Viajes</button><button type="button"><span class="ico">📋</span>Plan</button><button type="button" class="on"><span class="ico">📍</span>Hoy</button><button type="button"><span class="ico">⚙</span>Ajustes</button></nav>
+          </div>
+        </template>
+
+        <template id="tpl-desktop-shell">
+          <header class="d-topnav">
+            <a class="wordmark3 logo" href="#"><span class="logo-mark3 lg">RD</span><span class="logo-text3">Ruta<em>Dos</em></span></a>
+            <nav class="d-nav-tabs">
+              <button type="button" data-dv="trips">Viajes</button>
+              <button type="button" data-dv="plan">Plan</button>
+              <button type="button" data-dv="hoy">Hoy</button>
+              <button type="button" data-dv="wizard">Wizard</button>
+              <button type="button">Ajustes</button>
+            </nav>
+            <button type="button" class="btn3 primary sm">+ Nuevo viaje</button>
+          </header>
+        </template>
+
+        <template id="tpl-desktop-trips">
+          <div class="view on" data-v="trips">
+            <div class="d-trips3">
+              <div class="d-trips3-top"><div><h2 class="display" style="margin:0;font-size:2rem">Tus viajes</h2><p class="muted" style="margin:0.35rem 0 0">Sin hero de marketing · grid editorial</p></div></div>
+              <div class="d-trips3-grid">
+                <button type="button" class="trip-xl3"><img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80" alt="" /><div class="overlay"><span class="badge">Viaje activo</span><h3>Londres</h3><p>22–24 jul · 3 días · 15 paradas</p><p class="vibe">Ritmo tranquilo · iconos primero</p></div></button>
+                <div class="d-trip-stack3">
+                  <button type="button" class="trip-card3"><img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=200&q=70" alt="" /><div class="body"><strong>Roma</strong><span>Borrador · 4 días</span></div></button>
+                  <button type="button" class="trip-card3"><img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=200&q=70" alt="" /><div class="body"><strong>París</strong><span>Ago · 2 días</span></div></button>
+                  <p class="sec-label" style="margin-top:0.5rem">Explorar</p>
+                  <div class="chip-row3"><span class="chip3 on">Londres</span><span class="chip3">París</span><span class="chip3">Roma</span><span class="chip3">Barcelona</span></div>
+                </div>
+              </div>
+              <p class="sec-label" style="margin-top:1.5rem">Próximos viajes</p>
+              <div class="d-trips3-bottom">
+                <button type="button" class="trip-card3"><img src="https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>Venecia</strong><span>Sep · 3 días</span></div></button>
+                <button type="button" class="trip-card3"><img src="https://images.unsplash.com/photo-1555881400-74d7aca93a39?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>Lisboa</strong><span>Oct · 2 días</span></div></button>
+                <button type="button" class="trip-card3"><img src="https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>Madrid</strong><span>Nov · 1 día</span></div></button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template id="tpl-desktop-wizard">
+          <div class="view on" data-v="wizard">
+            <div class="d-wiz3">
+              <div class="d-wiz3-photo"><div class="d-wiz3-photo-caption"><h3 class="display">Londres</h3><p style="margin:0.35rem 0 0;opacity:0.92">Panel foto sticky</p></div></div>
+              <div class="d-wiz3-form">
+                <div class="m-wiz3-progress" style="margin:0 0 1.25rem;background:var(--line)"><i style="width:50%"></i></div>
+                <span class="sec-label">Paso 1 de 2</span>
+                <h2 class="display">¿A dónde vas?</h2>
+                <p class="muted" style="margin:0 0 1.25rem">Formulario a la izquierda · foto fija a la derecha</p>
+                <input class="v3-input" value="Londres" /><input class="v3-input" value="22 – 24 jul 2026" />
+                <div style="margin-top:1rem;display:flex;gap:0.5rem"><button type="button" class="btn3 ghost">Atrás</button><button type="button" class="btn3 primary">Continuar</button></div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template id="tpl-desktop-plan">
+          <div class="view on" data-v="plan">
+            <div class="d-plan3">
+              <div class="d-plan3-map"><div class="map3"><div class="route"></div><span class="pin" style="top:35%;left:40%"></span><span class="pin alt" style="top:50%;left:55%"></span><span class="pin" style="top:42%;left:48%"></span></div></div>
+              <div class="d-plan3-panel">
+                <h2 class="display" style="margin:0">Londres</h2>
+                <p class="dest-snapshot">Mapa sticky 60% · panel scroll 40% · ritmo tranquilo</p>
+                <div class="seg3" style="margin:0.85rem 0"><span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span></div>
+                <div class="budget-card3">
+                  <div class="top"><strong>~102 €/día</strong><span class="muted tiny">3 noches · ~306 €</span></div>
+                  <div class="budget-bar3"><span style="width:38%;background:var(--cat-museum)"></span><span style="width:30%;background:var(--cat-food)"></span><span style="width:22%;background:var(--cat-view)"></span><span style="width:10%;background:var(--cat-monument)"></span></div>
+                  <div class="budget-legend3"><span><i style="background:var(--cat-museum)"></i>Alojamiento</span><span><i style="background:var(--cat-food)"></i>Comida</span><span><i style="background:var(--cat-view)"></i>Transporte</span><span><i style="background:var(--cat-monument)"></i>Entradas</span></div>
+                </div>
+                <div class="d-plan3-toolbar"><button type="button" class="btn3 ghost sm">Exportar</button><button type="button" class="btn3 ghost sm">Telegram</button><button type="button" class="btn3 ghost sm">Compartir</button></div>
+                <div class="day-pills3"><div class="day-pill3 on">Día 1</div><div class="day-pill3">Día 2</div><div class="day-pill3">Día 3</div></div>
+                <div class="plan-stop3"><span class="cat-ico monument sm">🏛</span><div><strong>Big Ben</strong><span>16:30 · Westminster</span></div></div>
+                <div class="plan-stop3"><span class="cat-ico view sm">👁</span><div><strong>London Eye</strong><span>18:00 · 12 min</span></div></div>
+                <div class="plan-stop3"><span class="cat-ico market sm">🛍</span><div><strong>Borough Market</strong><span>Cena</span></div></div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template id="tpl-desktop-hoy">
+          <div class="view on" data-v="hoy">
+            <div class="d-hoy3">
+              <div class="d-hoy3-topbar">
+                <div><h2 class="display" style="margin:0;font-size:1.5rem">Jueves 23 jul</h2><p class="muted tiny" style="margin:0.15rem 0 0">Londres · 9 paradas · llueve a partir de las 17:00</p></div>
+                <div class="actions">
+                  <button type="button" class="btn3 ghost sm">🗺 Maps</button>
+                  <button type="button" class="btn3 ghost sm">🚇 Metro</button>
+                  <button type="button" class="btn3 ghost sm">🍽 Comer</button>
+                  <button type="button" class="btn3 primary sm">▶ En ruta</button>
+                </div>
+              </div>
+              <div class="d-hoy3-map"><div class="map3"><span style="position:absolute;top:1rem;left:1rem;padding:0.35rem 0.65rem;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);color:#fff;border-radius:999px;font-size:0.75rem;font-weight:700">☁ 14–21°</span><div class="route"></div><span class="pin" style="top:40%;left:44%"></span><span class="pin alt" style="top:55%;left:52%"></span></div></div>
+              <div class="d-hoy3-panel">
+                <div class="replan-row3"><span class="chip3">😴 Cansados</span><span class="chip3">🌧 Lluvia</span><span class="chip3">⏱ Tarde</span></div>
+                <article class="place-card3">
+                  <img class="photo" src="https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=500&q=70" alt="" />
+                  <div class="body">
+                    <div class="row-top"><h4 style="margin:0">National Gallery</h4><span class="time-badge">10:00</span></div>
+                    <div class="cat-row"><span class="cat-ico museum sm">🖼</span><span>Museo · Trafalgar Sq</span></div>
+                    <div class="transport-rail3">
+                      <div class="transport-pill3 on"><span class="t-ico">🚶</span><span class="t-val">12 min</span></div>
+                      <div class="transport-pill3"><span class="t-ico">🚇</span><span class="t-val">8 min</span></div>
+                      <div class="transport-pill3"><span class="t-ico">🚕</span><span class="t-val">6 min · €8</span></div>
+                    </div>
+                  </div>
+                </article>
+                <article class="place-card3">
+                  <img class="photo" src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?auto=format&fit=crop&w=500&q=70" alt="" />
+                  <div class="body">
+                    <div class="row-top"><h4 style="margin:0">Buckingham Palace</h4><span class="time-badge">11:30</span></div>
+                    <div class="cat-row"><span class="cat-ico monument sm">🏛</span><span>Monumento · 0.8 km</span></div>
+                  </div>
+                </article>
+                <article class="place-card3">
+                  <img class="photo" src="https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=500&q=70" alt="" />
+                  <div class="body">
+                    <div class="row-top"><h4 style="margin:0">Dishoom</h4><span class="time-badge">13:00</span></div>
+                    <div class="cat-row"><span class="cat-ico food sm">🍽</span><span>Comida · Reserva recomendada</span></div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </template>
+
+      </div>
+
+      <aside class="notes">
+        <span class="tag">Mock v3 — claro / oscuro</span>
+        <h2>Ideas cogidas de las referencias</h2>
+        <ul>
+          <li><strong>Foto grande por tarjeta</strong> (patrón repetido en 7/8 case studies Behance) en vez de icono/thumb chico</li>
+          <li><strong>Rail de transporte</strong> con icono+tiempo(+precio) en vez de un &lt;select&gt; — TripPlanner (Behance), Wanderlog</li>
+          <li><strong>Presupuesto como barra segmentada</strong> por categoría — AI Smart Trip Planner, Stippl, Tripsy</li>
+          <li><strong>Iconos de categoría en círculo de color</strong> — Trippo, Wanderlog</li>
+          <li><strong>Línea "vibe" bajo el título</strong> (destination snapshot) — Polarsteps</li>
+          <li><strong>Modo oscuro solo en "Hoy"</strong> — diferencial propio, nadie de la lista separa planificar vs vivir el día</li>
+        </ul>
+        <div class="swatches">
+          <span style="background:#fafafa"></span>
+          <span style="background:#ff5a3c"></span>
+          <span style="background:#1a2b4a"></span>
+          <span style="background:#0d1420"></span>
+        </div>
+      </aside>
+    </div>
+
+    <p class="foot-note">Este archivo es solo un mock estático (no toca componentes reales de <code>src/</code>). Al aprobar dirección, se implementa en <code>src/ui/v2/*</code> + <code>src/ui/v2.css</code>.</p>
+  </div>
+
+  <script>
+    let currentView = 'trips';
+    let themeMode = 'auto'; // auto | light | dark
+
+    function cloneTpl(id) { return document.getElementById(id).content.cloneNode(true); }
+
+    function themeFor(view) {
+      if (themeMode !== 'auto') return themeMode;
+      return view === 'hoy' ? 'dark' : 'light';
+    }
+
+    function applyTheme(frameEl, labelEl) {
+      const t = themeFor(currentView);
+      frameEl.setAttribute('data-theme', t);
+      if (labelEl) labelEl.textContent = themeMode === 'auto' ? ('auto → ' + t) : t;
+    }
+
+    function renderMobile(container) {
+      container.innerHTML = '';
+      container.appendChild(cloneTpl('tpl-mobile-' + currentView));
+    }
+    function renderDesktop(container) {
+      container.innerHTML = '';
+      container.appendChild(cloneTpl('tpl-desktop-shell'));
+      container.appendChild(cloneTpl('tpl-desktop-' + currentView));
+      const active = container.querySelector('[data-dv="' + currentView + '"]');
+      if (active) active.classList.add('on');
+    }
+
+    function renderAll() {
+      renderMobile(document.getElementById('screen-mobile'));
+      renderMobile(document.getElementById('screen-both-mobile'));
+      renderDesktop(document.getElementById('screen-desktop'));
+      renderDesktop(document.getElementById('screen-both-desktop'));
+
+      applyTheme(document.getElementById('phone-mobile'), document.getElementById('themeLabelMobile'));
+      applyTheme(document.getElementById('browser-desktop'), document.getElementById('themeLabelDesktop'));
+      applyTheme(document.getElementById('phone-both-mobile'), document.getElementById('themeLabelBothMobile'));
+      applyTheme(document.getElementById('browser-both-desktop'), document.getElementById('themeLabelBothDesktop'));
+    }
+
+    document.getElementById('deviceSeg').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-device]');
+      if (!btn) return;
+      document.body.dataset.device = btn.dataset.device;
+      document.querySelectorAll('#deviceSeg button').forEach((b) => b.classList.toggle('on', b === btn));
+    });
+
+    function setView(name) {
+      currentView = name;
+      document.querySelectorAll('#viewSeg button').forEach((b) => b.classList.toggle('on', b.dataset.view === name));
+      renderAll();
+    }
+    document.getElementById('viewSeg').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-view]');
+      if (btn) setView(btn.dataset.view);
+    });
+
+    document.getElementById('themeSeg').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-theme-mode]');
+      if (!btn) return;
+      themeMode = btn.dataset.themeMode;
+      document.querySelectorAll('#themeSeg button').forEach((b) => b.classList.toggle('on', b === btn));
+      renderAll();
+    });
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-dv]');
+      if (btn && btn.closest('.d-nav-tabs')) setView(btn.dataset.dv);
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>

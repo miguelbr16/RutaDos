@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuthStore } from '../authStore'
 import { useAppStore } from '../store'
+import { DataLicensesSection } from '../components/DataLicensesSection'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 export function SettingsPage() {
@@ -20,12 +21,12 @@ export function SettingsPage() {
   const [busy, setBusy] = useState(false)
 
   return (
-    <div className="page narrow">
-      <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'home' })}>
+    <div className="page narrow ui-settings-page ui-page-tabbed">
+      <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'trips' })}>
         ← Inicio
       </button>
       <p className="brand small">RutaDos</p>
-      <h1>Pareja y sync</h1>
+      <h1>Ajustes</h1>
 
       {!isSupabaseConfigured && (
         <p className="muted">
@@ -33,6 +34,9 @@ export function SettingsPage() {
           <code>.env.example</code>.
         </p>
       )}
+
+      <section className="section">
+        <h2>Pareja y sync</h2>
 
       {isSupabaseConfigured && !user && (
         <div className="panel">
@@ -113,13 +117,16 @@ export function SettingsPage() {
             className="btn ghost"
             onClick={() => {
               void signOut()
-              setView({ name: 'home' })
+              setView({ name: 'trips' })
             }}
           >
             Cerrar sesión
           </button>
         </div>
       )}
+      </section>
+
+      <DataLicensesSection />
 
       <section className="section">
         <h2>Añadir a inicio (PWA)</h2>

@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { SegmentedTabs, TopNav } from '../ui'
 import { Icon } from '../components/Icons'
 import {
   DEFAULT_PREFERENCES,
   PREFERENCE_LABELS,
-  TRANSIT_MODE_LABELS,
   type PreferenceKey,
   type Preferences,
   type RouteStyle,
@@ -36,6 +36,29 @@ import { loadOfflineDay } from '../lib/offlineDay'
 import { genericGuide, getCityGuide } from '../lib/cityGuides'
 import { fetchPlacePhotoUrls } from '../lib/placePhotos'
 import type { Stop } from '../types'
+import type { CityLink } from '../lib/cityGuides'
+
+/** Bloque de links de guía (museos/shows/monumentos) — fusionado desde la antigua GuidesPage. */
+function GuideLinkBlock({ title, items }: { title: string; items: CityLink[] }) {
+  if (!items.length) return null
+  return (
+    <div style={{ marginTop: '0.75rem' }}>
+      <p className="muted tiny" style={{ margin: '0 0 0.35rem', fontWeight: 700 }}>
+        {title}
+      </p>
+      <ul className="guide-list">
+        {items.map((l) => (
+          <li key={l.url + l.title}>
+            <a href={l.url} target="_blank" rel="noreferrer" className="guide-card">
+              <strong>{l.title}</strong>
+              <span className="muted">{l.blurb}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 const STYLE_KEYS: PreferenceKey[] = [
   'museums',
@@ -55,14 +78,21 @@ const STYLE_KEYS: PreferenceKey[] = [
   'night_walks',
 ]
 
-export function TripPage({ tripId }: { tripId: string }) {
+/**
+ * Hub "Plan" — mapa persistente, días, presupuesto y Compartir siempre visibles
+ * (VISION_APP_V2.md §3.2/§5.3). Import/export y ajuste fino quedan en "Más opciones",
+ * pero nunca el presupuesto ni compartir.
+ */
+export function PlanPage({ tripId }: { tripId: string }) {
   const trip = useAppStore((s) => s.trips.find((t) => t.id === tripId))
   const setView = useAppStore((s) => s.setView)
+  const setActiveTrip = useAppStore((s) => s.setActiveTrip)
   const mergePlacesIntoTrip = useAppStore((s) => s.mergePlacesIntoTrip)
   const replanTripStyle = useAppStore((s) => s.replanTripStyle)
   const setTripHotel = useAppStore((s) => s.setTripHotel)
   const generating = useAppStore((s) => s.generating)
 
+  const [moreOpen, setMoreOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [styleOpen, setStyleOpen] = useState(false)
@@ -78,10 +108,13 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [rediscover, setRediscover] = useState(true)
   const [venueKind, setVenueKind] = useState<VenueKind | null>(null)
   const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
-  const [moreOpen, setMoreOpen] = useState(false)
   const [mapStops, setMapStops] = useState<Stop[]>([])
   const [tripTab, setTripTab] = useState<'map' | 'days' | 'hotel' | 'food'>('days')
   const allStops = trip?.days.flatMap((d) => d.stops) ?? []
+
+  useEffect(() => {
+    setActiveTrip(tripId)
+  }, [tripId, setActiveTrip])
 
   useEffect(() => {
     if (!trip) return
@@ -110,9 +143,9 @@ export function TripPage({ tripId }: { tripId: string }) {
   if (!trip) {
     return (
       <div className="page">
-        <p>Viaje no encontrado.</p>
-        <button type="button" className="btn" onClick={() => setView({ name: 'home' })}>
-          Inicio
+        <p>No encontramos este viaje. Puede que se haya borrado en este dispositivo.</p>
+        <button type="button" className="btn primary" onClick={() => setView({ name: 'trips' })}>
+          Volver a Viajes
         </button>
       </div>
     )
@@ -168,7 +201,6 @@ export function TripPage({ tripId }: { tripId: string }) {
       } catch {
         setShareMsg(`Link: ${url}\n${tgHint}`)
       }
-      // Abre el bot listo para enlazar el viaje
       openTelegramBot(token)
     } catch (e) {
       exportTripJson()
@@ -230,165 +262,168 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   return (
-    <div className="page r3-trip rd-fade">
-      <div className="r3-trip-top">
-        <button
-          type="button"
-          className="r3-trip-back"
-          aria-label="Volver"
-          onClick={() => setView({ name: 'home' })}
-        >
-          <Icon name="chevron-left" size={20} />
-        </button>
-        <button
-          type="button"
-          className={moreOpen ? 'r3-trip-opt on' : 'r3-trip-opt'}
-          aria-expanded={moreOpen}
-          aria-label={moreOpen ? 'Cerrar opciones' : 'Opciones'}
-          onClick={() => setMoreOpen((v) => !v)}
-        >
-          {moreOpen ? <Icon name="close" size={18} /> : <Icon name="more" size={18} />}
-        </button>
+    <div className="ui-trip ui-enter ui-page-tabbed">
+      <TopNav
+        title={trip.title}
+        onBack={() => setView({ name: 'trips' })}
+        backLabel="Inicio"
+        right={
+          <button
+            type="button"
+            className={`ui-icon-btn${moreOpen ? ' on' : ''}`}
+            aria-expanded={moreOpen}
+            aria-label={moreOpen ? 'Cerrar más opciones' : 'Más opciones'}
+            onClick={() => setMoreOpen((v) => !v)}
+          >
+            {moreOpen ? <Icon name="close" size={18} /> : <Icon name="more" size={18} />}
+          </button>
+        }
+      />
+
+      <header className="ui-trip-head">
+        <h1>{trip.title}</h1>
+        <p>
+          {trip.startDate} → {trip.endDate}
+          {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
+        </p>
+      </header>
+
+      <div className="ui-budget-strip">
+        <span>
+          ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/día
+        </span>
+        <span className="muted tiny">
+          ~{budget.totalMin}–{budget.totalMax} € · {budget.nights} noches
+        </span>
       </div>
 
-      {moreOpen && (
-        <div className="trip-more-panel" role="region" aria-label="Opciones del viaje">
-          <div className="trip-more-head">
-            <h2>Opciones</h2>
-            <p className="muted tiny">Presupuesto, compartir y ajustar el plan.</p>
-          </div>
+      <div className="ui-plan-primary-actions">
+        <button
+          type="button"
+          className="btn primary sm"
+          disabled={shareBusy}
+          onClick={() => void onShare()}
+        >
+          <Icon name="share" size={15} /> {shareBusy ? 'Compartiendo…' : 'Compartir'}
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => {
+            setDraftPrefs({ ...DEFAULT_PREFERENCES, ...trip.preferences })
+            setDraftPace(trip.routeStyle.pace)
+            setDraftExplore(trip.routeStyle.explore)
+            setDraftFood(trip.routeStyle.foodBudget)
+            setStyleOpen((v) => !v)
+          }}
+        >
+          <Icon name="sliders" size={15} /> {styleOpen ? 'Cerrar ajuste' : 'Ajustar gustos y ritmo'}
+        </button>
+      </div>
+      {shareMsg && <p className="muted tiny ui-plan-share-msg">{shareMsg}</p>}
+      <p className="prefs-driven muted tiny">
+        Plan con: {prefsSummaryLine(trip.preferences, trip.routeStyle)}.
+      </p>
 
-          <div className="budget-box">
-            <strong>Presupuesto orientativo</strong>
-            <p>
-              ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/persona/día · total ~{' '}
-              {budget.totalMin}–{budget.totalMax} €/persona ({budget.nights} noches)
-            </p>
-            <p className="muted tiny">{budget.blurb}</p>
-            <p className="prefs-driven muted tiny">
-              Plan con: {prefsSummaryLine(trip.preferences, trip.routeStyle)}.
-            </p>
-            <button
-              type="button"
-              className="btn ghost sm"
-              style={{ marginTop: '0.5rem' }}
-              onClick={() => {
-                setDraftPrefs({ ...DEFAULT_PREFERENCES, ...trip.preferences })
-                setDraftPace(trip.routeStyle.pace)
-                setDraftExplore(trip.routeStyle.explore)
-                setDraftFood(trip.routeStyle.foodBudget)
-                setStyleOpen((v) => !v)
-              }}
-            >
-              {styleOpen ? 'Cerrar ajuste' : 'Ajustar gustos y ritmo'}
-            </button>
-          </div>
-
-          {styleOpen && draftPrefs && (
-            <div className="panel" style={{ marginTop: '0.75rem' }}>
-              <h3>Ajustar y rearmar plan</h3>
-              <div className="chip-row" style={{ flexWrap: 'wrap', gap: '0.35rem' }}>
-                {STYLE_KEYS.map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    className={`chip ${draftPrefs[k] ? 'on' : ''}`}
-                    onClick={() => setDraftPrefs({ ...draftPrefs, [k]: !draftPrefs[k] })}
-                  >
-                    {PREFERENCE_LABELS[k]}
-                  </button>
-                ))}
-              </div>
-              <label className="field" style={{ marginTop: '0.75rem' }}>
-                <span>Ritmo</span>
-                <select
-                  value={draftPace ?? trip.routeStyle.pace}
-                  onChange={(e) => setDraftPace(e.target.value as RouteStyle['pace'])}
-                >
-                  <option value="relaxed">Tranquilo</option>
-                  <option value="normal">Normal</option>
-                  <option value="intense">Intenso</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>Explorar</span>
-                <select
-                  value={draftExplore ?? trip.routeStyle.explore}
-                  onChange={(e) => setDraftExplore(e.target.value as RouteStyle['explore'])}
-                >
-                  <option value="icons">Iconos</option>
-                  <option value="mixed">Mixto</option>
-                  <option value="local">Local / barrios</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>Comida</span>
-                <select
-                  value={draftFood ?? trip.routeStyle.foodBudget}
-                  onChange={(e) => setDraftFood(e.target.value as RouteStyle['foodBudget'])}
-                >
-                  <option value="low">Económica</option>
-                  <option value="mid">Media</option>
-                  <option value="high">Especial</option>
-                </select>
-              </label>
-              <label className="check" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  checked={rediscover}
-                  onChange={(e) => setRediscover(e.target.checked)}
-                />
-                <span>Buscar sitios de nuevo</span>
-              </label>
+      {styleOpen && draftPrefs && (
+        <div className="panel" style={{ margin: '0 var(--page-pad) 0.75rem' }}>
+          <h3>Ajustar y rearmar plan</h3>
+          <div className="chip-row" style={{ flexWrap: 'wrap', gap: '0.35rem' }}>
+            {STYLE_KEYS.map((k) => (
               <button
+                key={k}
                 type="button"
-                className="btn primary"
-                disabled={generating}
-                style={{ marginTop: '0.75rem' }}
-                onClick={() =>
-                  void replanTripStyle(
-                    tripId,
-                    {
-                      preferences: draftPrefs,
-                      routeStyle: {
-                        pace: draftPace ?? trip.routeStyle.pace,
-                        explore: draftExplore ?? trip.routeStyle.explore,
-                        foodBudget: draftFood ?? trip.routeStyle.foodBudget,
-                      },
-                    },
-                    { rediscover },
-                  ).then(() => setStyleOpen(false))
-                }
+                className={`chip ${draftPrefs[k] ? 'on' : ''}`}
+                onClick={() => setDraftPrefs({ ...draftPrefs, [k]: !draftPrefs[k] })}
               >
-                {generating ? 'Rearmando…' : 'Aplicar y rearmar días'}
+                {PREFERENCE_LABELS[k]}
               </button>
-            </div>
-          )}
+            ))}
+          </div>
+          <label className="field" style={{ marginTop: '0.75rem' }}>
+            <span>Ritmo</span>
+            <select
+              value={draftPace ?? trip.routeStyle.pace}
+              onChange={(e) => setDraftPace(e.target.value as RouteStyle['pace'])}
+            >
+              <option value="relaxed">Tranquilo</option>
+              <option value="normal">Normal</option>
+              <option value="intense">Intenso</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Explorar</span>
+            <select
+              value={draftExplore ?? trip.routeStyle.explore}
+              onChange={(e) => setDraftExplore(e.target.value as RouteStyle['explore'])}
+            >
+              <option value="icons">Iconos</option>
+              <option value="mixed">Mixto</option>
+              <option value="local">Local / barrios</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Comida</span>
+            <select
+              value={draftFood ?? trip.routeStyle.foodBudget}
+              onChange={(e) => setDraftFood(e.target.value as RouteStyle['foodBudget'])}
+            >
+              <option value="low">Económica</option>
+              <option value="mid">Media</option>
+              <option value="high">Especial</option>
+            </select>
+          </label>
+          <label className="check" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={rediscover}
+              onChange={(e) => setRediscover(e.target.checked)}
+            />
+            <span>Buscar sitios de nuevo</span>
+          </label>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={generating}
+            style={{ marginTop: '0.75rem' }}
+            onClick={() =>
+              void replanTripStyle(
+                tripId,
+                {
+                  preferences: draftPrefs,
+                  routeStyle: {
+                    pace: draftPace ?? trip.routeStyle.pace,
+                    explore: draftExplore ?? trip.routeStyle.explore,
+                    foodBudget: draftFood ?? trip.routeStyle.foodBudget,
+                  },
+                },
+                { rediscover },
+              ).then(() => setStyleOpen(false))
+            }
+          >
+            {generating ? 'Rearmando…' : 'Aplicar y rearmar días'}
+          </button>
+        </div>
+      )}
 
-          <div className="toolbar trip-toolbar" style={{ marginTop: '0.75rem' }}>
+      {moreOpen && (
+        <div className="trip-more-panel" role="region" aria-label="Más opciones del viaje">
+          <div className="trip-more-head">
+            <h2>Más opciones</h2>
+            <p className="muted tiny">Llevar a Google Maps, importar sitios, Telegram.</p>
+          </div>
+
+          <div className="toolbar trip-toolbar">
             <button type="button" className="btn primary sm" onClick={exportToGoogleMaps}>
               Llevar a Google Maps
-            </button>
-            <button
-              type="button"
-              className="btn ghost sm"
-              disabled={shareBusy}
-              onClick={() => void onShare()}
-            >
-              {shareBusy ? 'Compartiendo…' : 'Compartir'}
             </button>
             <button type="button" className="btn ghost sm" onClick={() => setImportOpen((v) => !v)}>
               Importar sitios
             </button>
-            <button
-              type="button"
-              className="btn ghost sm"
-              onClick={() => openTelegramBot()}
-            >
+            <button type="button" className="btn ghost sm" onClick={() => openTelegramBot()}>
               Telegram
             </button>
           </div>
-          {shareMsg && <p className="muted tiny">{shareMsg}</p>}
 
           {exportOpen && (
             <div className="panel">
@@ -405,6 +440,15 @@ export function TripPage({ tripId }: { tripId: string }) {
               </button>
             </div>
           )}
+
+          <div className="panel">
+            <h3>Guía de {trip.city.name}</h3>
+            <p className="muted tiny">Museos, shows y monumentos — reservar entrada antes de ir.</p>
+            <GuideLinkBlock title="Museos" items={guide.museums} />
+            <GuideLinkBlock title="Shows y teatro" items={guide.shows} />
+            <GuideLinkBlock title="Monumentos" items={guide.monuments} />
+            <GuideLinkBlock title="Más links" items={guide.extra} />
+          </div>
 
           {importOpen && (
             <div className="panel">
@@ -444,63 +488,35 @@ export function TripPage({ tripId }: { tripId: string }) {
         </div>
       )}
 
-      <header className="r3-trip-head">
-        <h1>{trip.title}</h1>
-        <p>
-          {trip.startDate} → {trip.endDate}
-          {trip.logistics?.hotel ? ` · ${trip.logistics.hotel.name}` : ''}
-        </p>
-      </header>
-
-      <div className="r3-trip-budget">
-        <span className="r3-trip-budget-label">Presupuesto orientativo</span>
-        <strong>
-          ~{budget.perPersonPerDayMin}–{budget.perPersonPerDayMax} €/día
-        </strong>
-        <span className="r3-trip-budget-sub">
-          total ~{budget.totalMin}–{budget.totalMax} € · {budget.nights} noches
-        </span>
-      </div>
-
-      <nav className="r3-trip-tabs" aria-label="Secciones del viaje">
-        {(
+      <SegmentedTabs
+        tabs={
           [
             { id: 'map' as const, label: 'Mapa' },
             { id: 'days' as const, label: 'Días' },
             { id: 'hotel' as const, label: 'Hotel' },
             { id: 'food' as const, label: 'Comer' },
           ] as const
-        ).map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={tripTab === t.id ? 'on' : ''}
-            onClick={() => {
-              setTripTab(t.id)
-              if (t.id === 'hotel') setVenueKind('hotel')
-              else if (t.id === 'food') setVenueKind('restaurant')
-              else setVenueKind(null)
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
+        }
+        value={tripTab}
+        onChange={(id) => {
+          setTripTab(id)
+          if (id === 'hotel') setVenueKind('hotel')
+          else if (id === 'food') setVenueKind('restaurant')
+          else setVenueKind(null)
+        }}
+        ariaLabel="Secciones del viaje"
+      />
 
-      <div className="r3-trip-layout">
-        <div className="r3-trip-map-col">
-          <div className="r3-trip-map-wrap">
-            <div className="r3-trip-map-inner">
+      <div className="ui-trip-layout">
+        <div className="ui-trip-map-wrap">
               <TripMap
                 stops={mapStops.length ? mapStops : allStops.slice(0, 40)}
                 height="360px"
                 showLegend
               />
-            </div>
-          </div>
         </div>
 
-        <div className="r3-trip-body">
+        <div className="ui-trip-body">
           {tripTab === 'map' ? (
             <p className="muted tiny trip-map-hint">
               Tocá un pin para fotos. Cambiá a Días para el itinerario.
@@ -518,7 +534,7 @@ export function TripPage({ tripId }: { tripId: string }) {
                 className="btn ghost sm"
                 onClick={() =>
                   setView({
-                    name: 'day',
+                    name: 'today',
                     tripId: trip.id,
                     dayId: offlineForThisTrip.dayId,
                   })
@@ -530,29 +546,14 @@ export function TripPage({ tripId }: { tripId: string }) {
           ) : null}
 
           <div className="trip-transit-strip rd-pill-row" aria-label="Transporte local">
-            <a
-              className="btn ghost sm"
-              href={guide.transportPlannerUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a className="btn ghost sm" href={guide.transportPlannerUrl} target="_blank" rel="noreferrer">
               Metro / bus
             </a>
-            <a
-              className="btn ghost sm"
-              href={guide.transportTicketUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a className="btn ghost sm" href={guide.transportTicketUrl} target="_blank" rel="noreferrer">
               Billetes
             </a>
             {guide.transportMapUrl ? (
-              <a
-                className="btn ghost sm"
-                href={guide.transportMapUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a className="btn ghost sm" href={guide.transportMapUrl} target="_blank" rel="noreferrer">
                 Mapa red
               </a>
             ) : null}
@@ -641,31 +642,17 @@ export function TripPage({ tripId }: { tripId: string }) {
           {venueKind && (
             <VenueFinder
               kind={venueKind}
-              lat={
-                venueKind === 'hotel'
-                  ? hotelSearchPoint.lat
-                  : (trip.logistics?.hotel?.lat ?? trip.city.lat)
-              }
-              lng={
-                venueKind === 'hotel'
-                  ? hotelSearchPoint.lng
-                  : (trip.logistics?.hotel?.lng ?? trip.city.lng)
-              }
+              lat={venueKind === 'hotel' ? hotelSearchPoint.lat : (trip.logistics?.hotel?.lat ?? trip.city.lat)}
+              lng={venueKind === 'hotel' ? hotelSearchPoint.lng : (trip.logistics?.hotel?.lng ?? trip.city.lng)}
               city={trip.city.name}
               checkin={trip.startDate}
               checkout={trip.endDate}
-              nearLabel={
-                venueKind === 'hotel' ? 'Cerca del centro de vuestra ruta' : undefined
-              }
+              nearLabel={venueKind === 'hotel' ? 'Cerca del centro de vuestra ruta' : undefined}
               onClose={() => setVenueKind(null)}
               onAdd={
                 venueKind === 'hotel'
                   ? (v) => {
-                      setTripHotel(trip.id, {
-                        name: v.name,
-                        lat: v.lat,
-                        lng: v.lng,
-                      })
+                      setTripHotel(trip.id, { name: v.name, lat: v.lat, lng: v.lng })
                       setHotelBannerDismissed(true)
                       setVenueKind(null)
                     }
@@ -675,12 +662,12 @@ export function TripPage({ tripId }: { tripId: string }) {
           )}
 
         {(tripTab === 'days' || tripTab === 'map') && (
-        <section className="r3-trip-days">
+        <section className="ui-trip-days">
           <h2>Días del viaje</h2>
-          <p className="r3-trip-days-sub">
-            {trip.days.length} días · {visitStops.length} paradas · tocá un día para el mapa detalle
+          <p className="muted tiny">
+            {trip.days.length} días · {visitStops.length} paradas
           </p>
-          <ul className="r3-trip-day-list">
+          <ul className="ui-day-list">
             {trip.days.map((day) => {
               const visits = [...day.stops]
                 .filter((s) => !s.isHotel)
@@ -693,40 +680,32 @@ export function TripPage({ tripId }: { tripId: string }) {
                     : null
               return (
                 <li key={day.id}>
-                  <article className={`r3-trip-day c-${(trip.days.indexOf(day) % 5) + 1}`}>
+                  <article className="ui-day-item">
                     <button
                       type="button"
                       className="day-summary-main"
-                      onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
+                      onClick={() => setView({ name: 'today', tripId: trip.id, dayId: day.id })}
                     >
-                      <div className="day-summary-top">
+                      <div className="ui-day-item-head">
                         <strong>{day.label}</strong>
-                        <span className="day-meta-pills">
-                          {tag ? <span className="day-pill tag">{tag}</span> : null}
-                          <span className="day-pill count">
+                        <span>
+                          {tag ? <span className="ui-pill">{tag}</span> : null}
+                          <span className="muted tiny">
+                            {' '}
                             {visits.length} sitio{visits.length === 1 ? '' : 's'}
                           </span>
                         </span>
                       </div>
                       {visits.length === 0 ? (
-                        <p className="day-summary-names muted tiny">Sin paradas aún</p>
+                        <p className="muted tiny">Sin paradas aún</p>
                       ) : (
-                        <ol className="day-summary-tl">
+                        <ol className="ui-mini-tl">
                           {visits.slice(0, 4).map((s, i) => (
                             <li key={s.id}>
-                              <span className="day-summary-n">{i + 1}</span>
+                              <span className="ui-stop-n">{i + 1}</span>
                               <span>
-                                {s.suggestedTime ? (
-                                  <em className="day-summary-time">{s.suggestedTime}</em>
-                                ) : null}
+                                {s.suggestedTime ? <em>{s.suggestedTime} </em> : null}
                                 {s.name.replace(/\s*\/.*$/, '').slice(0, 32)}
-                                {s.transitMode && i < Math.min(3, visits.length - 1) ? (
-                                  <span className="muted tiny">
-                                    {' '}
-                                    → {TRANSIT_MODE_LABELS[s.transitMode]}
-                                    {s.minutesToNext != null ? ` ${s.minutesToNext}'` : ''}
-                                  </span>
-                                ) : null}
                               </span>
                             </li>
                           ))}
@@ -736,7 +715,7 @@ export function TripPage({ tripId }: { tripId: string }) {
                         </ol>
                       )}
                     </button>
-                    <div className="day-summary-actions">
+                    <div className="ui-day-actions">
                       <a
                         className="btn ghost sm"
                         href={googleMapsDirectionsUrl(day.stops)}
@@ -749,7 +728,7 @@ export function TripPage({ tripId }: { tripId: string }) {
                       <button
                         type="button"
                         className="btn primary sm"
-                        onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
+                        onClick={() => setView({ name: 'today', tripId: trip.id, dayId: day.id })}
                       >
                         Ver día
                       </button>

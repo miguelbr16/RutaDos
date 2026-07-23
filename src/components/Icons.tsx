@@ -22,6 +22,14 @@ export type IconName =
   | 'close'
   | 'trash'
   | 'arrow-right'
+  | 'suitcase'
+  | 'calendar'
+  | 'sun'
+  | 'chat'
+  | 'send'
+  | 'share'
+  | 'pin'
+  | 'sliders'
 
 const PATHS: Record<IconName, string | string[]> = {
   map: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7',
@@ -41,6 +49,17 @@ const PATHS: Record<IconName, string | string[]> = {
   close: 'M18 6L6 18M6 6l12 12',
   trash: 'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6',
   'arrow-right': 'M5 12h14M13 6l6 6-6 6',
+  suitcase: 'M9 7V5a3 3 0 016 0v2M4 7h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7zM4 12h16',
+  calendar: 'M8 2v4M16 2v4M4 10h16M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
+  sun: [
+    'M12 8a4 4 0 100 8 4 4 0 000-8z',
+    'M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  ],
+  chat: 'M21 11.5a8.4 8.4 0 01-1.2 4.4L21 20l-4.2-1.1a8.4 8.4 0 11-.3-13.2A8.4 8.4 0 0121 11.5z',
+  send: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
+  share: 'M4 12v6a2 2 0 002 2h12a2 2 0 002-2v-6M16 6l-4-4-4 4M12 2v13',
+  pin: 'M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z M12 12a2 2 0 100-4 2 2 0 000 4z',
+  sliders: 'M4 6h16M4 12h16M4 18h16M8 4v4M14 10v4M10 16v4',
 }
 
 export function Icon({ name, size = 20, className, strokeWidth = 1.75 }: IconProps) {

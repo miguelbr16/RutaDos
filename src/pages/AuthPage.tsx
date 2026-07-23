@@ -17,7 +17,7 @@ export function AuthPage() {
   if (!isSupabaseConfigured) {
     return (
       <div className="page narrow">
-        <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'home' })}>
+        <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'trips' })}>
           ← Inicio
         </button>
         <h1>Cuenta pareja</h1>
@@ -49,7 +49,7 @@ export function AuthPage() {
 
   return (
     <div className="page narrow">
-      <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'home' })}>
+      <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'trips' })}>
         ← Inicio
       </button>
       <p className="brand small">RutaDos</p>

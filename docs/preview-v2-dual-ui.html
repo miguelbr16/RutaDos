@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RutaDos — Mock dual (Composer) · claro + Hoy oscuro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --light-bg: #fafafa;
+      --light-surface: #fff;
+      --light-ink: #0f1419;
+      --light-muted: #6b7280;
+      --light-line: rgba(15, 20, 25, 0.08);
+      --accent: #ff5a3c;
+      --navy: #1a2b4a;
+      --accent-soft: rgba(255, 90, 60, 0.12);
+      --map-shadow: 0 8px 32px rgba(26, 43, 74, 0.12);
+      --card-shadow: 0 4px 20px rgba(15, 20, 25, 0.06);
+      --r-sm: 12px;
+      --r: 20px;
+      --r-lg: 24px;
+      --font: "Plus Jakarta Sans", system-ui, sans-serif;
+      --display: "Instrument Serif", Georgia, serif;
+      /* Hoy oscuro */
+      --dark-bg: #0f1729;
+      --dark-surface: #1a2438;
+      --dark-surface-2: #232f47;
+      --dark-ink: #f1f5f9;
+      --dark-muted: #94a3b8;
+      --dark-line: rgba(255, 255, 255, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font); background: #dfe3ea; color: var(--light-ink); min-height: 100vh; }
+
+    .wrap { max-width: 1420px; margin: 0 auto; padding: 1rem 1.25rem 2.5rem; }
+    .top { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem; }
+    .top h1 { margin: 0; font-family: var(--display); font-size: 1.45rem; font-weight: 400; }
+    .top p { margin: 0.3rem 0 0; color: var(--light-muted); font-size: 0.86rem; max-width: 46rem; line-height: 1.5; }
+    .seg { display: flex; flex-wrap: wrap; gap: 0.3rem; background: #fff; padding: 0.28rem; border-radius: 999px; border: 1px solid var(--light-line); }
+    .seg button { border: 0; background: transparent; border-radius: 999px; padding: 0.4rem 0.8rem; font: inherit; font-size: 0.8rem; font-weight: 600; color: var(--light-muted); cursor: pointer; }
+    .seg button.on { background: var(--navy); color: #fff; }
+
+    .grid { display: grid; grid-template-columns: 1fr 300px; gap: 1.25rem; }
+    @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+
+    .aside {
+      background: #fff; border: 1px solid var(--light-line); border-radius: var(--r);
+      padding: 1rem; font-size: 0.82rem; position: sticky; top: 1rem;
+      box-shadow: var(--card-shadow);
+    }
+    .aside .tag { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+    .aside h2 { margin: 0.35rem 0 0.5rem; font-family: var(--display); font-size: 1.1rem; font-weight: 400; }
+    .aside ul { margin: 0; padding-left: 1rem; color: var(--light-muted); line-height: 1.55; }
+    .aside .src { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--light-line); font-size: 0.72rem; color: var(--light-muted); }
+
+    .frame-mobile, .frame-desktop, .frame-both { display: none; }
+    body[data-device="mobile"] .frame-mobile { display: block; }
+    body[data-device="desktop"] .frame-desktop { display: block; }
+    body[data-device="both"] .frame-both { display: grid; grid-template-columns: minmax(280px, 390px) 1fr; gap: 1rem; }
+    @media (max-width: 900px) { body[data-device="both"] .frame-both { grid-template-columns: 1fr; } }
+    .lbl { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--light-muted); margin: 0 0 0.4rem 0.25rem; }
+
+    .phone {
+      width: min(100%, 390px); height: 844px; margin: 0 auto; background: var(--light-bg);
+      border-radius: 40px; border: 10px solid #111; overflow: hidden; position: relative;
+      box-shadow: 0 24px 60px rgba(15, 23, 41, 0.22);
+    }
+    .notch { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 118px; height: 26px; background: #111; border-radius: 13px; z-index: 99; }
+
+    .browser { background: #fff; border-radius: var(--r); border: 1px solid var(--light-line); overflow: hidden; box-shadow: var(--map-shadow); }
+    .bchrome { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.85rem; background: #f3f4f6; border-bottom: 1px solid var(--light-line); }
+    .bchrome i { width: 9px; height: 9px; border-radius: 50%; background: #cbd5e1; display: block; }
+    .bchrome .url { flex: 1; margin-left: 0.4rem; background: #fff; border: 1px solid var(--light-line); border-radius: 7px; padding: 0.22rem 0.6rem; font-size: 0.72rem; color: var(--light-muted); }
+
+    .screen { height: 824px; overflow: auto; position: relative; background: var(--light-bg); }
+    .browser .screen { height: 700px; }
+    .screen.theme-dark { background: var(--dark-bg); color: var(--dark-ink); }
+
+    .view { display: none; min-height: 100%; }
+    .view.on { display: block; animation: up 0.28s ease; }
+    @keyframes up { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; } }
+
+    /* —— shared components —— */
+    .wordmark { display: inline-flex; align-items: center; gap: 0.45rem; text-decoration: none; color: inherit; }
+    .mark { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #ff7a62); color: #fff; font-size: 0.7rem; font-weight: 800; display: grid; place-items: center; box-shadow: 0 4px 14px rgba(255, 90, 60, 0.3); }
+    .wm-text { font-weight: 700; font-size: 1.02rem; letter-spacing: -0.03em; }
+    .wm-text em { font-style: normal; color: var(--accent); }
+
+    .btn { appearance: none; border: 0; border-radius: 999px; padding: 0.68rem 1.15rem; font: inherit; font-weight: 600; font-size: 0.88rem; cursor: pointer; }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.ghost { background: var(--light-surface); border: 1px solid var(--light-line); color: var(--navy); }
+    .btn.full { width: 100%; }
+    .btn.sm { padding: 0.42rem 0.75rem; font-size: 0.78rem; }
+    .btn.icon { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-radius: 11px; }
+
+    .chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.32rem 0.7rem; border-radius: 999px; font-size: 0.74rem; font-weight: 600; border: 1px solid var(--light-line); background: #fff; color: var(--navy); white-space: nowrap; }
+    .chip.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .theme-dark .chip { background: var(--dark-surface-2); border-color: var(--dark-line); color: var(--dark-ink); }
+    .theme-dark .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    .tabbar {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 40;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      padding: 0.42rem 0.5rem calc(0.5rem + env(safe-area-inset-bottom, 0));
+      border-top: 1px solid var(--light-line);
+      background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(14px);
+    }
+    .tabbar.dark {
+      background: rgba(15, 23, 41, 0.92); border-top-color: var(--dark-line);
+    }
+    .tabbar button { border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 0.12rem; font: inherit; font-size: 0.6rem; font-weight: 600; color: var(--light-muted); cursor: pointer; }
+    .tabbar.dark button { color: var(--dark-muted); }
+    .tabbar button.on { color: var(--navy); }
+    .tabbar.dark button.on { color: var(--accent); }
+    .tabbar .ico { font-size: 0.95rem; }
+
+    .fab {
+      position: absolute; right: 1rem; bottom: 5.1rem; z-index: 35;
+      width: 54px; height: 54px; border-radius: 50%; border: 0;
+      background: var(--accent); color: #fff; font-size: 1.45rem;
+      box-shadow: 0 8px 22px rgba(255, 90, 60, 0.38); cursor: pointer;
+    }
+
+    .mapbox {
+      border-radius: var(--r-lg); overflow: hidden; position: relative;
+      background: linear-gradient(145deg, #d4e4f4, #b8cfe0);
+      box-shadow: var(--map-shadow);
+    }
+    .mapbox .route-line {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(118deg, transparent 42%, rgba(255, 90, 60, 0.45) 42.5%, rgba(255, 90, 60, 0.45) 43%, transparent 43.5%),
+        radial-gradient(circle at 38% 42%, var(--accent) 0, var(--accent) 5px, transparent 6px),
+        radial-gradient(circle at 52% 54%, var(--navy) 0, var(--navy) 5px, transparent 6px),
+        radial-gradient(circle at 46% 36%, var(--accent) 0, var(--accent) 4px, transparent 5px);
+    }
+    .mapbox.dark-map { background: linear-gradient(145deg, #1e2d45, #152238); }
+    .pin {
+      position: absolute; width: 22px; height: 22px; border-radius: 50%;
+      background: var(--accent); color: #fff; font-size: 0.62rem; font-weight: 800;
+      display: grid; place-items: center; border: 2px solid #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .pin.n2 { background: var(--navy); top: 52%; left: 54%; }
+    .pin.n3 { top: 44%; left: 40%; }
+
+    .display { font-family: var(--display); font-weight: 400; }
+    .muted { color: var(--light-muted); }
+    .theme-dark .muted { color: var(--dark-muted); }
+    .tiny { font-size: 0.74rem; }
+    .sec { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--light-muted); margin: 0 0 0.5rem; }
+
+    /* —— VIAJES (Rhyme + TravelPlan + Polarsteps) —— */
+    .trips { padding: 3rem 1rem 5.4rem; }
+    .trips-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; }
+    .progress-widget {
+      background: #fff; border-radius: var(--r); padding: 0.85rem 1rem;
+      box-shadow: var(--card-shadow); margin-bottom: 0.85rem;
+      border: 1px solid var(--light-line);
+    }
+    .progress-widget .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .progress-widget strong { font-size: 0.88rem; }
+    .progress-bar { height: 6px; background: var(--light-line); border-radius: 99px; overflow: hidden; }
+    .progress-bar i { display: block; height: 100%; width: 67%; background: linear-gradient(90deg, var(--accent), #ff8066); border-radius: 99px; }
+    .progress-meta { display: flex; gap: 0.75rem; margin-top: 0.45rem; font-size: 0.72rem; color: var(--light-muted); }
+
+    .trip-xl {
+      display: block; width: 100%; border: 0; padding: 0; text-align: left; cursor: pointer;
+      border-radius: var(--r-lg); overflow: hidden; height: 188px; position: relative;
+      box-shadow: var(--map-shadow); margin-bottom: 0.85rem;
+    }
+    .trip-xl img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .trip-xl .ov {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent 25%, rgba(15, 20, 25, 0.78));
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 1rem; color: #fff;
+    }
+    .trip-xl .badge { display: inline-block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; background: var(--accent); padding: 0.18rem 0.45rem; border-radius: 999px; width: fit-content; margin-bottom: 0.3rem; }
+    .trip-xl h3 { margin: 0; font-family: var(--display); font-size: 1.65rem; }
+    .trip-xl p { margin: 0.15rem 0 0; font-size: 0.82rem; opacity: 0.92; }
+    .snapshot { font-size: 0.78rem; color: var(--light-muted); font-style: italic; margin: 0 0 0.85rem; padding: 0.55rem 0.75rem; background: var(--accent-soft); border-radius: var(--r-sm); border-left: 3px solid var(--accent); }
+    .trip-scroll { display: flex; gap: 0.6rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 1rem; }
+    .trip-scroll::-webkit-scrollbar { display: none; }
+    .trip-card { flex: 0 0 152px; border: 0; padding: 0; background: #fff; border-radius: var(--r); overflow: hidden; box-shadow: var(--card-shadow); text-align: left; cursor: pointer; }
+    .trip-card img { width: 100%; height: 88px; object-fit: cover; display: block; }
+    .trip-card .b { padding: 0.55rem 0.65rem 0.65rem; }
+    .trip-card strong { display: block; font-size: 0.86rem; }
+    .trip-card span { font-size: 0.72rem; color: var(--light-muted); }
+    .offline-badge { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.68rem; font-weight: 600; color: #059669; background: #ecfdf5; padding: 0.2rem 0.5rem; border-radius: 999px; margin-top: 0.35rem; }
+
+    /* —— WIZARD —— */
+    .wiz {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      color: #fff;
+      background-image:
+        linear-gradient(180deg, rgba(15, 23, 41, 0.2) 0%, rgba(15, 23, 41, 0.55) 40%, rgba(15, 23, 41, 0.95) 100%),
+        url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80");
+      background-size: cover; background-position: center;
+    }
+    .wiz-bar { height: 3px; background: rgba(255,255,255,0.2); margin: 3rem 1rem 0; border-radius: 99px; }
+    .wiz-bar i { display: block; height: 100%; width: 50%; background: var(--accent); border-radius: 99px; }
+    .wiz-body { flex: 1; padding: 0 1rem 1.25rem; display: flex; flex-direction: column; justify-content: flex-end; }
+    .wiz-body h2 { margin: 0 0 0.3rem; font-family: var(--display); font-size: 2rem; line-height: 1.05; }
+    .wiz-input {
+      width: 100%; padding: 0.95rem 1rem; border-radius: 14px; margin-bottom: 0.55rem;
+      border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px); color: #fff; font: inherit;
+    }
+    .cat-row { display: flex; gap: 0.4rem; overflow-x: auto; margin: 0.75rem 0; scrollbar-width: none; }
+    .cat-circle {
+      flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+      font-size: 0.62rem; font-weight: 600; color: rgba(255,255,255,0.85);
+    }
+    .cat-circle i {
+      width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+      font-size: 1.1rem; background: rgba(255,255,255,0.15); border: 2px solid transparent;
+    }
+    .cat-circle.on i { border-color: var(--accent); background: rgba(255,90,60,0.25); }
+
+    /* —— PLAN (Wanderlog + Stippl + Tripsy) —— */
+    .plan { padding: 3rem 1rem 5.4rem; }
+    .plan h2 { margin: 0; font-family: var(--display); font-size: 1.55rem; }
+    .style-pill { font-size: 0.76rem; color: var(--navy); background: #eef2ff; padding: 0.25rem 0.55rem; border-radius: 999px; font-weight: 600; display: inline-block; margin-top: 0.35rem; }
+    .weather-strip {
+      display: flex; gap: 0.35rem; overflow-x: auto; margin: 0.75rem 0; scrollbar-width: none;
+    }
+    .weather-strip::-webkit-scrollbar { display: none; }
+    .wday {
+      flex: 0 0 auto; text-align: center; padding: 0.4rem 0.55rem; border-radius: 12px;
+      background: #fff; border: 1px solid var(--light-line); font-size: 0.68rem; min-width: 48px;
+    }
+    .wday.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .wday strong { display: block; font-size: 0.85rem; }
+    .plan .mapbox { height: 200px; margin: 0.65rem 0; }
+    .budget-break {
+      background: #fff; border-radius: var(--r-sm); padding: 0.75rem; margin: 0.75rem 0;
+      box-shadow: var(--card-shadow); border: 1px solid var(--light-line);
+    }
+    .budget-break .total { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.65rem; }
+    .budget-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; font-size: 0.76rem; }
+    .budget-row .ico { width: 28px; text-align: center; }
+    .budget-row .bar { flex: 1; height: 8px; background: var(--light-line); border-radius: 99px; overflow: hidden; }
+    .budget-row .bar i { display: block; height: 100%; border-radius: 99px; }
+    .budget-row .bar i.tr { width: 35%; background: #6366f1; }
+    .budget-row .bar i.fo { width: 28%; background: var(--accent); }
+    .budget-row .bar i.ho { width: 37%; background: #10b981; }
+    .seg-tabs { display: flex; gap: 0.15rem; padding: 0.2rem; background: rgba(26,43,74,0.06); border-radius: 11px; margin: 0.65rem 0; }
+    .seg-tabs span { flex: 1; text-align: center; padding: 0.38rem; border-radius: 9px; font-size: 0.76rem; font-weight: 600; color: var(--light-muted); }
+    .seg-tabs span.on { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .stop {
+      display: grid; grid-template-columns: 36px 1fr auto; gap: 0.55rem; align-items: center;
+      padding: 0.65rem 0; border-bottom: 1px solid var(--light-line);
+    }
+    .cat-icon {
+      width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+      font-size: 1rem; background: #fef3c7; color: #b45309;
+    }
+    .cat-icon.museum { background: #ede9fe; color: #6d28d9; }
+    .cat-icon.food { background: #ffedd5; color: #c2410c; }
+    .stop strong { font-size: 0.86rem; display: block; }
+    .stop .meta { font-size: 0.72rem; color: var(--light-muted); }
+    .price-tag { font-size: 0.68rem; font-weight: 600; color: #059669; background: #ecfdf5; padding: 0.15rem 0.4rem; border-radius: 6px; white-space: nowrap; }
+    .toolbar { display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0.5rem 0; }
+
+    /* —— HOY OSCURO (YOGO + Behance transport sheet + Tripsy) —— */
+    .hoy { min-height: 100%; padding-bottom: 5.4rem; background: var(--dark-bg); color: var(--dark-ink); }
+    .hoy-map-wrap { padding: 2.85rem 0.75rem 0; }
+    .hoy-map-wrap .mapbox { height: 34vh; min-height: 240px; }
+    .hoy .weather-pill {
+      position: absolute; top: 0.65rem; left: 0.65rem; z-index: 2;
+      padding: 0.32rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600;
+      background: rgba(26, 36, 56, 0.85); color: var(--dark-ink); border: 1px solid var(--dark-line);
+    }
+    .hoy-sheet {
+      margin: -18px 0 0; padding: 0.45rem 1rem 1rem;
+      background: var(--dark-bg); border-radius: var(--r-lg) var(--r-lg) 0 0;
+      border-top: 1px solid var(--dark-line);
+    }
+    .hoy-sheet .handle { width: 34px; height: 4px; background: var(--dark-line); border-radius: 99px; margin: 0.3rem auto 0.75rem; }
+    .hoy-sheet h3 { margin: 0; font-family: var(--display); font-size: 1.3rem; }
+    .place-lg {
+      background: var(--dark-surface); border-radius: var(--r); overflow: hidden;
+      margin: 0.75rem 0; border: 1px solid var(--dark-line);
+    }
+    .place-lg img { width: 100%; height: 120px; object-fit: cover; display: block; }
+    .place-lg .body { padding: 0.75rem 0.85rem; }
+    .place-lg .time-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem; }
+    .place-lg .time { font-size: 0.9rem; font-weight: 700; color: var(--accent); }
+    .place-lg h4 { margin: 0; font-size: 1rem; }
+    .place-lg .meta { font-size: 0.74rem; color: var(--dark-muted); margin-top: 0.2rem; }
+
+    /* Selector transporte — Behance bottom sheet oscuro */
+    .transit-sheet {
+      background: #0a0f18; border-radius: var(--r) var(--r) 0 0;
+      padding: 0.65rem 0.85rem 0.85rem; margin-top: 0.65rem;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .transit-sheet .lbl2 { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dark-muted); margin-bottom: 0.45rem; }
+    .transit-row { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
+    .transit-row::-webkit-scrollbar { display: none; }
+    .transit-opt {
+      flex: 0 0 auto; min-width: 100px; padding: 0.55rem 0.65rem; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+      font-size: 0.72rem; color: var(--dark-muted); cursor: pointer; text-align: left;
+    }
+    .transit-opt.on { border-color: var(--accent); background: rgba(255,90,60,0.12); color: var(--dark-ink); }
+    .transit-opt strong { display: block; font-size: 0.82rem; color: var(--dark-ink); margin-bottom: 0.1rem; }
+    .transit-opt .price { color: var(--accent); font-weight: 600; }
+
+    .daybar {
+      position: absolute; bottom: 4.15rem; left: 0.65rem; right: 0.65rem; z-index: 30;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem;
+      padding: 0.4rem; border-radius: 16px;
+      background: rgba(26, 36, 56, 0.92); backdrop-filter: blur(14px);
+      border: 1px solid var(--dark-line); box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+    }
+    .daybar button {
+      border: 0; background: transparent; color: var(--dark-muted);
+      display: flex; flex-direction: column; align-items: center; gap: 0.08rem;
+      font: inherit; font-size: 0.58rem; font-weight: 600; cursor: pointer;
+    }
+    .daybar button.on { color: var(--accent); }
+
+    /* —— DESKTOP —— */
+    .dnav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.7rem 1.5rem; background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(14px); border-bottom: 1px solid var(--light-line);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .dnav.dark { background: rgba(15,23,41,0.94); border-bottom-color: var(--dark-line); }
+    .dnav.dark .wm-text { color: var(--dark-ink); }
+    .dnav-tabs { display: flex; gap: 0.2rem; }
+    .dnav-tabs button {
+      border: 0; background: transparent; padding: 0.42rem 0.8rem; border-radius: 999px;
+      font: inherit; font-size: 0.82rem; font-weight: 600; color: var(--light-muted); cursor: pointer;
+    }
+    .dnav-tabs button.on { background: var(--navy); color: #fff; }
+    .dnav.dark .dnav-tabs button { color: var(--dark-muted); }
+    .dnav.dark .dnav-tabs button.on { background: var(--accent); color: #fff; }
+
+    .d-trips { padding: 1.5rem 2rem; max-width: 1140px; margin: 0 auto; }
+    .d-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.25rem; margin-top: 1rem; }
+    .d-plan { display: grid; grid-template-columns: 3fr 2fr; min-height: 640px; }
+    .d-plan-map { padding: 1rem 0 1rem 1rem; position: sticky; top: 3.2rem; }
+    .d-plan-map .mapbox { height: 580px; }
+    .d-plan-side { padding: 1rem 1.25rem 1rem 0.5rem; overflow: auto; max-height: 640px; }
+
+    .d-hoy {
+      display: grid; grid-template-columns: 1.05fr 0.95fr; min-height: 640px;
+      background: var(--dark-bg); color: var(--dark-ink);
+    }
+    .d-hoy-map { padding: 1rem 0 1rem 1rem; }
+    .d-hoy-map .mapbox { height: 580px; }
+    .d-hoy-side { padding: 1rem 1.25rem 1rem 0.5rem; overflow: auto; }
+    .d-hoy-top {
+      grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center;
+      padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--dark-line);
+    }
+
+    .d-wiz { display: grid; grid-template-columns: 1fr 1fr; min-height: 640px; }
+    .d-wiz-photo {
+      background:
+        linear-gradient(180deg, transparent, rgba(15,23,41,0.6)),
+        url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80") center/cover;
+      position: relative;
+    }
+    .d-wiz-photo .cap { position: absolute; bottom: 0; left: 0; right: 0; padding: 2rem; color: #fff; }
+    .d-wiz-form { padding: 2rem 2.25rem; display: flex; flex-direction: column; justify-content: center; max-width: 440px; }
+  </style>
+</head>
+<body data-device="both">
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>RutaDos — Mock Composer (dual + extras App Store/Behance)</h1>
+        <p>Plan/Viajes/Wizard <strong>claro</strong> · Hub <strong>Hoy oscuro</strong>. Incluye lo que Sonnet no cubrió: widget progreso viaje (TravelPlan), línea de ruta Wanderlog, weather strip Tripsy, snapshot estilo Polarsteps, budget por categoría Stippl, precio flexible GetYourGuide, offline TripIt, categorías círculo Behance, sheet transporte oscuro.</p>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.45rem">
+        <div class="seg" id="devSeg">
+          <button type="button" data-d="mobile">Solo móvil</button>
+          <button type="button" data-d="desktop">Solo PC</button>
+          <button type="button" class="on" data-d="both">Ambos</button>
+        </div>
+        <div class="seg" id="viewSeg">
+          <button type="button" class="on" data-v="trips">Viajes</button>
+          <button type="button" data-v="wizard">Wizard</button>
+          <button type="button" data-v="plan">Plan</button>
+          <button type="button" data-v="hoy">Hoy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div id="frames-host"></div>
+
+      <aside class="aside">
+        <span class="tag">Mock Composer</span>
+        <h2>Extras vs informe Sonnet</h2>
+        <ul>
+          <li><strong>TravelPlan:</strong> widget progreso viaje activo</li>
+          <li><strong>Wanderlog:</strong> pins numerados + línea ruta + export Maps</li>
+          <li><strong>Tripsy:</strong> tira clima 5 días</li>
+          <li><strong>Polarsteps:</strong> snapshot "encaja con tu estilo"</li>
+          <li><strong>Stippl:</strong> budget barras transporte/comida/hotel</li>
+          <li><strong>GetYourGuide:</strong> badge precio/reserva flexible</li>
+          <li><strong>TripIt:</strong> badge listo offline</li>
+          <li><strong>Behance Stubbs:</strong> sheet transporte oscuro icono+tiempo+€</li>
+          <li><strong>Modo dual:</strong> tab bar oscura en Hoy</li>
+        </ul>
+        <p class="src">Comparar con preview-v2-ui.html (todo claro) y el mock de Sonnet.</p>
+      </aside>
+    </div>
+  </div>
+
+  <template id="tpl-phone-shell"><div class="phone"><div class="notch"></div><div class="screen" data-root></div></div></template>
+  <template id="tpl-browser-shell"><div class="browser"><div class="bchrome"><i></i><i></i><i></i><div class="url"></div></div><div class="screen" data-root></div></div></template>
+
+  <script>
+    const V = ['trips','wizard','plan','hoy'];
+    let view = 'trips';
+
+    function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
+
+    function mobileTrips() {
+      return `<div class="view on" data-v="trips"><div class="trips">
+        <div class="trips-head"><a class="wordmark" href="#"><span class="mark">RD</span><span class="wm-text">Ruta<em>Dos</em></span></a><button class="btn ghost icon">⚙</button></div>
+        <div class="progress-widget"><div class="row"><strong>Londres · día 2 de 3</strong><span class="tiny muted">67%</span></div><div class="progress-bar"><i></i></div><div class="progress-meta"><span>6/9 paradas hoy</span><span class="offline-badge">● Offline listo</span></div></div>
+        <p class="snapshot">Encaja con tu estilo: clásico + foodie · ritmo tranquilo</p>
+        <button class="trip-xl"><img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80" alt=""/><div class="ov"><span class="badge">En curso</span><h3>Londres</h3><p>22–24 jul · 15 paradas</p></div></button>
+        <p class="sec">Otros viajes</p><div class="trip-scroll">
+          <button class="trip-card"><img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=400&q=70" alt=""/><div class="b"><strong>Roma</strong><span>Borrador</span></div></button>
+          <button class="trip-card"><img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=70" alt=""/><div class="b"><strong>París</strong><span>Ago</span></div></button>
+        </div>
+        <p class="sec">Explorar · Rhyme-style chips</p>
+        <div style="display:flex;gap:0.35rem;overflow-x:auto"><span class="chip on">Londres</span><span class="chip">París</span><span class="chip">Roma</span></div>
+      </div><button class="fab">+</button><nav class="tabbar"><button class="on"><span class="ico">✈</span>Viajes</button><button><span class="ico">📋</span>Plan</button><button><span class="ico">📍</span>Hoy</button><button><span class="ico">⚙</span>Ajustes</button></nav></div>`;
+    }
+
+    function mobileWizard() {
+      return `<div class="view on" data-v="wizard"><div class="wiz"><div class="wiz-bar"><i></i></div><div class="wiz-body">
+        <span class="sec" style="color:rgba(255,255,255,0.7)">Paso 1 de 2</span>
+        <h2 class="display">¿A dónde vas?</h2>
+        <p class="tiny" style="opacity:0.85;margin:0 0 0.85rem">Foto 100% — sin bloque blanco</p>
+        <input class="wiz-input" value="Londres"/><input class="wiz-input" value="22 – 24 jul"/>
+        <p class="sec" style="color:rgba(255,255,255,0.65);margin-top:0.5rem">Intereses · Behance círculos</p>
+        <div class="cat-row">
+          <div class="cat-circle on"><i>🏛</i>Cultura</div><div class="cat-circle on"><i>🍽</i>Comer</div><div class="cat-circle"><i>🌳</i>Naturaleza</div><div class="cat-circle"><i>🎭</i>Noche</div>
+        </div>
+        <button class="btn primary full" style="margin-top:0.65rem">Continuar</button>
+      </div></div></div>`;
+    }
+
+    function mobilePlan() {
+      return `<div class="view on" data-v="plan"><div class="plan">
+        <h2 class="display">Londres</h2><span class="style-pill">Clásico + foodie</span>
+        <div class="weather-strip"><div class="wday"><span>Mi</span><strong>18°</strong></div><div class="wday on"><span>Ju</span><strong>21°</strong></div><div class="wday"><span>Vi</span><strong>19°</strong></div><div class="wday"><span>Sá</span><strong>17°</strong></div><div class="wday"><span>Do</span><strong>16°</strong></div></div>
+        <div class="mapbox"><div class="route-line"></div><span class="pin" style="top:38%;left:42%">1</span><span class="pin n2">2</span><span class="pin n3">3</span></div>
+        <div class="seg-tabs"><span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span></div>
+        <div class="budget-break"><div class="total">~285 € total · 3 días</div>
+          <div class="budget-row"><span class="ico">🚇</span><span style="width:3.5rem">Transp.</span><div class="bar"><i class="tr"></i></div><span>35%</span></div>
+          <div class="budget-row"><span class="ico">🍽</span><span style="width:3.5rem">Comida</span><div class="bar"><i class="fo"></i></div><span>28%</span></div>
+          <div class="budget-row"><span class="ico">🛏</span><span style="width:3.5rem">Hotel</span><div class="bar"><i class="ho"></i></div><span>37%</span></div>
+        </div>
+        <div class="toolbar"><button class="btn ghost sm">↗ Google Maps</button><button class="btn ghost sm">Compartir</button></div>
+        <div class="stop"><span class="cat-icon museum">🏛</span><div><strong>National Gallery</strong><span class="meta">10:00 · 45 min</span></div><span class="price-tag">Gratis</span></div>
+        <div class="stop"><span class="cat-icon">👑</span><div><strong>Buckingham</strong><span class="meta">11:30 · 18 min a pie</span></div></div>
+        <div class="stop"><span class="cat-icon food">🍽</span><div><strong>Dishoom</strong><span class="meta">13:00 · reserva sugerida</span></div><span class="price-tag">~25€ flex</span></div>
+      </div><nav class="tabbar"><button><span class="ico">✈</span>Viajes</button><button class="on"><span class="ico">📋</span>Plan</button><button><span class="ico">📍</span>Hoy</button><button><span class="ico">⚙</span>Ajustes</button></nav></div>`;
+    }
+
+    function mobileHoy() {
+      return `<div class="view on" data-v="hoy"><div class="hoy theme-dark">
+        <div class="hoy-map-wrap"><div class="mapbox dark-map"><span class="weather-pill">☁ 14–21° · Tripsy</span><div class="route-line"></div><span class="pin" style="top:40%;left:44%">1</span><span class="pin n2">2</span></div></div>
+        <nav class="daybar"><button class="on"><span class="ico">🗺</span>Maps</button><button><span class="ico">🚇</span>Metro</button><button><span class="ico">🍽</span>Comer</button><button><span class="ico">▶</span>En ruta</button></nav>
+        <div class="hoy-sheet"><div class="handle"></div><h3 class="display">Jueves 23 · parada 1</h3><p class="tiny muted">Modo oscuro · contraste alto en calle</p>
+          <div class="place-lg"><img src="https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=800&q=70" alt=""/><div class="body">
+            <div class="time-row"><span class="time">10:00 · 45′</span><span class="chip on">Ahora</span></div>
+            <h4>National Gallery</h4><p class="meta">Trafalgar Sq · Museo · ★ 4.8</p>
+            <div class="transit-sheet"><p class="lbl2">Siguiente tramo · Behance sheet</p><div class="transit-row">
+              <button class="transit-opt on"><strong>🚶 A pie</strong>12 min<br/><span class="price">Gratis</span></button>
+              <button class="transit-opt"><strong>🚇 Metro</strong>8 min<br/><span class="price">~£2.80</span></button>
+              <button class="transit-opt"><strong>🚌 Bus</strong>14 min<br/><span class="price">~£1.75</span></button>
+            </div></div>
+          </div></div>
+          <div class="place-lg" style="opacity:0.75"><img src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?auto=format&fit=crop&w=800&q=70" alt="" style="height:80px"/><div class="body"><span class="time">11:30</span><h4 style="margin-top:0.25rem">Buckingham Palace</h4><p class="meta">Siguiente parada</p></div></div>
+        </div>
+      </div><nav class="tabbar dark"><button><span class="ico">✈</span>Viajes</button><button><span class="ico">📋</span>Plan</button><button class="on"><span class="ico">📍</span>Hoy</button><button><span class="ico">⚙</span>Ajustes</button></nav></div>`;
+    }
+
+    function desktopNav(dark) {
+      return `<header class="dnav${dark ? ' dark' : ''}"><a class="wordmark" href="#"><span class="mark">RD</span><span class="wm-text">Ruta<em>Dos</em></span></a>
+        <nav class="dnav-tabs"><button data-dv="trips">Viajes</button><button data-dv="plan">Plan</button><button data-dv="hoy">Hoy</button><button data-dv="wizard">Wizard</button><button>Ajustes</button></nav>
+        <button class="btn primary sm">+ Nuevo viaje</button></header>`;
+    }
+
+    function desktopTrips() {
+      return desktopNav(false) + `<div class="view on" data-v="trips"><div class="d-trips"><h2 class="display" style="margin:0;font-size:2rem">Tus viajes</h2>
+        <div class="progress-widget" style="margin-top:1rem;max-width:480px"><div class="row"><strong>Londres · 67% del viaje</strong></div><div class="progress-bar"><i></i></div></div>
+        <div class="d-grid"><button class="trip-xl" style="height:280px;margin:0"><img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80" alt=""/><div class="ov"><span class="badge">Activo</span><h3>Londres</h3><p>Snapshot Polarsteps: clásico + foodie</p></div></button>
+        <div><p class="sec">Próximos</p><button class="trip-card" style="display:grid;grid-template-columns:100px 1fr;width:100%;flex:none;margin-bottom:0.5rem"><img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=200&q=70" alt="" style="height:76px"/><div class="b"><strong>Roma</strong><span>4 días</span></div></button>
+        <span class="offline-badge">● Pack offline descargado</span></div></div></div>`;
+    }
+
+    function desktopWizard() {
+      return desktopNav(false) + `<div class="view on" data-v="wizard"><div class="d-wiz"><div class="d-wiz-photo"><div class="cap"><h3 class="display" style="margin:0;font-size:2rem">Londres</h3><p style="margin:0.35rem 0 0">Panel foto sticky desktop</p></div></div>
+        <div class="d-wiz-form"><div class="wiz-bar" style="margin:0 0 1rem;background:var(--light-line)"><i></i></div><h2 class="display">¿A dónde vas?</h2>
+        <input class="wiz-input" style="background:#fff;color:var(--light-ink);border-color:var(--light-line)" value="Londres"/>
+        <div class="cat-row" style="flex-wrap:wrap"><div class="cat-circle on"><i style="background:#fef3c7;color:#000">🏛</i>Cultura</div><div class="cat-circle on"><i style="background:#ffedd5;color:#000">🍽</i>Comer</div></div>
+        <button class="btn primary">Continuar</button></div></div></div>`;
+    }
+
+    function desktopPlan() {
+      return desktopNav(false) + `<div class="view on" data-v="plan"><div class="d-plan"><div class="d-plan-map"><div class="mapbox"><div class="route-line"></div><span class="pin" style="top:36%;left:40%">1</span><span class="pin n2">2</span><span class="pin n3">3</span></div></div>
+        <div class="d-plan-side"><h2 class="display" style="margin:0">Londres</h2><div class="weather-strip" style="margin-top:0.65rem"><div class="wday on"><strong>21°</strong> Ju</div><div class="wday"><strong>19°</strong> Vi</div></div>
+        <div class="budget-break"><div class="total">285 € · Stippl breakdown</div><div class="budget-row"><span class="ico">🚇</span><div class="bar"><i class="tr"></i></div></div><div class="budget-row"><span class="ico">🍽</span><div class="bar"><i class="fo"></i></div></div></div>
+        <div class="toolbar"><button class="btn ghost sm">↗ Wanderlog export</button></div>
+        <div class="stop"><span class="cat-icon museum">🏛</span><div><strong>National Gallery</strong><span class="meta">10:00</span></div></div></div></div></div>`;
+    }
+
+    function desktopHoy() {
+      return desktopNav(true) + `<div class="view on" data-v="hoy"><div class="d-hoy">
+        <div class="d-hoy-top"><div><h2 class="display" style="margin:0">Jueves 23</h2><p class="tiny muted">Hub oscuro en desktop también</p></div>
+          <div style="display:flex;gap:0.35rem"><button class="btn ghost sm" style="background:var(--dark-surface-2);border-color:var(--dark-line);color:var(--dark-ink)">🗺 Maps</button><button class="btn primary sm">▶ En ruta</button></div></div>
+        <div class="d-hoy-map"><div class="mapbox dark-map" style="height:100%"><span class="weather-pill">☁ 14–21°</span><div class="route-line"></div><span class="pin" style="top:42%;left:45%">1</span></div></div>
+        <div class="d-hoy-side"><div class="place-lg"><img src="https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=800&q=70" alt=""/><div class="body"><span class="time">10:00</span><h4>National Gallery</h4>
+          <div class="transit-sheet"><p class="lbl2">Transporte</p><div class="transit-row"><button class="transit-opt on"><strong>🚶 12 min</strong>Gratis</button><button class="transit-opt"><strong>🚇 8 min</strong>~£2.80</button></div></div>
+        </div></div></div></div>`;
+    }
+
+    const mobileFns = { trips: mobileTrips, wizard: mobileWizard, plan: mobilePlan, hoy: mobileHoy };
+    const desktopFns = { trips: desktopTrips, wizard: desktopWizard, plan: desktopPlan, hoy: desktopHoy };
+
+    function mountPhone(root) {
+      root.className = 'screen' + (view === 'hoy' ? ' theme-dark' : '');
+      root.innerHTML = mobileFns[view]();
+    }
+
+    function mountBrowser(root) {
+      root.className = 'screen' + (view === 'hoy' ? ' theme-dark' : '');
+      root.innerHTML = desktopFns[view]();
+      root.querySelectorAll('[data-dv]').forEach(b => b.classList.toggle('on', b.dataset.dv === view));
+    }
+
+    function render() {
+      const host = document.getElementById('frames-host');
+      const mode = document.body.dataset.device;
+      host.innerHTML = '';
+
+      if (mode === 'mobile' || mode === 'both') {
+        const wrap = el('<div><p class="lbl">Web móvil</p></div>');
+        const shell = document.getElementById('tpl-phone-shell').content.cloneNode(true);
+        mountPhone(shell.querySelector('[data-root]'));
+        wrap.appendChild(shell);
+        host.appendChild(wrap);
+      }
+      if (mode === 'desktop' || mode === 'both') {
+        const wrap = el('<div><p class="lbl">Web PC · 1280</p></div>');
+        const shell = document.getElementById('tpl-browser-shell').content.cloneNode(true);
+        shell.querySelector('.url').textContent = view === 'hoy' ? 'localhost:5173/hoy — tema oscuro' : 'localhost:5173';
+        mountBrowser(shell.querySelector('[data-root]'));
+        wrap.appendChild(shell);
+        if (mode === 'both') wrap.style.minWidth = '0';
+        host.appendChild(wrap);
+      }
+    }
+
+    document.getElementById('devSeg').addEventListener('click', e => {
+      const b = e.target.closest('[data-d]'); if (!b) return;
+      document.body.dataset.device = b.dataset.d;
+      document.querySelectorAll('#devSeg button').forEach(x => x.classList.toggle('on', x === b));
+      render();
+    });
+    document.getElementById('viewSeg').addEventListener('click', e => {
+      const b = e.target.closest('[data-v]'); if (!b) return;
+      view = b.dataset.v;
+      document.querySelectorAll('#viewSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === view));
+      render();
+    });
+    document.addEventListener('click', e => {
+      const b = e.target.closest('[data-dv]'); if (b) { view = b.dataset.dv; document.querySelectorAll('#viewSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === view)); render(); }
+    });
+
+    render();
+  </script>
+</body>
+</html>

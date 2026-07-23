@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_PREFERENCES,
   PREFERENCE_LABELS,
@@ -12,7 +12,7 @@ import { useAppStore } from '../store'
 import { searchDestinations, searchHotels, searchCityPlaces, type PlaceSuggestion } from '../lib/geocode'
 import { TripDateFields } from '../components/TripDateFields'
 import { TripMap } from '../components/TripMap'
-import { DestinationGrid } from '../components/DestinationGrid'
+import { DestGrid, ProgressDots } from '../ui'
 import { Icon, type IconName } from '../components/Icons'
 import { findAirportsForCity, type AirportOption } from '../lib/airports'
 import { estimateTripBudget } from '../lib/budget'
@@ -366,7 +366,7 @@ export function WizardPage() {
   }, [wizard.hotelQuery, wizard.cityQuery, wizard.hotelPick, wizard.cityPick, view, patchWizard])
 
   useEffect(() => {
-    if (view.name !== 'wizard' || view.step !== 2) return
+    if (view.name !== 'wizard' || view.step !== 1) return
     const q = wizard.mustVisitQuery.trim()
     if (q.length < 2 || !wizard.cityPick) {
       setMustSuggestions([])
@@ -488,9 +488,9 @@ export function WizardPage() {
   function renderCityHighlights(className?: string) {
     if (!wizard.cityPick || !typicalSites.length) return null
     return (
-      <div className={className ?? 'r3-wiz-highlights-block'}>
-        <p className="r3-wiz-section-label">Sitios típicos</p>
-        <ul className="r3-wiz-highlights">
+      <div className={className ?? 'ui-wiz-highlights-block'}>
+        <p className="ui-wiz-section-label">Sitios típicos</p>
+        <ul className="ui-wiz-highlights">
           {typicalSites.map((site) => {
             const picked = site.canAdd
               ? (wizard.mustVisits ?? []).some(
@@ -501,7 +501,7 @@ export function WizardPage() {
               <li key={site.name}>
                 <button
                   type="button"
-                  className={picked ? 'r3-wiz-highlight on' : 'r3-wiz-highlight'}
+                  className={picked ? 'ui-wiz-highlight on' : 'ui-wiz-highlight'}
                   disabled={!site.canAdd}
                   title={site.canAdd ? 'Priorizar en el plan' : undefined}
                   onClick={() => addTypicalSite(site)}
@@ -522,24 +522,23 @@ export function WizardPage() {
   }
 
   return (
-    <div className="page r3-wiz rd-fade">
-      <div className="r3-wiz-top">
-        <button type="button" className="r3-wiz-back" aria-label="Inicio" onClick={() => setView({ name: 'home' })}>
+    <div className="ui-wizard ui-enter">
+      <div className="ui-wiz-main">
+      <div className="ui-wiz-top">
+        <button type="button" className="ui-icon-btn" aria-label="Inicio" onClick={() => setView({ name: 'trips' })}>
           <Icon name="chevron-left" size={20} />
         </button>
-        <span className="r3-wiz-step-label">
-          {step === 0 ? 'Destino' : step === 1 ? 'Estilo' : 'Confirmar'}
+        <div className="ui-wiz-meta">
+        <span className="ui-wiz-step">
+          Paso {step + 1} de 2 · {step === 0 ? 'Destino y estilo' : 'Confirmar'}
         </span>
-        <nav className="r3-wiz-dots" aria-label="Progreso">
-          {[0, 1, 2].map((i) => (
-            <span key={i} className={i <= step ? 'on' : ''} aria-hidden />
-          ))}
-        </nav>
+        <ProgressDots steps={2} current={step} />
+        </div>
       </div>
 
-      {wizard.cityPick && step < 2 ? (
+      {wizard.cityPick && step < 1 ? (
         <div
-          className="r3-wiz-banner"
+          className="ui-wiz-banner"
           style={
             photoForDestination(wizard.cityPick.name)
               ? { backgroundImage: `url("${photoForDestination(wizard.cityPick.name)}")` }
@@ -551,14 +550,14 @@ export function WizardPage() {
       ) : null}
 
       {step === 0 && (
-        <section className="r3-wiz-stage">
-          <header className="r3-wiz-head">
+        <section className="ui-wiz-stage">
+          <header className="ui-wiz-head">
             <h2>¿A dónde vas?</h2>
-            <p>Elegí ciudad abajo o buscá. Después: fechas y hotel (opcional).</p>
+            <p>Elegí ciudad, fechas y un perfil de viaje. Hotel y detalles: opcional, después.</p>
           </header>
 
-          <div className="r3-wiz-panel">
-            <div className="r3-wiz-search">
+          <div className="ui-wiz-panel">
+            <div className="ui-wiz-search">
               <input
                 value={wizard.cityQuery}
                 onChange={(e) =>
@@ -630,7 +629,7 @@ export function WizardPage() {
                     Cambiar
                   </button>
                 </div>
-                <div className="r3-wiz-map-preview">
+                <div className="ui-wiz-map-preview">
                   <TripMap
                     stops={[
                       {
@@ -651,8 +650,8 @@ export function WizardPage() {
               </>
             ) : null}
 
-            <p className="r3-wiz-section-label">Destinos populares</p>
-            <DestinationGrid
+            <p className="ui-wiz-section-label">Destinos populares</p>
+            <DestGrid
               destinations={FEATURED_DESTINATIONS}
               onPick={pickQuickDestination}
               selectedName={wizard.cityPick?.name ?? null}
@@ -681,7 +680,7 @@ export function WizardPage() {
             </div>
           ) : null}
 
-          <div className="r3-wiz-panel r3-wiz-dates">
+          <div className="ui-wiz-panel ui-wiz-dates">
             <TripDateFields label="Llegada" value={wizard.startDate} onChange={setStartDate} />
             <TripDateFields
               label="Salida"
@@ -690,7 +689,7 @@ export function WizardPage() {
               onChange={setEndDate}
             />
             {nights > 0 ? (
-              <p className="r3-wiz-nights">
+              <p className="ui-wiz-nights">
                 {nights === 1 ? '1 noche' : `${nights} noches`} · {nights + 1} días
               </p>
             ) : null}
@@ -878,24 +877,14 @@ export function WizardPage() {
               )}
             </div>
           </details>
-        </section>
-      )}
 
-      {step === 1 && (
-        <section className="r3-wiz-stage">
-          <header className="r3-wiz-head">
-            <h2>¿Cómo querés el viaje?</h2>
-            <p>Elegí un perfil: define ritmo, sitios y transporte. Podés afinar después.</p>
-          </header>
-
-          <div className="r3-wiz-step1-grid">
-            <div className="r3-wiz-step1-main">
-          <div className="r3-wiz-presets">
+          <p className="ui-wiz-section-label ui-wiz-style-label">¿Cómo querés el viaje?</p>
+          <div className="ui-wiz-presets">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
                 type="button"
-                className={selectedPreset === p.id ? 'r3-wiz-preset on' : 'r3-wiz-preset'}
+                className={selectedPreset === p.id ? 'ui-wiz-preset on' : 'ui-wiz-preset'}
                 onClick={() => {
                   setSelectedPreset(p.id)
                   patchWizard({
@@ -910,7 +899,7 @@ export function WizardPage() {
                   })
                 }}
               >
-                <span className="r3-wiz-preset-icon" aria-hidden>
+                <span className="ui-wiz-preset-icon" aria-hidden>
                   <Icon name={p.icon} size={20} />
                 </span>
                 <span>
@@ -921,7 +910,7 @@ export function WizardPage() {
             ))}
           </div>
 
-          <div className="r3-wiz-segment">
+          <div className="ui-wiz-segment">
             <span>Moverse</span>
             <div>
               {MOBILITY_OPTIONS.map((o) => (
@@ -939,7 +928,7 @@ export function WizardPage() {
             </div>
           </div>
 
-          <div className="r3-wiz-segment">
+          <div className="ui-wiz-segment">
             <span>Comida</span>
             <div>
               {FOOD_OPTIONS.map((o) => (
@@ -963,14 +952,14 @@ export function WizardPage() {
             <summary>Afinar más</summary>
             <p className="muted tiny">Categorías, ritmo y opciones extra.</p>
 
-            <div className="vibe-grid">
+            <div className="ui-vibe-grid">
               {VIBE_BUCKETS.map((b) => {
                 const on = bucketIsOn(wizard.preferences, b.keys)
                 return (
                   <button
                     key={b.id}
                     type="button"
-                    className={on ? 'vibe-card on' : 'vibe-card'}
+                    className={on ? 'ui-vibe on' : 'ui-vibe'}
                     onClick={() => {
                       setSelectedPreset(null)
                       patchWizard({ preferences: toggleBucketPrefs(wizard.preferences, b.keys) })
@@ -1073,52 +1062,38 @@ export function WizardPage() {
               Paradas extra entre sitios
             </label>
           </details>
-            </div>
-
-            <aside className="r3-wiz-side-card">
-              {wizard.cityPick && photoForDestination(wizard.cityPick.name) ? (
-                <img
-                  className="r3-wiz-side-photo"
-                  src={photoForDestination(wizard.cityPick.name)}
-                  alt=""
-                />
-              ) : null}
-              <strong>{wizard.cityPick?.name}</strong>
-              {renderCityHighlights('r3-wiz-highlights-block compact')}
-            </aside>
-          </div>
         </section>
       )}
 
-      {step === 2 && (
-        <section className="r3-wiz-stage">
-          <header className="r3-wiz-head">
+      {step === 1 && (
+        <section className="ui-wiz-stage">
+          <header className="ui-wiz-head">
             <h2>Listo para armar</h2>
             <p>Revisá el resumen. El plan sale con mapa y días numerados.</p>
           </header>
 
-          <article className="r3-wiz-boarding">
+          <article className="ui-wiz-boarding">
             {wizard.cityPick && photoForDestination(wizard.cityPick.name) ? (
               <img
-                className="r3-wiz-boarding-photo"
+                className="ui-wiz-boarding-photo"
                 src={photoForDestination(wizard.cityPick.name)}
                 alt=""
               />
             ) : null}
-            <div className="r3-wiz-boarding-body">
-              <p className="r3-wiz-boarding-k">Destino</p>
+            <div className="ui-wiz-boarding-body">
+              <p className="ui-wiz-boarding-k">Destino</p>
               <strong>{wizard.cityPick?.name ?? wizard.cityQuery}</strong>
-              <p className="r3-wiz-boarding-k">Fechas</p>
+              <p className="ui-wiz-boarding-k">Fechas</p>
               <span>
                 {wizard.startDate} → {wizard.endDate}
                 {nights > 0 ? ` · ${nights} noches` : ''}
               </span>
-              <p className="r3-wiz-boarding-k">Estilo</p>
+              <p className="ui-wiz-boarding-k">Estilo</p>
               <span>{preview}</span>
             </div>
           </article>
 
-          <ul className="r3-wiz-checklist">
+          <ul className="ui-wiz-checklist">
             <li>
               <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
                 <span className="wiz-summary-k">Destino</span>
@@ -1155,7 +1130,7 @@ export function WizardPage() {
               </button>
             </li>
             <li>
-              <button type="button" className="wiz-summary-row" onClick={() => go(1)}>
+              <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
                 <span className="wiz-summary-k">Gustos</span>
                 <span className="wiz-summary-v">
                   {activePrefs.map((k) => PREFERENCE_LABELS[k]).join(', ') || '—'}
@@ -1164,7 +1139,7 @@ export function WizardPage() {
               </button>
             </li>
             <li>
-              <button type="button" className="wiz-summary-row" onClick={() => go(1)}>
+              <button type="button" className="wiz-summary-row" onClick={() => go(0)}>
                 <span className="wiz-summary-k">Cómo viajáis</span>
                 <span className="wiz-summary-v">{preview}</span>
                 <span className="wiz-summary-edit">Editar</span>
@@ -1267,13 +1242,19 @@ export function WizardPage() {
         </section>
       )}
 
-      <div className="r3-wiz-footer">
-        <div className="r3-wiz-footer-inner">
+      </div>
+
+      <div className="ui-wiz-sticky">
           {step === 0 ? (
             <button
               type="button"
-              className="btn primary r3-wiz-cta"
-              disabled={!wizard.cityPick || wizard.endDate < wizard.startDate}
+              className="btn primary ui-wiz-cta"
+              disabled={
+                !wizard.cityPick ||
+                wizard.endDate < wizard.startDate ||
+                activePrefs.length === 0 ||
+                !styleReady
+              }
               onClick={() => go(1)}
             >
               Continuar
@@ -1281,27 +1262,12 @@ export function WizardPage() {
           ) : null}
           {step === 1 ? (
             <>
-              <button type="button" className="btn ghost" onClick={() => go(0)}>
+              <button type="button" className="btn ghost" onClick={() => go(0)} disabled={generating}>
                 Atrás
               </button>
               <button
                 type="button"
-                className="btn primary r3-wiz-cta"
-                disabled={activePrefs.length === 0 || !styleReady}
-                onClick={() => go(2)}
-              >
-                Continuar
-              </button>
-            </>
-          ) : null}
-          {step === 2 ? (
-            <>
-              <button type="button" className="btn ghost" onClick={() => go(1)} disabled={generating}>
-                Atrás
-              </button>
-              <button
-                type="button"
-                className="btn primary r3-wiz-cta"
+                className="btn primary ui-wiz-cta"
                 onClick={() => void generateTrip()}
                 disabled={generating || !wizard.cityPick}
               >
@@ -1309,8 +1275,28 @@ export function WizardPage() {
               </button>
             </>
           ) : null}
-        </div>
       </div>
+
+      <aside className="ui-wiz-side">
+        {wizard.cityPick && photoForDestination(wizard.cityPick.name) ? (
+          <img className="ui-wiz-side-photo" src={photoForDestination(wizard.cityPick.name)} alt="" />
+        ) : null}
+        <div className="ui-wiz-side-shade" aria-hidden />
+        <div className="ui-wiz-side-inner">
+          <p className="ui-wiz-side-kicker">RutaDos</p>
+          {wizard.cityPick ? (
+            <>
+              <h3>{wizard.cityPick.name}</h3>
+              <p>{step === 0 ? 'Elegí ritmo y estilo — el mapa se arma con esto.' : preview}</p>
+            </>
+          ) : (
+            <>
+              <h3>Tu viaje, a tu ritmo</h3>
+              <p>Elegí un destino a la izquierda para ver la vista previa aquí.</p>
+            </>
+          )}
+        </div>
+      </aside>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CATEGORY_LABELS,
   DAY_FOCUS_LABELS,
@@ -9,18 +9,11 @@ import { useAppStore } from '../store'
 import { TripMap } from '../components/TripMap'
 import { DayTimeline } from '../components/DayTimeline'
 import { OfflinePackPreview, OfflineStatusBanner } from '../components/OfflineBanner'
+import { OnRouteMode } from '../components/OnRouteMode'
 import { filterAlongRoute } from '../lib/discover'
-import {
-  fetchWalkingRoute,
-  googleMapsDirectionsUrl,
-} from '../lib/mapsUrl'
+import { fetchWalkingRoute, googleMapsDirectionsUrl } from '../lib/mapsUrl'
 import { geocodeCity } from '../lib/geocode'
-import {
-  dayToKml,
-  downloadTextFile,
-  GOOGLE_MY_MAPS_URL,
-  safeFilename,
-} from '../lib/exportGmaps'
+import { dayToKml, downloadTextFile, GOOGLE_MY_MAPS_URL, safeFilename } from '../lib/exportGmaps'
 import { fetchPlacePhotoUrls } from '../lib/placePhotos'
 import { hoursForPlace, evaluateOpeningHours, type PlaceHours } from '../lib/openingHours'
 import { loadOfflineDay, saveOfflineDay, type OfflineDayPack } from '../lib/offlineDay'
@@ -31,6 +24,8 @@ import type { VenueKind } from '../lib/bookingLinks'
 import type { NearbyVenue } from '../lib/nearbyVenues'
 import { hotelBookingUrl } from '../lib/bookingLinks'
 import { getCityGuide } from '../lib/cityGuides'
+import { pickActiveDay } from '../lib/copilot'
+import { CopilotSheet, DayBottomBar } from '../ui'
 import { Icon } from '../components/Icons'
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -45,9 +40,15 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
+/**
+ * Hub "Hoy" — fusiona Day + En ruta (inmersivo) + Copiloto in-app (VISION_APP_V2.md §3.2/§5.4).
+ * Barra inferior con máx. 4 acciones; replan (cansados/lluvia/tarde) siempre visible arriba;
+ * copiloto se abre como panel deslizable sin ocupar hueco en la barra.
+ */
+export function TodayPage({ tripId, dayId }: { tripId: string; dayId?: string }) {
   const trip = useAppStore((s) => s.trips.find((t) => t.id === tripId))
   const setView = useAppStore((s) => s.setView)
+  const setActiveTrip = useAppStore((s) => s.setActiveTrip)
   const optimizeDay = useAppStore((s) => s.optimizeDay)
   const moveDayStop = useAppStore((s) => s.moveDayStop)
   const removeDayStop = useAppStore((s) => s.removeDayStop)
@@ -82,8 +83,15 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   } | null>(null)
   const [tiredOpen, setTiredOpen] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState(false)
+  const [immersive, setImmersive] = useState(false)
+  const [copilotOpen, setCopilotOpen] = useState(false)
 
-  const day = trip?.days.find((d) => d.id === dayId)
+  const day = dayId ? trip?.days.find((d) => d.id === dayId) : trip ? pickActiveDay(trip) : undefined
+  const dayIndex = trip && day ? trip.days.findIndex((d) => d.id === day.id) : -1
+
+  useEffect(() => {
+    setActiveTrip(tripId)
+  }, [tripId, setActiveTrip])
 
   useEffect(() => {
     const on = () => setOnline(true)
@@ -211,12 +219,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
 
     const seen = new Set<string>()
     const out: GeoPlace[] = []
-    for (const p of [
-      ...deferred,
-      ...along,
-      ...near,
-      ...rest.sort((a, b) => b.score - a.score),
-    ]) {
+    for (const p of [...deferred, ...along, ...near, ...rest.sort((a, b) => b.score - a.score)]) {
       if (seen.has(p.id)) continue
       seen.add(p.id)
       out.push(p)
@@ -228,9 +231,9 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   if (!trip || !day) {
     return (
       <div className="page">
-        <p>Día no encontrado.</p>
-        <button type="button" className="btn" onClick={() => setView({ name: 'home' })}>
-          Inicio
+        <p>No encontramos este día. Puede que el viaje se haya borrado en este dispositivo.</p>
+        <button type="button" className="btn primary" onClick={() => setView({ name: 'trips' })}>
+          Volver a Viajes
         </button>
       </div>
     )
@@ -243,6 +246,11 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
     return { ...s, photoUrl: urls[0], photoUrls: urls }
   })
 
+  function goToDayIndex(i: number) {
+    const target = trip!.days[i]
+    if (target) setView({ name: 'today', tripId, dayId: target.id })
+  }
+
   async function submitManual(e: React.FormEvent) {
     e.preventDefault()
     if (!manualName.trim()) return
@@ -251,7 +259,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
     try {
       const q = manualQuery.trim() || `${manualName.trim()}, ${trip!.city.name}`
       const geo = await geocodeCity(q)
-      addManualPlaceToDay(tripId, dayId, {
+      addManualPlaceToDay(tripId, dayId ?? day!.id, {
         name: manualName.trim(),
         lat: geo.lat,
         lng: geo.lng,
@@ -267,21 +275,48 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   }
 
   return (
-    <div className="page r3-day rd-fade">
+    <div className="ui-day ui-enter ui-page-tabbed">
       <OfflineStatusBanner online={online} pack={offlinePack} />
 
-      <button
-        type="button"
-        className="btn ghost sm back"
-        onClick={() => setView({ name: 'trip', tripId })}
-      >
-        ← {trip.title}
-      </button>
+      <div className="ui-today-topbar">
+        <button type="button" className="btn ghost sm back" onClick={() => setView({ name: 'plan', tripId })}>
+          ← {trip.title}
+        </button>
+        <div className="ui-day-switch">
+          <button
+            type="button"
+            className="ui-icon-btn"
+            aria-label="Día anterior"
+            disabled={dayIndex <= 0}
+            onClick={() => goToDayIndex(dayIndex - 1)}
+          >
+            <Icon name="chevron-left" size={16} />
+          </button>
+          <span>{day.label}</span>
+          <button
+            type="button"
+            className="ui-icon-btn"
+            aria-label="Día siguiente"
+            disabled={dayIndex < 0 || dayIndex >= trip.days.length - 1}
+            onClick={() => goToDayIndex(dayIndex + 1)}
+          >
+            <Icon name="chevron-right" size={16} />
+          </button>
+        </div>
+        <button
+          type="button"
+          className="ui-icon-btn ui-copilot-fab-inline"
+          aria-label="Abrir copiloto"
+          onClick={() => setCopilotOpen(true)}
+        >
+          <Icon name="chat" size={18} />
+        </button>
+      </div>
 
-      <div className="r3-day-map">
+      <div className="ui-day-map">
         <TripMap stops={mapStops} route={route} height="340px" showLegend showLegs />
         {weather && (
-          <div className="r3-day-weather">
+          <div className="ui-day-weather">
             <strong>
               {weather.label} · {weather.tempMin}–{weather.tempMax}°
             </strong>
@@ -290,7 +325,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
                 type="button"
                 className="chip on"
                 onClick={() => {
-                  chaosReplan(tripId, dayId, 'rain')
+                  chaosReplan(tripId, day.id, 'rain')
                   setMsg('Replan por lluvia: priorizamos sitios cubiertos.')
                 }}
               >
@@ -301,9 +336,8 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
         )}
       </div>
 
-      <div className="r3-day-sheet">
-        <header className="day-hero r3-day-head">
-          <div className="r3-day-title-row">
+      <div className="ui-day-sheet">
+        <header className="ui-day-title-row">
             <div>
               <h1>{day.label}</h1>
               <p className="muted">
@@ -319,7 +353,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
               type="button"
               className="btn tired-btn sm"
               onClick={() => {
-                chaosReplan(tripId, dayId, 'shorter')
+                chaosReplan(tripId, day.id, 'shorter')
                 setTiredOpen(true)
                 setVenueKind(null)
                 setMsg('Día acortado. Elegí un café si querés pausar.')
@@ -327,10 +361,9 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
             >
               Cansados
             </button>
-          </div>
         </header>
 
-      <div className="chaos-bar day-quick">
+      <div className="ui-day-chips day-quick">
         <button
           type="button"
           className={venueKind === 'restaurant' && !mealNear ? 'chip on' : 'chip'}
@@ -357,7 +390,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           type="button"
           className="chip"
           onClick={() => {
-            chaosReplan(tripId, dayId, 'late')
+            chaosReplan(tripId, day.id, 'late')
             setMsg('Replan: vais tarde.')
           }}
         >
@@ -367,7 +400,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           type="button"
           className="chip"
           onClick={() => {
-            chaosReplan(tripId, dayId, 'rain')
+            chaosReplan(tripId, day.id, 'rain')
             setMsg('Replan: lluvia.')
           }}
         >
@@ -402,7 +435,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           tripCafes={trip.places.filter((p) => p.category === 'cafe')}
           onClose={() => setTiredOpen(false)}
           onAddCafe={(place) => {
-            addSuggestedToDay(tripId, dayId, place)
+            addSuggestedToDay(tripId, day.id, place)
             setMsg(`Café añadido: ${place.name}`)
             setTiredOpen(false)
           }}
@@ -438,13 +471,9 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
               phone: v.phone,
               listingKind: v.kind === 'hotel' ? 'hotel' : 'restaurant',
               bestSlot:
-                v.kind === 'hotel'
-                  ? 'morning'
-                  : mealNear?.meal === 'dinner'
-                    ? 'evening'
-                    : 'lunch',
+                v.kind === 'hotel' ? 'morning' : mealNear?.meal === 'dinner' ? 'evening' : 'lunch',
             }
-            addSuggestedToDay(tripId, dayId, place)
+            addSuggestedToDay(tripId, day.id, place)
             setMsg(`Añadido: ${v.name}`)
             setVenueKind(null)
             setMealNear(null)
@@ -485,8 +514,8 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
                   type="button"
                   className="suggest-item"
                   onClick={() => {
-                    if (p.deferred) addDeferredToDay(tripId, dayId, p.id)
-                    else addSuggestedToDay(tripId, dayId, p)
+                    if (p.deferred) addDeferredToDay(tripId, day.id, p.id)
+                    else addSuggestedToDay(tripId, day.id, p)
                     setMsg(`Añadido: ${p.name}`)
                   }}
                 >
@@ -508,27 +537,35 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
                 key={f}
                 type="button"
                 className={(day.focus ?? 'central') === f ? 'chip on' : 'chip'}
-                onClick={() => setDayFocus(tripId, dayId, f)}
+                onClick={() => setDayFocus(tripId, day.id, f)}
               >
                 {DAY_FOCUS_LABELS[f]}
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            className="btn ghost sm"
-            style={{ marginTop: '0.5rem' }}
-            onClick={() => {
-              downloadTextFile(
-                `${safeFilename(trip.title)}_${safeFilename(day.label)}.kml`,
-                dayToKml(trip.title, day.label, ordered),
-                'application/vnd.google-earth.kml+xml',
-              )
-              setMsg(`KML · ${GOOGLE_MY_MAPS_URL.replace('https://', '')}`)
-            }}
-          >
-            Exportar KML
-          </button>
+          <div className="toolbar" style={{ marginTop: '0.5rem' }}>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => {
+                downloadTextFile(
+                  `${safeFilename(trip.title)}_${safeFilename(day.label)}.kml`,
+                  dayToKml(trip.title, day.label, ordered),
+                  'application/vnd.google-earth.kml+xml',
+                )
+                setMsg(`KML · ${GOOGLE_MY_MAPS_URL.replace('https://', '')}`)
+              }}
+            >
+              Exportar KML
+            </button>
+            <button
+              type="button"
+              className="btn ghost sm"
+              onClick={() => setView({ name: 'build', tripId, dayId: day.id })}
+            >
+              Editar día a mano
+            </button>
+          </div>
         </section>
       )}
 
@@ -539,7 +576,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
             type="button"
             className="btn ghost sm"
             onClick={() => {
-              optimizeDay(tripId, dayId)
+              optimizeDay(tripId, day.id)
               setMsg('Ruta reordenada por cercanía y horas actualizadas.')
             }}
           >
@@ -554,13 +591,13 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
           stops={ordered}
           photoByStop={photoByStop}
           hoursByStop={hoursByStop}
-          onModeChange={(stopId, mode) => setStopTransitMode(tripId, dayId, stopId, mode)}
-          onMove={(stopId, dir) => moveDayStop(tripId, dayId, stopId, dir)}
-          onRemove={(stopId) => removeDayStop(tripId, dayId, stopId)}
-          onNotes={(stopId, notes) => setStopUserNotes(tripId, dayId, stopId, notes)}
+          onModeChange={(stopId, mode) => setStopTransitMode(tripId, day.id, stopId, mode)}
+          onMove={(stopId, dir) => moveDayStop(tripId, day.id, stopId, dir)}
+          onRemove={(stopId) => removeDayStop(tripId, day.id, stopId)}
+          onNotes={(stopId, notes) => setStopUserNotes(tripId, day.id, stopId, notes)}
           onDefer={(stopId) => {
             const s = ordered.find((x) => x.id === stopId)
-            deferStopToLater(tripId, dayId, stopId)
+            deferStopToLater(tripId, day.id, stopId)
             if (s) setMsg(`“${s.name}” para otro día.`)
           }}
           onFindMeals={({ lat, lng, meal, nearName }) => {
@@ -592,57 +629,47 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       </form>
       </div>
 
-      <nav className="r3-day-bar" aria-label="Acciones del día">
-        <a
-          href={googleMapsDirectionsUrl(ordered)}
-          target="_blank"
-          rel="noreferrer"
-          className="r3-day-bar-item"
-        >
-          <span className="r3-day-bar-ico" aria-hidden>
-            <Icon name="map" size={18} />
-          </span>
-          Maps
-        </a>
-        <a
-          href={
-            getCityGuide(trip.city.name)?.transportPlannerUrl ??
-            `https://www.google.com/search?q=${encodeURIComponent(trip.city.name + ' metro journey planner')}`
-          }
-          target="_blank"
-          rel="noreferrer"
-          className="r3-day-bar-item"
-        >
-          <span className="r3-day-bar-ico" aria-hidden>
-            <Icon name="transit" size={18} />
-          </span>
-          Metro
-        </a>
-        <button
-          type="button"
-          className="r3-day-bar-item"
-          onClick={() => {
-            setTiredOpen(false)
-            setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))
-            setMealNear(null)
-          }}
-        >
-          <span className="r3-day-bar-ico" aria-hidden>
-            <Icon name="dining" size={18} />
-          </span>
-          Comer
-        </button>
-        <button
-          type="button"
-          className="r3-day-bar-item on"
-          onClick={() => setView({ name: 'onroute', tripId, dayId })}
-        >
-          <span className="r3-day-bar-ico" aria-hidden>
-            <Icon name="arrow-right" size={18} />
-          </span>
-          En ruta
-        </button>
-      </nav>
+      <DayBottomBar
+        items={[
+          {
+            key: 'maps',
+            label: 'Maps',
+            href: googleMapsDirectionsUrl(ordered),
+            icon: <Icon name="map" size={18} />,
+          },
+          {
+            key: 'metro',
+            label: 'Metro',
+            href:
+              getCityGuide(trip.city.name)?.transportPlannerUrl ??
+              `https://www.google.com/search?q=${encodeURIComponent(trip.city.name + ' metro journey planner')}`,
+            icon: <Icon name="transit" size={18} />,
+          },
+          {
+            key: 'food',
+            label: 'Comer',
+            icon: <Icon name="dining" size={18} />,
+            onClick: () => {
+              setTiredOpen(false)
+              setVenueKind((k) => (k === 'restaurant' ? null : 'restaurant'))
+              setMealNear(null)
+            },
+          },
+          {
+            key: 'onroute',
+            label: 'En ruta',
+            icon: <Icon name="arrow-right" size={18} />,
+            onClick: () => setImmersive(true),
+          },
+        ]}
+      />
+
+      {immersive && (
+        <OnRouteMode tripId={tripId} dayId={day.id} onClose={() => setImmersive(false)} />
+      )}
+      {copilotOpen && (
+        <CopilotSheet tripId={tripId} dayId={day.id} onClose={() => setCopilotOpen(false)} />
+      )}
     </div>
   )
 }

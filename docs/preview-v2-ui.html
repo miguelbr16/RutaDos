@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RutaDos — Preview v2 · Web móvil + Web PC</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --v2-bg: #fafafa;
+      --v2-surface: #ffffff;
+      --v2-ink: #0f1419;
+      --v2-muted: #6b7280;
+      --v2-line: rgba(15, 20, 25, 0.08);
+      --v2-accent: #ff5a3c;
+      --v2-accent-2: #1a2b4a;
+      --v2-accent-soft: rgba(255, 90, 60, 0.1);
+      --v2-map-shadow: 0 8px 32px rgba(26, 43, 74, 0.12);
+      --v2-card-shadow: 0 4px 20px rgba(15, 20, 25, 0.06);
+      --v2-radius-sm: 12px;
+      --v2-radius: 20px;
+      --v2-radius-lg: 24px;
+      --v2-font: "Plus Jakarta Sans", system-ui, sans-serif;
+      --v2-display: "Instrument Serif", Georgia, serif;
+      --bp-desktop: 1024px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--v2-font);
+      color: var(--v2-ink);
+      background: #e8ebef;
+      min-height: 100vh;
+    }
+
+    .chrome {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1rem 1.25rem 2rem;
+    }
+    .chrome-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .chrome-top h1 {
+      margin: 0;
+      font-family: var(--v2-display);
+      font-size: 1.5rem;
+      font-weight: 400;
+    }
+    .chrome-top p {
+      margin: 0.25rem 0 0;
+      color: var(--v2-muted);
+      font-size: 0.88rem;
+      max-width: 44rem;
+      line-height: 1.45;
+    }
+    .seg {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      background: var(--v2-surface);
+      padding: 0.3rem;
+      border-radius: 999px;
+      border: 1px solid var(--v2-line);
+      box-shadow: var(--v2-card-shadow);
+    }
+    .seg button {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      border-radius: 999px;
+      padding: 0.42rem 0.85rem;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--v2-muted);
+      cursor: pointer;
+    }
+    .seg button.on { background: var(--v2-accent-2); color: #fff; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr minmax(240px, 300px);
+      gap: 1.25rem;
+      align-items: start;
+    }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+    .notes {
+      background: var(--v2-surface);
+      border: 1px solid var(--v2-line);
+      border-radius: var(--v2-radius);
+      padding: 1rem 1.1rem;
+      box-shadow: var(--v2-card-shadow);
+      position: sticky;
+      top: 1rem;
+      font-size: 0.84rem;
+    }
+    .notes .tag {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--v2-accent);
+      margin-bottom: 0.35rem;
+    }
+    .notes h2 {
+      margin: 0 0 0.5rem;
+      font-family: var(--v2-display);
+      font-size: 1.15rem;
+      font-weight: 400;
+    }
+    .notes ul { margin: 0; padding-left: 1rem; color: var(--v2-muted); line-height: 1.55; }
+    .notes table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      margin-top: 0.65rem;
+    }
+    .notes th, .notes td {
+      text-align: left;
+      padding: 0.35rem 0.25rem;
+      border-bottom: 1px solid var(--v2-line);
+      vertical-align: top;
+    }
+    .notes th { color: var(--v2-ink); font-weight: 600; }
+    .swatches { display: flex; gap: 0.35rem; margin-top: 0.75rem; }
+    .swatches span {
+      width: 28px; height: 28px; border-radius: 8px;
+      border: 1px solid var(--v2-line);
+    }
+
+    /* —— frames —— */
+    .frames-wrap { min-width: 0; }
+    .frame-mobile, .frame-desktop, .frame-both { display: none; }
+    body[data-device="mobile"] .frame-mobile { display: block; }
+    body[data-device="desktop"] .frame-desktop { display: block; }
+    body[data-device="both"] .frame-both { display: grid; }
+
+    .frame-both {
+      grid-template-columns: minmax(280px, 390px) 1fr;
+      gap: 1rem;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .frame-both { grid-template-columns: 1fr; }
+    }
+    .frame-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--v2-muted);
+      margin: 0 0 0.45rem 0.25rem;
+    }
+
+    .phone {
+      width: min(100%, 390px);
+      height: 844px;
+      margin: 0 auto;
+      background: var(--v2-bg);
+      border-radius: 40px;
+      border: 10px solid #111;
+      box-shadow: 0 24px 60px rgba(26, 43, 74, 0.18);
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-notch {
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      width: 120px; height: 28px; background: #111; border-radius: 14px; z-index: 50;
+    }
+
+    .browser {
+      width: 100%;
+      min-width: 0;
+      background: var(--v2-surface);
+      border-radius: var(--v2-radius);
+      border: 1px solid var(--v2-line);
+      box-shadow: var(--v2-map-shadow);
+      overflow: hidden;
+    }
+    .browser.wide { min-height: 720px; }
+    .desk-chrome {
+      display: flex; align-items: center; gap: 0.45rem;
+      padding: 0.55rem 0.85rem;
+      background: #f4f5f7;
+      border-bottom: 1px solid var(--v2-line);
+    }
+    .desk-chrome i {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #d1d5db; display: block;
+    }
+    .desk-chrome .url {
+      flex: 1; margin-left: 0.5rem;
+      background: #fff; border: 1px solid var(--v2-line);
+      border-radius: 8px; padding: 0.25rem 0.65rem;
+      font-size: 0.75rem; color: var(--v2-muted);
+    }
+
+    .screen {
+      height: 824px;
+      overflow: auto;
+      background: var(--v2-bg);
+      position: relative;
+    }
+    .browser.wide .screen { height: 680px; }
+
+    .view { display: none; min-height: 100%; }
+    .view.on { display: block; animation: rise 0.32s ease; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    /* —— v2 components —— */
+    .v2-btn {
+      appearance: none; border: 0; border-radius: 999px;
+      padding: 0.72rem 1.2rem; font: inherit; font-weight: 600;
+      font-size: 0.9rem; cursor: pointer;
+    }
+    .v2-btn.primary { background: var(--v2-accent); color: #fff; }
+    .v2-btn.ghost {
+      background: var(--v2-surface); color: var(--v2-accent-2);
+      border: 1px solid var(--v2-line);
+    }
+    .v2-btn.sm { padding: 0.45rem 0.85rem; font-size: 0.8rem; }
+    .v2-btn.full { width: 100%; }
+    .v2-btn.icon {
+      width: 40px; height: 40px; padding: 0;
+      display: grid; place-items: center; border-radius: 12px;
+    }
+    .v2-chip {
+      display: inline-flex; align-items: center;
+      padding: 0.35rem 0.75rem; border-radius: 999px;
+      font-size: 0.78rem; font-weight: 600;
+      border: 1px solid var(--v2-line);
+      background: var(--v2-surface); color: var(--v2-accent-2);
+      white-space: nowrap;
+    }
+    .v2-chip.on { background: var(--v2-accent-2); color: #fff; border-color: var(--v2-accent-2); }
+
+    .v2-fab {
+      position: absolute; right: 1rem; bottom: 5.2rem; z-index: 30;
+      width: 56px; height: 56px; border-radius: 50%; border: 0;
+      background: var(--v2-accent); color: #fff; font-size: 1.5rem;
+      box-shadow: 0 8px 24px rgba(255, 90, 60, 0.35); cursor: pointer;
+    }
+
+    .v2-tabbar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      padding: 0.45rem 0.5rem calc(0.55rem + env(safe-area-inset-bottom, 0));
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--v2-line); z-index: 40;
+    }
+    .v2-tabbar button {
+      appearance: none; border: 0; background: transparent;
+      display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+      font: inherit; font-size: 0.62rem; font-weight: 600;
+      color: var(--v2-muted); cursor: pointer;
+    }
+    .v2-tabbar button.on { color: var(--v2-accent-2); }
+    .v2-tabbar .ico {
+      width: 22px; height: 22px; border-radius: 8px;
+      display: grid; place-items: center; font-size: 0.85rem;
+    }
+    .v2-tabbar button.on .ico { background: var(--v2-accent-soft); }
+
+    .v2-seg {
+      display: flex; gap: 0.2rem; padding: 0.22rem;
+      background: rgba(26, 43, 74, 0.06); border-radius: 12px;
+    }
+    .v2-seg span {
+      flex: 1; text-align: center; padding: 0.42rem 0.35rem;
+      border-radius: 10px; font-size: 0.78rem; font-weight: 600; color: var(--v2-muted);
+    }
+    .v2-seg span.on {
+      background: var(--v2-surface); color: var(--v2-accent-2);
+      box-shadow: 0 1px 4px rgba(15, 20, 25, 0.08);
+    }
+
+    .v2-map {
+      border-radius: var(--v2-radius-lg); overflow: hidden;
+      box-shadow: var(--v2-map-shadow);
+      background: linear-gradient(135deg, #dce8f5 0%, #c5d9ea 40%, #b8cfe0 100%);
+      position: relative;
+    }
+    .v2-map .route {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 35% 45%, rgba(255, 90, 60, 0.25) 0, transparent 8%),
+        radial-gradient(circle at 55% 55%, rgba(26, 43, 74, 0.2) 0, transparent 7%),
+        radial-gradient(circle at 48% 38%, rgba(26, 43, 74, 0.15) 0, transparent 6%);
+    }
+    .v2-map .pin {
+      position: absolute; width: 12px; height: 12px; border-radius: 50%;
+      background: var(--v2-accent); border: 2px solid #fff;
+      box-shadow: 0 2px 8px rgba(26, 43, 74, 0.25);
+    }
+    .v2-map .pin.navy { background: var(--v2-accent-2); }
+
+    .display { font-family: var(--v2-display); font-weight: 400; }
+    .muted { color: var(--v2-muted); }
+    .tiny { font-size: 0.76rem; }
+    .sec-label {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--v2-muted); margin: 0 0 0.55rem;
+    }
+
+    .v2-trip-xl {
+      display: block; width: 100%; border: 0; padding: 0;
+      border-radius: var(--v2-radius-lg); overflow: hidden;
+      position: relative; height: 200px; margin-bottom: 1rem;
+      cursor: pointer; box-shadow: var(--v2-map-shadow); text-align: left;
+    }
+    .v2-trip-xl img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .v2-trip-xl .overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent 30%, rgba(15, 20, 25, 0.75));
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 1.1rem; color: #fff;
+    }
+    .v2-trip-xl .badge {
+      display: inline-block; font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.04em;
+      background: var(--v2-accent); padding: 0.2rem 0.5rem;
+      border-radius: 999px; margin-bottom: 0.35rem; width: fit-content;
+    }
+    .v2-trip-xl h3 {
+      margin: 0; font-family: var(--v2-display);
+      font-size: 1.75rem; font-weight: 400;
+    }
+    .v2-trip-xl p { margin: 0.2rem 0 0; font-size: 0.85rem; opacity: 0.9; }
+
+    .v2-trip-row {
+      display: flex; gap: 0.65rem; overflow-x: auto;
+      padding-bottom: 0.35rem; margin-bottom: 1.25rem; scrollbar-width: none;
+    }
+    .v2-trip-row::-webkit-scrollbar { display: none; }
+    .v2-trip-card {
+      flex: 0 0 160px; border: 0; padding: 0;
+      background: var(--v2-surface); border-radius: var(--v2-radius);
+      overflow: hidden; box-shadow: var(--v2-card-shadow);
+      text-align: left; cursor: pointer;
+    }
+    .v2-trip-card img { width: 100%; height: 96px; object-fit: cover; display: block; }
+    .v2-trip-card .body { padding: 0.65rem 0.75rem 0.75rem; }
+    .v2-trip-card strong { display: block; font-size: 0.92rem; font-weight: 700; }
+    .v2-trip-card span {
+      display: block; font-size: 0.74rem; color: var(--v2-muted); margin-top: 0.15rem;
+    }
+    .chip-row {
+      display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; flex-wrap: wrap;
+    }
+    .chip-row::-webkit-scrollbar { display: none; }
+
+    .budget-strip {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.65rem 0.85rem; background: var(--v2-surface);
+      border-radius: var(--v2-radius-sm); box-shadow: var(--v2-card-shadow);
+      margin-bottom: 0.85rem; font-size: 0.88rem; font-weight: 600;
+    }
+    .day-pills {
+      display: flex; gap: 0.45rem; overflow-x: auto;
+      margin-bottom: 0.85rem; scrollbar-width: none;
+    }
+    .day-pills::-webkit-scrollbar { display: none; }
+    .day-pill {
+      flex: 0 0 auto; padding: 0.55rem 0.85rem; border-radius: 14px;
+      border: 1px solid var(--v2-line); background: var(--v2-surface);
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .day-pill.on { background: var(--v2-accent-2); color: #fff; border-color: var(--v2-accent-2); }
+    .day-pill small {
+      display: block; font-size: 0.68rem; font-weight: 500;
+      opacity: 0.75; margin-top: 0.1rem;
+    }
+    .plan-stop {
+      display: flex; gap: 0.65rem; align-items: center;
+      padding: 0.65rem 0; border-bottom: 1px solid var(--v2-line);
+    }
+    .plan-stop .n {
+      width: 24px; height: 24px; border-radius: 8px;
+      background: var(--v2-accent-soft); color: var(--v2-accent);
+      font-size: 0.72rem; font-weight: 700;
+      display: grid; place-items: center;
+    }
+    .plan-stop strong { font-size: 0.88rem; }
+    .plan-stop span { font-size: 0.74rem; color: var(--v2-muted); }
+
+    .place-card {
+      display: grid; grid-template-columns: 44px 64px 1fr 20px;
+      gap: 0.65rem; align-items: center;
+      padding: 0.75rem 0; border-bottom: 1px solid var(--v2-line);
+      position: relative;
+    }
+    .place-card .time {
+      font-size: 0.78rem; font-weight: 700; color: var(--v2-accent-2);
+      text-align: center; line-height: 1.2;
+    }
+    .place-card .time small {
+      display: block; font-size: 0.62rem; font-weight: 500; color: var(--v2-muted);
+    }
+    .place-card img {
+      width: 64px; height: 64px; border-radius: 14px; object-fit: cover;
+    }
+    .place-card strong { display: block; font-size: 0.9rem; }
+    .place-card .meta { font-size: 0.72rem; color: var(--v2-muted); margin-top: 0.1rem; }
+    .place-card .chev { color: var(--v2-muted); font-size: 0.85rem; }
+    .place-card::before {
+      content: ""; position: absolute; left: 22px; top: 100%;
+      width: 2px; height: 12px; background: var(--v2-line);
+    }
+    .place-card:last-child::before { display: none; }
+
+    .replan-row {
+      display: flex; gap: 0.35rem; margin: 0.65rem 0 0.85rem; overflow-x: auto;
+    }
+
+    .v2-input {
+      width: 100%; padding: 1rem 1.1rem; border-radius: 16px;
+      border: 1px solid var(--v2-line); background: var(--v2-surface);
+      color: var(--v2-ink); font: inherit; font-size: 1rem; margin-bottom: 0.65rem;
+    }
+
+    /* ═══ WEB MÓVIL (<1024) ═══ */
+    .m-trips { padding: 3rem 1rem 5.5rem; }
+    .m-trips-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 1.25rem;
+    }
+    .m-trips-head h2 {
+      margin: 0; font-size: 1.65rem; font-family: var(--v2-display);
+    }
+
+    /* Wizard móvil: foto 100% viewport — SIN mitad blanca */
+    .m-wiz {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      color: #fff;
+      background-color: #0f1419;
+      background-image:
+        linear-gradient(180deg, rgba(15, 20, 25, 0.25) 0%, rgba(15, 20, 25, 0.45) 35%, rgba(15, 20, 25, 0.92) 72%, rgba(15, 20, 25, 0.97) 100%),
+        url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80");
+      background-size: cover;
+      background-position: center;
+    }
+    .m-wiz-progress {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.2);
+      margin: 3rem 1rem 0;
+      border-radius: 99px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .m-wiz-progress i {
+      display: block;
+      height: 100%;
+      width: 50%;
+      background: var(--v2-accent);
+      border-radius: 99px;
+    }
+    .m-wiz-body {
+      flex: 1;
+      padding: 0 1rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 0;
+    }
+    .m-wiz-body .step {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.75;
+      margin-bottom: 0.5rem;
+    }
+    .m-wiz-body h2 {
+      margin: 0 0 0.35rem;
+      font-family: var(--v2-display);
+      font-size: 2rem;
+      line-height: 1.1;
+    }
+    .m-wiz-body > p {
+      margin: 0 0 1.25rem;
+      opacity: 0.85;
+      font-size: 0.9rem;
+    }
+    .m-wiz-body .v2-input {
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(12px);
+      color: #fff;
+    }
+    .m-wiz-body .v2-input::placeholder { color: rgba(255, 255, 255, 0.5); }
+    .m-wiz-body .v2-btn.primary {
+      margin-top: 0.85rem;
+      box-shadow: 0 8px 24px rgba(255, 90, 60, 0.35);
+    }
+
+    /* Wordmark / logo RutaDos */
+    .v2-wordmark {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      color: inherit;
+    }
+    .v2-logo-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--v2-accent), #ff8066);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 12px rgba(255, 90, 60, 0.28);
+    }
+    .v2-logo-mark.lg {
+      width: 36px;
+      height: 36px;
+      border-radius: 11px;
+      font-size: 0.78rem;
+    }
+    .v2-logo-text {
+      font-family: var(--v2-font);
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.03em;
+    }
+    .v2-logo-text em {
+      font-style: normal;
+      color: var(--v2-accent);
+    }
+    .d-topnav .v2-wordmark .v2-logo-text { font-size: 1.15rem; }
+
+    .m-plan { padding: 3rem 1rem 5.5rem; }
+    .m-plan-head h2 { margin: 0; font-family: var(--v2-display); font-size: 1.65rem; }
+    .m-plan-head p { margin: 0.2rem 0 0.85rem; font-size: 0.85rem; }
+    .m-plan .v2-map { height: 220px; margin-bottom: 0.85rem; }
+
+    .m-hoy {
+      display: flex; flex-direction: column; height: 100%; min-height: 780px;
+    }
+    .m-hoy-map {
+      flex: 0 0 38vh; min-height: 280px; margin: 2.8rem 0.75rem 0;
+    }
+    .m-hoy-map .v2-map { height: 100%; }
+    .m-hoy-map .weather {
+      position: absolute; top: 0.75rem; left: 0.75rem;
+      padding: 0.35rem 0.65rem; background: rgba(255, 255, 255, 0.92);
+      border-radius: 999px; font-size: 0.72rem; font-weight: 600; z-index: 2;
+    }
+    .v2-sheet {
+      flex: 1; margin-top: -20px; background: var(--v2-surface);
+      border-radius: var(--v2-radius-lg) var(--v2-radius-lg) 0 0;
+      box-shadow: 0 -8px 32px rgba(26, 43, 74, 0.1);
+      padding: 0.5rem 1rem 5.5rem; position: relative; z-index: 5;
+    }
+    .v2-sheet-handle {
+      width: 36px; height: 4px; background: var(--v2-line);
+      border-radius: 99px; margin: 0.35rem auto 0.85rem;
+    }
+    .v2-sheet h3 {
+      margin: 0 0 0.15rem; font-family: var(--v2-display); font-size: 1.35rem;
+    }
+    .v2-daybar {
+      position: absolute; bottom: 4.2rem; left: 0.75rem; right: 0.75rem;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.35rem;
+      padding: 0.45rem; background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(16px); border-radius: 18px;
+      box-shadow: var(--v2-map-shadow); z-index: 20;
+    }
+    .v2-daybar button {
+      appearance: none; border: 0; background: transparent;
+      display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+      font: inherit; font-size: 0.6rem; font-weight: 600;
+      color: var(--v2-muted); cursor: pointer;
+    }
+    .v2-daybar button.on { color: var(--v2-accent-2); }
+    .v2-daybar .ico { font-size: 1rem; }
+
+    /* ═══ WEB PC (≥1024) ═══ */
+    .d-topnav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1.75rem;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--v2-line);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .d-topnav .logo { font-family: var(--v2-display); font-size: 1.35rem; }
+    .d-nav-tabs { display: flex; gap: 0.25rem; }
+    .d-nav-tabs button {
+      appearance: none; border: 0; background: transparent;
+      padding: 0.45rem 0.85rem; border-radius: 999px;
+      font: inherit; font-size: 0.85rem; font-weight: 600;
+      color: var(--v2-muted); cursor: pointer;
+    }
+    .d-nav-tabs button.on { background: var(--v2-accent-2); color: #fff; }
+
+    .d-trips {
+      padding: 1.75rem 2rem 2rem;
+      max-width: 1140px; margin: 0 auto;
+    }
+    .d-trips-top {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      margin-bottom: 1.25rem;
+    }
+    .d-trips-grid {
+      display: grid; grid-template-columns: 1.35fr 1fr; gap: 1.5rem;
+    }
+    .d-trips .v2-trip-xl { height: 300px; margin: 0; }
+    .d-trip-stack { display: grid; gap: 0.65rem; align-content: start; }
+    .d-trip-stack .v2-trip-card {
+      flex: none; width: 100%;
+      display: grid; grid-template-columns: 110px 1fr;
+    }
+    .d-trip-stack .v2-trip-card img { height: 88px; }
+    .d-trips-bottom {
+      margin-top: 1.5rem;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem;
+    }
+    .d-trips-bottom .v2-trip-card { flex: none; width: 100%; }
+
+    .d-plan {
+      display: grid; grid-template-columns: 3fr 2fr;
+      min-height: 620px; align-items: start;
+    }
+    .d-plan-map {
+      padding: 1.25rem 0 1.25rem 1.25rem;
+      position: sticky; top: 3.5rem;
+    }
+    .d-plan-map .v2-map { height: calc(620px - 2.5rem); min-height: 560px; }
+    .d-plan-panel {
+      padding: 1.25rem 1.5rem 1.5rem 0.75rem;
+      max-height: 620px; overflow: auto;
+    }
+    .d-plan-toolbar {
+      display: flex; gap: 0.35rem; margin: 0.75rem 0;
+      flex-wrap: wrap;
+    }
+
+    .d-hoy {
+      display: grid;
+      grid-template-areas:
+        "top top"
+        "map panel";
+      grid-template-columns: 1.05fr 0.95fr;
+      grid-template-rows: auto 1fr;
+      min-height: 620px;
+    }
+    .d-hoy-topbar {
+      grid-area: top;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 1.5rem;
+      border-bottom: 1px solid var(--v2-line);
+      background: var(--v2-surface);
+    }
+    .d-hoy-topbar .actions { display: flex; gap: 0.35rem; }
+    .d-hoy-map {
+      grid-area: map;
+      padding: 1.25rem 0 1.25rem 1.25rem;
+      position: sticky; top: 3.5rem; align-self: start;
+    }
+    .d-hoy-map .v2-map { height: 520px; }
+    .d-hoy-panel {
+      grid-area: panel;
+      padding: 1rem 1.5rem 1.5rem 0.75rem;
+      overflow: auto; max-height: 580px;
+    }
+
+    .d-wiz {
+      display: grid; grid-template-columns: 1fr 1fr;
+      min-height: 620px;
+    }
+    .d-wiz-photo {
+      position: sticky; top: 3.5rem; align-self: start;
+      min-height: 620px;
+      background:
+        linear-gradient(180deg, transparent, rgba(15, 20, 25, 0.55)),
+        url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80") center/cover;
+    }
+    .d-wiz-photo-caption {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 2rem; color: #fff;
+    }
+    .d-wiz-photo-caption h3 {
+      margin: 0; font-family: var(--v2-display); font-size: 2.2rem;
+    }
+    .d-wiz-form {
+      padding: 2.5rem 2.5rem 2rem 2rem;
+      display: flex; flex-direction: column; justify-content: center;
+      max-width: 480px;
+    }
+    .d-wiz-form h2 {
+      margin: 0.25rem 0 0.5rem; font-family: var(--v2-display); font-size: 2.2rem;
+    }
+  </style>
+</head>
+<body data-device="both">
+  <div class="chrome">
+    <div class="chrome-top">
+      <div>
+        <h1>RutaDos — Preview v2 · Web móvil + Web PC</h1>
+        <p>Rhyme × Atlas. Misma app, dos layouts: tab bar abajo (&lt;1024px) · nav superior + split mapa/lista (≥1024px). Breakpoint único: <strong>1024px</strong>.</p>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+        <div class="seg" id="deviceSeg">
+          <button type="button" data-device="mobile">Solo móvil</button>
+          <button type="button" data-device="desktop">Solo PC</button>
+          <button type="button" class="on" data-device="both">Ambos</button>
+        </div>
+        <div class="seg" id="viewSeg">
+          <button type="button" class="on" data-view="trips">Viajes</button>
+          <button type="button" data-view="wizard">Wizard</button>
+          <button type="button" data-view="plan">Plan</button>
+          <button type="button" data-view="hoy">Hoy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="frames-wrap">
+
+        <!-- ══ SOLO MÓVIL ══ -->
+        <div class="frame-mobile">
+          <p class="frame-label">Web móvil · 390px · tab bar abajo</p>
+          <div class="phone">
+            <div class="phone-notch"></div>
+            <div class="screen" id="screen-mobile">
+              <!-- content injected by JS clone -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ SOLO PC ══ -->
+        <div class="frame-desktop">
+          <p class="frame-label">Web PC · 1280px · nav superior · layouts split</p>
+          <div class="browser wide">
+            <div class="desk-chrome"><i></i><i></i><i></i><div class="url">localhost:5173 — desktop ≥1024px</div></div>
+            <div class="screen" id="screen-desktop">
+              <!-- content below -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ AMBOS ══ -->
+        <div class="frame-both">
+          <div>
+            <p class="frame-label">Web móvil · &lt;1024px</p>
+            <div class="phone">
+              <div class="phone-notch"></div>
+              <div class="screen" id="screen-both-mobile"></div>
+            </div>
+          </div>
+          <div>
+            <p class="frame-label">Web PC · ≥1024px</p>
+            <div class="browser wide">
+              <div class="desk-chrome"><i></i><i></i><i></i><div class="url">localhost:5173</div></div>
+              <div class="screen" id="screen-both-desktop"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ TEMPLATES (hidden, cloned into screens) ══ -->
+        <template id="tpl-mobile-trips">
+          <div class="view on" data-v="trips">
+            <div class="m-trips">
+              <div class="m-trips-head">
+                <a class="v2-wordmark" href="#"><span class="v2-logo-mark">RD</span><span class="v2-logo-text">Ruta<em>Dos</em></span></a>
+                <button type="button" class="v2-btn ghost icon">⚙</button>
+              </div>
+              <h2 class="display" style="margin:0 0 1.25rem;font-size:1.65rem">Tus viajes</h2>
+              <button type="button" class="v2-trip-xl">
+                <img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80" alt="" />
+                <div class="overlay"><span class="badge">Activo</span><h3>Londres</h3><p>22–24 jul · 3 días · 15 paradas</p></div>
+              </button>
+              <p class="sec-label">Otros viajes</p>
+              <div class="v2-trip-row">
+                <button type="button" class="v2-trip-card"><img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>Roma</strong><span>Borrador · 4 días</span></div></button>
+                <button type="button" class="v2-trip-card"><img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>París</strong><span>Ago · 2 días</span></div></button>
+              </div>
+              <p class="sec-label">Explorar</p>
+              <div class="chip-row"><span class="v2-chip on">Londres</span><span class="v2-chip">París</span><span class="v2-chip">Roma</span><span class="v2-chip">Barcelona</span></div>
+            </div>
+            <button type="button" class="v2-fab">+</button>
+            <nav class="v2-tabbar"><button type="button" class="on"><span class="ico">✈</span>Viajes</button><button type="button"><span class="ico">📋</span>Plan</button><button type="button"><span class="ico">📍</span>Hoy</button><button type="button"><span class="ico">⚙</span>Ajustes</button></nav>
+          </div>
+        </template>
+
+        <template id="tpl-mobile-wizard">
+          <div class="view on" data-v="wizard">
+            <div class="m-wiz">
+              <div class="m-wiz-progress"><i></i></div>
+              <div class="m-wiz-body">
+                <span class="step">Paso 1 de 2</span>
+                <h2 class="display">¿A dónde vas?</h2>
+                <p>Destino y fechas. Todo sobre la foto — sin bloque blanco.</p>
+                <input class="v2-input" value="Londres" placeholder="Ciudad" />
+                <input class="v2-input" value="22 – 24 jul 2026" placeholder="Fechas" />
+                <button type="button" class="v2-btn primary full">Continuar</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template id="tpl-mobile-plan">
+          <div class="view on" data-v="plan">
+            <div class="m-plan">
+              <div class="m-plan-head"><h2 class="display">Londres</h2><p class="muted tiny">22–24 jul · 3 días</p></div>
+              <div class="v2-map"><div class="route"></div><span class="pin" style="top:38%;left:42%"></span><span class="pin navy" style="top:52%;left:55%"></span></div>
+              <div class="v2-seg" style="margin:0.75rem 0"><span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span></div>
+              <div class="budget-strip"><span>~85–120 €/día</span><span class="muted tiny">3 noches</span></div>
+              <div class="day-pills"><div class="day-pill on">Día 1<small>Llegada</small></div><div class="day-pill">Día 2<small>9 paradas</small></div><div class="day-pill">Día 3</div></div>
+              <div class="plan-stop"><span class="n">1</span><div><strong>Big Ben</strong><span>16:30</span></div></div>
+              <div class="plan-stop"><span class="n">2</span><div><strong>London Eye</strong><span>18:00</span></div></div>
+            </div>
+            <nav class="v2-tabbar"><button type="button"><span class="ico">✈</span>Viajes</button><button type="button" class="on"><span class="ico">📋</span>Plan</button><button type="button"><span class="ico">📍</span>Hoy</button><button type="button"><span class="ico">⚙</span>Ajustes</button></nav>
+          </div>
+        </template>
+
+        <template id="tpl-mobile-hoy">
+          <div class="view on" data-v="hoy">
+            <div class="m-hoy">
+              <div class="m-hoy-map"><div class="v2-map"><span class="weather">☁ 14–21°</span><div class="route"></div><span class="pin" style="top:40%;left:44%"></span><span class="pin navy" style="top:55%;left:52%"></span></div></div>
+              <nav class="v2-daybar"><button type="button" class="on"><span class="ico">🗺</span>Maps</button><button type="button"><span class="ico">🚇</span>Metro</button><button type="button"><span class="ico">🍽</span>Comer</button><button type="button"><span class="ico">▶</span>En ruta</button></nav>
+              <div class="v2-sheet">
+                <div class="v2-sheet-handle"></div>
+                <h3 class="display">Jueves 23 jul</h3>
+                <p class="muted tiny">9 paradas · bottom sheet</p>
+                <div class="replan-row"><span class="v2-chip">😴 Cansados</span><span class="v2-chip">🌧 Lluvia</span></div>
+                <article class="place-card"><div class="time">10:00<small>45'</small></div><img src="https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=200&q=70" alt="" /><div><strong>National Gallery</strong><div class="meta">Museo</div></div><span class="chev">›</span></article>
+                <article class="place-card"><div class="time">11:30<small>18'</small></div><img src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?auto=format&fit=crop&w=200&q=70" alt="" /><div><strong>Buckingham Palace</strong><div class="meta">0.8 km</div></div><span class="chev">›</span></article>
+              </div>
+            </div>
+            <nav class="v2-tabbar"><button type="button"><span class="ico">✈</span>Viajes</button><button type="button"><span class="ico">📋</span>Plan</button><button type="button" class="on"><span class="ico">📍</span>Hoy</button><button type="button"><span class="ico">⚙</span>Ajustes</button></nav>
+          </div>
+        </template>
+
+        <template id="tpl-desktop-shell">
+          <header class="d-topnav">
+            <a class="v2-wordmark logo" href="#">
+              <span class="v2-logo-mark lg">RD</span>
+              <span class="v2-logo-text">Ruta<em>Dos</em></span>
+            </a>
+            <nav class="d-nav-tabs">
+              <button type="button" data-dv="trips">Viajes</button>
+              <button type="button" data-dv="plan">Plan</button>
+              <button type="button" data-dv="hoy">Hoy</button>
+              <button type="button" data-dv="wizard">Wizard</button>
+              <button type="button">Ajustes</button>
+            </nav>
+            <button type="button" class="v2-btn primary sm">+ Nuevo viaje</button>
+          </header>
+        </template>
+
+        <template id="tpl-desktop-trips">
+          <div class="view on" data-v="trips">
+            <div class="d-trips">
+              <div class="d-trips-top">
+                <div><h2 class="display" style="margin:0;font-size:2rem">Tus viajes</h2><p class="muted" style="margin:0.35rem 0 0">Sin hero · grid editorial Atlas</p></div>
+              </div>
+              <div class="d-trips-grid">
+                <button type="button" class="v2-trip-xl"><img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80" alt="" /><div class="overlay"><span class="badge">Viaje activo</span><h3>Londres</h3><p>22–24 jul · 3 días · 15 paradas</p></div></button>
+                <div class="d-trip-stack">
+                  <button type="button" class="v2-trip-card"><img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=200&q=70" alt="" /><div class="body"><strong>Roma</strong><span>Borrador · 4 días</span></div></button>
+                  <button type="button" class="v2-trip-card"><img src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=200&q=70" alt="" /><div class="body"><strong>París</strong><span>Ago · 2 días</span></div></button>
+                  <p class="sec-label" style="margin-top:0.5rem">Explorar</p>
+                  <div class="chip-row"><span class="v2-chip on">Londres</span><span class="v2-chip">París</span><span class="v2-chip">Roma</span><span class="v2-chip">Barcelona</span></div>
+                </div>
+              </div>
+              <p class="sec-label" style="margin-top:1.5rem">Próximos viajes</p>
+              <div class="d-trips-bottom">
+                <button type="button" class="v2-trip-card"><img src="https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>Venecia</strong><span>Sep · 3 días</span></div></button>
+                <button type="button" class="v2-trip-card"><img src="https://images.unsplash.com/photo-1555881400-74d7aca93a39?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>Lisboa</strong><span>Oct · 2 días</span></div></button>
+                <button type="button" class="v2-trip-card"><img src="https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=400&q=70" alt="" /><div class="body"><strong>Madrid</strong><span>Nov · 1 día</span></div></button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template id="tpl-desktop-wizard">
+          <div class="view on" data-v="wizard">
+            <div class="d-wiz">
+              <div class="d-wiz-photo"><div class="d-wiz-photo-caption"><h3 class="display">Londres</h3><p style="margin:0.35rem 0 0;opacity:0.9">Panel foto sticky · Atlas</p></div></div>
+              <div class="d-wiz-form">
+                <div class="m-wiz-progress" style="margin:0 0 1.25rem;background:var(--v2-line)"><i style="width:50%"></i></div>
+                <span class="sec-label">Paso 1 de 2</span>
+                <h2 class="display">¿A dónde vas?</h2>
+                <p class="muted" style="margin:0 0 1.25rem">Formulario a la izquierda · foto fija derecha</p>
+                <input class="v2-input" value="Londres" /><input class="v2-input" value="22 – 24 jul 2026" />
+                <div style="margin-top:1rem;display:flex;gap:0.5rem"><button type="button" class="v2-btn ghost">Atrás</button><button type="button" class="v2-btn primary">Continuar</button></div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template id="tpl-desktop-plan">
+          <div class="view on" data-v="plan">
+            <div class="d-plan">
+              <div class="d-plan-map"><div class="v2-map"><div class="route"></div><span class="pin" style="top:35%;left:40%"></span><span class="pin navy" style="top:50%;left:55%"></span><span class="pin" style="top:42%;left:48%"></span></div></div>
+              <div class="d-plan-panel">
+                <h2 class="display" style="margin:0">Londres</h2>
+                <p class="muted tiny">Mapa sticky 60% · panel scroll 40%</p>
+                <div class="v2-seg" style="margin:0.85rem 0"><span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span></div>
+                <div class="budget-strip"><span>~85–120 €/día</span><span class="muted tiny">3 noches</span></div>
+                <div class="d-plan-toolbar"><button type="button" class="v2-btn ghost sm">Exportar</button><button type="button" class="v2-btn ghost sm">Telegram</button><button type="button" class="v2-btn ghost sm">Compartir</button></div>
+                <div class="day-pills"><div class="day-pill on">Día 1</div><div class="day-pill">Día 2</div><div class="day-pill">Día 3</div></div>
+                <div class="plan-stop"><span class="n">1</span><div><strong>Big Ben</strong><span>16:30 · Westminster</span></div></div>
+                <div class="plan-stop"><span class="n">2</span><div><strong>London Eye</strong><span>18:00 · 12 min</span></div></div>
+                <div class="plan-stop"><span class="n">3</span><div><strong>Borough Market</strong><span>Cena</span></div></div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template id="tpl-desktop-hoy">
+          <div class="view on" data-v="hoy">
+            <div class="d-hoy">
+              <div class="d-hoy-topbar">
+                <div><h2 class="display" style="margin:0;font-size:1.5rem">Jueves 23 jul</h2><p class="muted tiny" style="margin:0.15rem 0 0">Londres · 9 paradas</p></div>
+                <div class="actions">
+                  <button type="button" class="v2-btn ghost sm">🗺 Maps</button>
+                  <button type="button" class="v2-btn ghost sm">🚇 Metro</button>
+                  <button type="button" class="v2-btn ghost sm">🍽 Comer</button>
+                  <button type="button" class="v2-btn primary sm">▶ En ruta</button>
+                </div>
+              </div>
+              <div class="d-hoy-map"><div class="v2-map"><span style="position:absolute;top:1rem;left:1rem;padding:0.35rem 0.65rem;background:#fff;border-radius:999px;font-size:0.75rem;font-weight:600">☁ 14–21°</span><div class="route"></div><span class="pin" style="top:40%;left:44%"></span><span class="pin navy" style="top:55%;left:52%"></span></div></div>
+              <div class="d-hoy-panel">
+                <div class="replan-row"><span class="v2-chip">😴 Cansados</span><span class="v2-chip">🌧 Lluvia</span><span class="v2-chip">⏱ Tarde</span></div>
+                <article class="place-card"><div class="time">10:00<small>45'</small></div><img src="https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=200&q=70" alt="" /><div><strong>National Gallery</strong><div class="meta">Museo · Trafalgar Sq</div></div><span class="chev">›</span></article>
+                <article class="place-card"><div class="time">11:30<small>18'</small></div><img src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?auto=format&fit=crop&w=200&q=70" alt="" /><div><strong>Buckingham Palace</strong><div class="meta">A pie · 0.8 km</div></div><span class="chev">›</span></article>
+                <article class="place-card"><div class="time">13:00<small>1h</small></div><img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=200&q=70" alt="" /><div><strong>Dishoom</strong><div class="meta">Comida</div></div><span class="chev">›</span></article>
+              </div>
+            </div>
+          </div>
+        </template>
+
+      </div>
+
+      <aside class="notes">
+        <span class="tag">Web móvil + Web PC</span>
+        <h2>Misma app, dos layouts</h2>
+        <table>
+          <tr><th>Hub</th><th>Móvil &lt;1024</th><th>PC ≥1024</th></tr>
+          <tr><td>Nav</td><td>Tab bar abajo + FAB</td><td>Nav superior blur</td></tr>
+          <tr><td>Viajes</td><td>Trip XL + scroll horizontal</td><td>Grid 2 col + 3 col abajo</td></tr>
+          <tr><td>Wizard</td><td>Foto full-bleed + CTA sticky</td><td>Split 50/50 foto sticky</td></tr>
+          <tr><td>Plan</td><td>Mapa arriba + lista</td><td>Mapa sticky 60/40</td></tr>
+          <tr><td>Hoy</td><td>Mapa 40vh + sheet + daybar flotante</td><td>Topbar acciones + mapa|cards</td></tr>
+        </table>
+        <ul style="margin-top:0.75rem">
+          <li>Coral CTA · Navy nav · blanco limpio</li>
+          <li>Sin hero marketing en ningún breakpoint</li>
+          <li>Place cards con foto (Tripsy/YOGO)</li>
+        </ul>
+        <div class="swatches">
+          <span style="background:#fafafa"></span>
+          <span style="background:#ff5a3c"></span>
+          <span style="background:#1a2b4a"></span>
+          <span style="background:#fff"></span>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const VIEWS = ['trips', 'wizard', 'plan', 'hoy'];
+    let currentView = 'trips';
+
+    function cloneTpl(id) {
+      return document.getElementById(id).content.cloneNode(true);
+    }
+
+    function renderMobile(container) {
+      container.innerHTML = '';
+      container.appendChild(cloneTpl('tpl-mobile-' + currentView));
+    }
+
+    function renderDesktop(container) {
+      container.innerHTML = '';
+      container.appendChild(cloneTpl('tpl-desktop-shell'));
+      container.appendChild(cloneTpl('tpl-desktop-' + currentView));
+      const active = container.querySelector('[data-dv="' + currentView + '"]');
+      if (active) active.classList.add('on');
+    }
+
+    function renderAll() {
+      ['screen-mobile', 'screen-both-mobile'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) renderMobile(el);
+      });
+      ['screen-desktop', 'screen-both-desktop'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) renderDesktop(el);
+      });
+    }
+
+    document.getElementById('deviceSeg').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-device]');
+      if (!btn) return;
+      document.body.dataset.device = btn.dataset.device;
+      document.querySelectorAll('#deviceSeg button').forEach((b) => b.classList.toggle('on', b === btn));
+    });
+
+    function setView(name) {
+      currentView = name;
+      document.querySelectorAll('#viewSeg button').forEach((b) => {
+        b.classList.toggle('on', b.dataset.view === name);
+      });
+      renderAll();
+    }
+
+    document.getElementById('viewSeg').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-view]');
+      if (btn) setView(btn.dataset.view);
+    });
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-dv]');
+      if (btn && btn.closest('.d-nav-tabs')) setView(btn.dataset.dv);
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { DestinationGrid } from '../components/DestinationGrid'
 import { Icon, type IconName } from '../components/Icons'
 import { useAppStore } from '../store'
 import { loadOfflineDay } from '../lib/offlineDay'
@@ -9,6 +8,7 @@ import {
   buildQuickDestinationPatch,
   type QuickDestination,
 } from '../lib/quickDestinations'
+import { DestGrid, TopNav } from '../ui'
 
 function tripCoverPhoto(cityName: string): string {
   const hit = FEATURED_DESTINATIONS.find(
@@ -22,14 +22,16 @@ function tripCoverPhoto(cityName: string): string {
 const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
   { icon: 'map', title: 'Mapa del día', text: 'Ruta clara parada a parada' },
   { icon: 'transit', title: 'Transporte real', text: 'Links oficiales metro y bus' },
-  { icon: 'dining', title: 'Reservar al momento', text: 'Hotel, mesa y entradas' },
+  { icon: 'dining', title: 'Comer cerca', text: 'Restaurantes en la ruta' },
 ]
 
-const HERO_FEATURE = FEATURED_DESTINATIONS[0]
+const HERO = FEATURED_DESTINATIONS[0]
 
-export function HomePage() {
+/** Hub "Viajes" — lista de viajes guardados + crear uno nuevo (VISION_APP_V2.md §3.2/§5.2). */
+export function TripsPage() {
   const trips = useAppStore((s) => s.trips)
   const setView = useAppStore((s) => s.setView)
+  const setActiveTrip = useAppStore((s) => s.setActiveTrip)
   const deleteTrip = useAppStore((s) => s.deleteTrip)
   const resetWizard = useAppStore((s) => s.resetWizard)
   const patchWizard = useAppStore((s) => s.patchWizard)
@@ -63,6 +65,11 @@ export function HomePage() {
     setView({ name: 'wizard', step: 0 })
   }
 
+  function openTrip(id: string) {
+    setActiveTrip(id)
+    setView({ name: 'plan', tripId: id })
+  }
+
   function exportAll() {
     const blob = new Blob([JSON.stringify({ trips }, null, 2)], {
       type: 'application/json',
@@ -80,8 +87,12 @@ export function HomePage() {
     reader.onload = () => {
       try {
         const data = JSON.parse(String(reader.result))
-        if (Array.isArray(data.trips)) importTrips(data.trips)
-        else if (Array.isArray(data)) importTrips(data)
+        const list = Array.isArray(data) ? data : data?.trips
+        if (Array.isArray(list) && list.length) {
+          importTrips(list)
+        } else {
+          alert('El archivo no tiene viajes válidos')
+        }
       } catch {
         alert('No se pudo importar el archivo')
       }
@@ -90,7 +101,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="r3-home rd-fade">
+    <div className="ui-home ui-enter ui-page-tabbed">
       {!online && (
         <p className="offline-banner home-offline">
           Sin conexión.
@@ -100,107 +111,79 @@ export function HomePage() {
         </p>
       )}
 
-      <header className="r3-nav">
-        <div className="rd-layout r3-nav-inner">
-          <span className="r3-logo">
-            <span className="r3-logo-dot" aria-hidden />
-            RutaDos
-          </span>
-          <button
-            type="button"
-            className="r3-icon-btn"
-            aria-label="Ajustes"
-            onClick={() => setView({ name: 'settings' })}
-          >
-            <Icon name="settings" size={18} />
-          </button>
-        </div>
-      </header>
+      <TopNav />
 
-      {heroOk && HERO_FEATURE ? (
-        <section className="rd-home-hero-mobile" aria-label="Inicio">
-          <img src={HERO_FEATURE.photo} alt="" decoding="async" fetchPriority="high" />
-          <div className="rd-home-hero-mobile-shade" aria-hidden />
-          <div className="rd-home-hero-mobile-inner">
-            <p className="r3-kicker">RutaDos</p>
+      {heroOk && HERO ? (
+        <section className="ui-hero-mobile" aria-label="Inicio">
+          <img src={HERO.photo} alt="" decoding="async" fetchPriority="high" />
+          <div className="ui-hero-mobile-shade" aria-hidden />
+          <div className="ui-hero-mobile-inner">
+            <p className="ui-kicker">RutaDos</p>
             <h1>
               Tu viaje,
               <br />
               <em>a tu ritmo</em>
             </h1>
-            <p>Plan por días con mapa y transporte — solo o con quien viajéis.</p>
-            <div className="r3-cta-row">
-              <button type="button" className="btn primary" onClick={startWizard}>
-                Nuevo viaje
-              </button>
-            </div>
+            <p>Plan por días con mapa y transporte.</p>
+            <button type="button" className="btn primary" onClick={startWizard}>
+              Nuevo viaje
+            </button>
           </div>
         </section>
       ) : null}
 
-      <section className="rd-layout r3-hero rd-home-split-hero">
+      <section className="ui-hero-desktop" aria-label="Inicio">
         <div>
-          <p className="r3-kicker">Planificador de viajes</p>
+          <p className="ui-kicker">Planificador de viajes</p>
           <h1>
             Tu viaje,
             <br />
             <em>a tu ritmo</em>
           </h1>
-          <p className="r3-lede">
-            Plan por días con mapa y transporte — solo o con quien viajéis.
+          <p className="ui-lede">
+            Destino, fechas y un plan por días con mapa — solo o con quien viajéis.
           </p>
-          <div className="r3-cta-row">
+          <div className="hero-cta">
             <button type="button" className="btn primary" onClick={startWizard}>
               Nuevo viaje
             </button>
             <button
               type="button"
               className="btn ghost"
-              onClick={() => {
+              onClick={() =>
                 document.getElementById('home-destinos')?.scrollIntoView({
                   behavior: 'smooth',
                   block: 'start',
                 })
-              }}
+              }
             >
               Explorar destinos
             </button>
           </div>
         </div>
-        <div>
-          {heroOk && HERO_FEATURE ? (
-            <button
-              type="button"
-              className="r3-hero-card"
-              onClick={() => startWithDestination(HERO_FEATURE)}
-            >
-              <img
-                src={HERO_FEATURE.photo}
-                alt=""
-                decoding="async"
-                fetchPriority="high"
-                onError={() => setHeroOk(false)}
-              />
-              <span className="r3-hero-card-meta">
-                <strong>{HERO_FEATURE.label}</strong>
-                <span>{HERO_FEATURE.tagline ?? 'Empezar aquí'}</span>
-              </span>
-            </button>
-          ) : (
-            <div
-              className="r3-hero-card"
-              style={{ minHeight: '12rem', background: 'var(--r3-foam)' }}
-              aria-hidden
+        {heroOk && HERO ? (
+          <button type="button" className="ui-hero-photo" onClick={() => startWithDestination(HERO)}>
+            <img
+              src={HERO.photo}
+              alt=""
+              decoding="async"
+              fetchPriority="high"
+              onError={() => setHeroOk(false)}
             />
-          )}
-        </div>
+            <span className="ui-hero-photo-meta">
+              <strong>{HERO.label}</strong>
+              <br />
+              <span>{HERO.tagline ?? 'Empezar aquí'}</span>
+            </span>
+          </button>
+        ) : null}
       </section>
 
-      <main className="rd-layout r3-main">
-        <ul className="r3-features">
+      <main className="ui-main">
+        <ul className="ui-features">
           {FEATURES.map((f) => (
             <li key={f.title}>
-              <span className="r3-feature-ico" aria-hidden>
+              <span className="ui-feature-ico" aria-hidden>
                 <Icon name={f.icon} size={20} />
               </span>
               <div>
@@ -211,21 +194,21 @@ export function HomePage() {
           ))}
         </ul>
 
-        <div className="r3-cols">
+        <div className="ui-cols">
           <section id="home-destinos">
-            <div className="r3-sec-head">
+            <div className="ui-sec-head">
               <h2>Explorar destinos</h2>
               <p>Elegí una ciudad o buscá otra en el wizard</p>
             </div>
-            <DestinationGrid
+            <DestGrid
               destinations={FEATURED_DESTINATIONS}
               onPick={startWithDestination}
-              layout="grid"
+              layout="scroll"
             />
           </section>
 
           <section>
-            <div className="r3-sec-head r3-sec-row">
+            <div className="ui-sec-head ui-sec-row">
               <div>
                 <h2>Mis viajes</h2>
                 {trips.length > 0 ? <p>{trips.length} guardados</p> : null}
@@ -238,20 +221,20 @@ export function HomePage() {
             </div>
 
             {!trips.length ? (
-              <div className="r3-empty">
+              <div className="ui-empty">
                 <p>Todavía no hay viajes.</p>
                 <button type="button" className="btn primary sm" onClick={startWizard}>
                   Planificar el primero
                 </button>
               </div>
             ) : (
-              <ul className="r3-trips">
+              <ul className="ui-trip-list">
                 {trips.map((t) => (
                   <li key={t.id}>
                     <button
                       type="button"
-                      className="r3-trip"
-                      onClick={() => setView({ name: 'trip', tripId: t.id })}
+                      className="ui-trip-card"
+                      onClick={() => openTrip(t.id)}
                     >
                       <img src={tripCoverPhoto(t.city.name)} alt="" loading="lazy" />
                       <span>
@@ -264,7 +247,7 @@ export function HomePage() {
                     </button>
                     <button
                       type="button"
-                      className="r3-trip-del"
+                      className="ui-trip-del"
                       aria-label={`Borrar ${t.title}`}
                       onClick={() => {
                         if (confirm(`¿Borrar viaje a ${t.title}?`)) deleteTrip(t.id)
@@ -279,7 +262,7 @@ export function HomePage() {
           </section>
         </div>
 
-        <footer className="r3-foot">
+        <footer className="ui-foot">
           <button type="button" onClick={exportAll}>
             Exportar
           </button>
