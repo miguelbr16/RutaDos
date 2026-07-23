@@ -3,6 +3,7 @@ import { Icon } from '../components/Icons'
 import {
   DEFAULT_PREFERENCES,
   PREFERENCE_LABELS,
+  TRANSIT_MODE_LABELS,
   type PreferenceKey,
   type Preferences,
   type RouteStyle,
@@ -79,7 +80,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [mapStops, setMapStops] = useState<Stop[]>([])
-  const [tripTab, setTripTab] = useState<'map' | 'days' | 'hotel' | 'food'>('days')
+  const [tripTab, setTripTab] = useState<'overview' | 'hotel' | 'food'>('overview')
   const allStops = trip?.days.flatMap((d) => d.stops) ?? []
 
   useEffect(() => {
@@ -464,8 +465,7 @@ export function TripPage({ tripId }: { tripId: string }) {
       <nav className="trip-v2-tabs" aria-label="Secciones del viaje">
         {(
           [
-            { id: 'map' as const, label: 'Mapa' },
-            { id: 'days' as const, label: 'Días' },
+            { id: 'overview' as const, label: 'Plan' },
             { id: 'hotel' as const, label: 'Hotel' },
             { id: 'food' as const, label: 'Comer' },
           ] as const
@@ -478,7 +478,7 @@ export function TripPage({ tripId }: { tripId: string }) {
               setTripTab(t.id)
               if (t.id === 'hotel') setVenueKind('hotel')
               else if (t.id === 'food') setVenueKind('restaurant')
-              else if (venueKind) setVenueKind(null)
+              else setVenueKind(null)
             }}
           >
             {t.label}
@@ -486,27 +486,25 @@ export function TripPage({ tripId }: { tripId: string }) {
         ))}
       </nav>
 
-      <div className={`trip-v2-layout${tripTab === 'map' ? ' map-focus' : ''}`}>
-        {(tripTab === 'map' || tripTab === 'days') && (
-          <div className="trip-v2-map-col">
-            <div className="trip-v2-map-wrap">
-              <div className="trip-v2-map-inner">
-                <TripMap
-                  stops={mapStops.length ? mapStops : allStops.slice(0, 40)}
-                  height={tripTab === 'map' ? '420px' : '320px'}
-                  showLegend
-                />
-              </div>
+      <div className="trip-v2-layout">
+        <div className="trip-v2-map-col">
+          <div className="trip-v2-map-wrap">
+            <div className="trip-v2-map-inner">
+              <TripMap
+                stops={mapStops.length ? mapStops : allStops.slice(0, 40)}
+                height="360px"
+                showLegend
+              />
             </div>
           </div>
-        )}
+        </div>
 
         <div className="trip-v2-body">
-          {tripTab === 'map' ? (
+          {tripTab === 'overview' ? null : (
             <p className="muted tiny trip-map-hint">
-              Tocá un pin para ver fotos. Cambiá a Días para el itinerario.
+              El mapa sigue visible a la izquierda / arriba. Acá: {tripTab === 'hotel' ? 'hoteles' : 'restaurantes'}.
             </p>
-          ) : null}
+          )}
           {offlineForThisTrip ? (
             <div className="offline-banner ok compact">
               <strong>Offline · {offlineForThisTrip.dayLabel}</strong>
@@ -573,7 +571,10 @@ export function TripPage({ tripId }: { tripId: string }) {
                 <button
                   type="button"
                   className="btn primary sm"
-                  onClick={() => setVenueKind('hotel')}
+                  onClick={() => {
+                    setTripTab('hotel')
+                    setVenueKind('hotel')
+                  }}
                 >
                   Cerca de la ruta
                 </button>
@@ -668,10 +669,12 @@ export function TripPage({ tripId }: { tripId: string }) {
             />
           )}
 
-        {(tripTab === 'days' || tripTab === 'map') && (
+        {tripTab === 'overview' && (
         <section className="trip-v2-days">
-          <h2>Itinerario</h2>
-          <p className="trip-v2-days-sub">{trip.days.length} días · {visitStops.length} paradas</p>
+          <h2>Días del viaje</h2>
+          <p className="trip-v2-days-sub">
+            {trip.days.length} días · {visitStops.length} paradas · tocá un día para el mapa detalle
+          </p>
           <ul className="trip-v2-day-list">
             {trip.days.map((day) => {
               const visits = [...day.stops]
@@ -683,11 +686,6 @@ export function TripPage({ tripId }: { tripId: string }) {
                   : day.intensity === 'departure'
                     ? 'Salida'
                     : null
-              const names = visits
-                .slice(0, 3)
-                .map((s) => s.name.replace(/\s*\/.*$/, '').slice(0, 22))
-                .join(' · ')
-              const extra = visits.length - 3
               return (
                 <li key={day.id}>
                   <article className={`trip-v2-day c-${(trip.days.indexOf(day) % 5) + 1}`}>
@@ -705,13 +703,32 @@ export function TripPage({ tripId }: { tripId: string }) {
                           </span>
                         </span>
                       </div>
-                      {names ? (
-                        <p className="day-summary-names muted tiny">
-                          {names}
-                          {extra > 0 ? ` · +${extra}` : ''}
-                        </p>
+                      {visits.length === 0 ? (
+                        <p className="day-summary-names muted tiny">Sin paradas aún</p>
                       ) : (
-                        <p className="day-summary-names muted tiny">Sin paradas</p>
+                        <ol className="day-summary-tl">
+                          {visits.slice(0, 4).map((s, i) => (
+                            <li key={s.id}>
+                              <span className="day-summary-n">{i + 1}</span>
+                              <span>
+                                {s.suggestedTime ? (
+                                  <em className="day-summary-time">{s.suggestedTime}</em>
+                                ) : null}
+                                {s.name.replace(/\s*\/.*$/, '').slice(0, 32)}
+                                {s.transitMode && i < Math.min(3, visits.length - 1) ? (
+                                  <span className="muted tiny">
+                                    {' '}
+                                    → {TRANSIT_MODE_LABELS[s.transitMode]}
+                                    {s.minutesToNext != null ? ` ${s.minutesToNext}'` : ''}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </li>
+                          ))}
+                          {visits.length > 4 ? (
+                            <li className="muted tiny">+{visits.length - 4} más</li>
+                          ) : null}
+                        </ol>
                       )}
                     </button>
                     <div className="day-summary-actions">
@@ -729,7 +746,7 @@ export function TripPage({ tripId }: { tripId: string }) {
                         className="btn primary sm"
                         onClick={() => setView({ name: 'day', tripId: trip.id, dayId: day.id })}
                       >
-                        Abrir
+                        Ver día
                       </button>
                     </div>
                   </article>

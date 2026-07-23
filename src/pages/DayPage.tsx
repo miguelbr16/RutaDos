@@ -279,7 +279,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
       </button>
 
       <div className="day-yogo-map">
-        <TripMap stops={mapStops} route={route} height="280px" showLegend showLegs />
+        <TripMap stops={mapStops} route={route} height="340px" showLegend showLegs />
         {weather && (
           <div className="day-yogo-weather">
             <strong>

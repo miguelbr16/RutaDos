@@ -104,16 +104,48 @@ function FitBounds({
       ...stops.map((s) => [s.lat, s.lng] as [number, number]),
       ...pickables.map((p) => [p.lat, p.lng] as [number, number]),
     ]
-    if (!pts.length) {
-      if (fallback) map.setView([fallback.lat, fallback.lng], 12)
-      return
+    const apply = () => {
+      map.invalidateSize()
+      if (!pts.length) {
+        if (fallback) map.setView([fallback.lat, fallback.lng], 12)
+        return
+      }
+      if (pts.length === 1) {
+        map.setView(pts[0], 13)
+        return
+      }
+      map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 13 })
     }
-    if (pts.length === 1) {
-      map.setView(pts[0], 13)
-      return
+    apply()
+    const t1 = window.setTimeout(apply, 80)
+    const t2 = window.setTimeout(apply, 320)
+    const onResize = () => map.invalidateSize()
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+      window.removeEventListener('resize', onResize)
     }
-    map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 13 })
   }, [map, stops, pickables, fallback])
+  return null
+}
+
+/** Reflow Leaflet cuando cambia altura o tamaño real del contenedor. */
+function InvalidateOnLayout({ height }: { height: string }) {
+  const map = useMap()
+  useEffect(() => {
+    const id = window.setTimeout(() => map.invalidateSize(), 50)
+    return () => window.clearTimeout(id)
+  }, [map, height])
+  useEffect(() => {
+    const el = map.getContainer().parentElement
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      map.invalidateSize()
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [map])
   return null
 }
 
@@ -204,6 +236,7 @@ export function TripMap({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <FitBounds stops={ordered} pickables={pickables} fallback={defaultCenter} />
+          <InvalidateOnLayout height={height} />
           {showLegs &&
             ordered.slice(0, -1).map((s, i) => {
               const next = ordered[i + 1]

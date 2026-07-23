@@ -554,7 +554,7 @@ export function WizardPage() {
         <section className="wiz-v2-stage">
           <header className="wiz-v2-head">
             <h2>¿A dónde vas?</h2>
-            <p>Elegí un destino o buscá otro.</p>
+            <p>Elegí ciudad abajo o buscá. Después: fechas y hotel (opcional).</p>
           </header>
 
           <div className="wiz-v2-panel">
@@ -864,8 +864,8 @@ export function WizardPage() {
       {step === 1 && (
         <section className="wiz-v2-stage">
           <header className="wiz-v2-head">
-            <h2>Tu estilo</h2>
-            <p>Un perfil y seguimos.</p>
+            <h2>¿Cómo querés el viaje?</h2>
+            <p>Elegí un perfil: define ritmo, sitios y transporte. Podés afinar después.</p>
           </header>
 
           <div className="wiz-v2-step1-grid">
@@ -1073,8 +1073,8 @@ export function WizardPage() {
       {step === 2 && (
         <section className="wiz-v2-stage">
           <header className="wiz-v2-head">
-            <h2>Tu viaje</h2>
-            <p>Revisá y generá el plan.</p>
+            <h2>Listo para armar</h2>
+            <p>Revisá el resumen. El plan sale con mapa y días numerados.</p>
           </header>
 
           <article className="wiz-v2-boarding">

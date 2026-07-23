@@ -20,10 +20,12 @@ function tripCoverPhoto(cityName: string): string {
 }
 
 const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
-  { icon: 'map', title: 'Mapa del día', text: 'Ruta clara parada a parada' },
-  { icon: 'transit', title: 'Transporte real', text: 'Links oficiales metro y bus' },
-  { icon: 'dining', title: 'Reservar al momento', text: 'Hotel, mesa y entradas' },
+  { icon: 'map', title: 'Mapa siempre visible', text: 'Plan y ruta juntos, día a día' },
+  { icon: 'transit', title: 'Cómo moverse', text: 'Metro, bus y links oficiales' },
+  { icon: 'dining', title: 'Hotel y mesa', text: 'Reservar cerca de la ruta' },
 ]
+
+const HERO_FEATURE = FEATURED_DESTINATIONS[0]
 
 export function HomePage() {
   const trips = useAppStore((s) => s.trips)
@@ -88,7 +90,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="home-page home-v2">
+    <div className="home-page home-v2 home-v3">
       {!online && (
         <p className="offline-banner home-offline">
           Sin conexión.
@@ -115,33 +117,55 @@ export function HomePage() {
         </div>
       </header>
 
-      <section className="home-v2-hero">
-        {heroOk ? (
-          <img
-            className="home-v2-hero-img"
-            src={HERO_PHOTO}
-            alt=""
-            decoding="async"
-            fetchPriority="high"
-            onError={() => setHeroOk(false)}
-          />
-        ) : null}
-        <div className="home-v2-hero-shade" aria-hidden />
-        <div className="home-v2-hero-inner rd-layout">
-          <div className="home-v2-hero-content">
-            <p className="home-v2-brand-mark">RutaDos</p>
-            <h1>
-              Tu viaje,
-              <br />
-              <em>a tu ritmo</em>
-            </h1>
-            <p className="home-v2-lede">
-              Plan por días con mapa y transporte — solo o con quien viajéis.
-            </p>
-            <button type="button" className="btn primary home-v2-cta" onClick={startWizard}>
+      <section className="home-v3-hero rd-layout">
+        <div className="home-v3-hero-copy">
+          <p className="home-v3-kicker">Planificador de viajes</p>
+          <h1>
+            Tu viaje,
+            <br />
+            <em>a tu ritmo</em>
+          </h1>
+          <p className="home-v3-lede">
+            Itinerario por días con mapa siempre a la vista — solo o acompañado.
+          </p>
+          <div className="home-v3-cta-row">
+            <button type="button" className="btn primary home-v3-cta" onClick={startWizard}>
               Nuevo viaje
             </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                const el = document.getElementById('home-destinos')
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+            >
+              Explorar destinos
+            </button>
           </div>
+        </div>
+        <div className="home-v3-hero-visual">
+          {heroOk ? (
+            <button
+              type="button"
+              className="home-v3-hero-card"
+              onClick={() => startWithDestination(HERO_FEATURE)}
+            >
+              <img
+                src={HERO_FEATURE.photo}
+                alt=""
+                decoding="async"
+                fetchPriority="high"
+                onError={() => setHeroOk(false)}
+              />
+              <span className="home-v3-hero-card-meta">
+                <strong>{HERO_FEATURE.label}</strong>
+                <span>{HERO_FEATURE.tagline ?? 'Empezar aquí'}</span>
+              </span>
+            </button>
+          ) : (
+            <div className="home-v3-hero-fallback" aria-hidden />
+          )}
         </div>
       </section>
 
@@ -161,10 +185,10 @@ export function HomePage() {
         </ul>
 
         <div className="home-v2-columns">
-          <section className="home-v2-section">
+          <section className="home-v2-section" id="home-destinos">
             <div className="home-v2-section-head">
               <h2>Explorar destinos</h2>
-              <p>Empezá con una ciudad lista o buscá otra en el wizard</p>
+              <p>Elegí una ciudad o buscá otra en el wizard</p>
             </div>
             <DestinationGrid
               destinations={FEATURED_DESTINATIONS}
