@@ -522,7 +522,7 @@ export function WizardPage() {
   }
 
   return (
-    <div className="page r3-wiz">
+    <div className="page r3-wiz rd-fade">
       <div className="r3-wiz-top">
         <button type="button" className="r3-wiz-back" aria-label="Inicio" onClick={() => setView({ name: 'home' })}>
           <Icon name="chevron-left" size={20} />
@@ -616,19 +616,39 @@ export function WizardPage() {
             ) : null}
 
             {wizard.cityPick ? (
-              <div className="dest-picked">
-                <div>
-                  <strong>{wizard.cityPick.name}</strong>
-                  <span className="muted tiny">{wizard.cityPick.displayName}</span>
+              <>
+                <div className="dest-picked">
+                  <div>
+                    <strong>{wizard.cityPick.name}</strong>
+                    <span className="muted tiny">{wizard.cityPick.displayName}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    onClick={() => patchWizard({ cityPick: null })}
+                  >
+                    Cambiar
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="btn ghost sm"
-                  onClick={() => patchWizard({ cityPick: null })}
-                >
-                  Cambiar
-                </button>
-              </div>
+                <div className="r3-wiz-map-preview">
+                  <TripMap
+                    stops={[
+                      {
+                        id: 'wiz-city',
+                        placeId: 'wiz-city',
+                        name: wizard.cityPick.name,
+                        lat: wizard.cityPick.lat,
+                        lng: wizard.cityPick.lng,
+                        category: 'monument',
+                        order: 0,
+                      },
+                    ]}
+                    height="140px"
+                    showLegs={false}
+                    showLegend={false}
+                  />
+                </div>
+              </>
             ) : null}
 
             <p className="r3-wiz-section-label">Destinos populares</p>
@@ -704,10 +724,10 @@ export function WizardPage() {
               {loadingAirports && <p className="muted tiny">Buscando aeropuertos…</p>}
               {airports.length > 0 ? (
                 <ul className="wiz-select-list">
-                  {airports.map((a) => {
+                  {airports.map((a, i) => {
                     const selected = sameAirport(a, wizard.airportPick)
                     return (
-                      <li key={a.code || `${a.name}-${a.lat}`}>
+                      <li key={a.code ? `iata-${a.code}` : `ap-${i}-${a.lat.toFixed(4)}-${a.lng.toFixed(4)}`}>
                         <button
                           type="button"
                           className={selected ? 'wiz-select on' : 'wiz-select'}

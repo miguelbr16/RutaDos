@@ -267,7 +267,7 @@ export function DayPage({ tripId, dayId }: { tripId: string; dayId: string }) {
   }
 
   return (
-    <div className="page r3-day">
+    <div className="page r3-day rd-fade">
       <OfflineStatusBanner online={online} pack={offlinePack} />
 
       <button

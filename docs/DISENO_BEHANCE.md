@@ -1,102 +1,93 @@
-# RutaDos — Diseño UI (Behance + estado real)
+# RutaDos — Diseño UI light limpio (jul 2026)
 
-**Referencias Behance (jul 2026):**
+**Dirección:** light limpio / editorial de viaje — no dark, no glass, no purple-on-white genérico.
 
-1. [Travel agency landing](https://www.behance.net/gallery/168961811/Travel-agency-landing-page-uxui)
-2. [Travelscape](https://www.behance.net/gallery/252622071/Travelscape-Plan-Trips-Together-Powered-by-AI)
-3. [Touri](https://www.behance.net/gallery/248048297/Touri-AI-Trip-Planner-App-UI-UX-Design)
-4. [Travel Booking](https://www.behance.net/gallery/249333877/Travel-Booking-Trip-Planner-App-UIUX-Design)
-5. [YOGO Trip Planner](https://www.behance.net/gallery/78632553/YOGO-Trip-Planner-App)
+**Ancla visual:** [Dribbble 17978900](https://dribbble.com/shots/17978900-Trip-Planner-Mobile-App) + Behance YOGO / Atlas / Travel Booking / AI Smart Trip Planner.
 
-**Principio:** app para **cualquier viajero**. Inspiración visual, no copiar flujos de app solo-grupo.
+**Principio:** app para **cualquier viajero** (solo o acompañado). Inspiración visual, no copiar flujos ajenos.
+
+---
+
+## Tokens
+
+| Token | Valor |
+|-------|--------|
+| Fondo | `#F3F5F4` (mist/foam) |
+| Superficie | cards blancas, radio 16–20px |
+| Marca | teal `--sea` / `--rd-sea` |
+| Tipo | Fraunces (títulos) + Outfit (UI) |
+| Layout | `--layout-max: 72rem`, `.rd-layout` |
+
+CSS: `src/redesign.css` (tokens `--rd-*`) + `src/skin.css` (pantallas `r3-*`). Import en `main.tsx`.
 
 ---
 
 ## Mapa pantalla → inspiración
 
-| Pantalla | Inspiración | Estado jul 2026 |
-|----------|-------------|-----------------|
-| **Home** | Landing agency + Touri | Parcial — hero + destinos foto; diseño aún en iteración |
-| **Wizard** | Touri + Travelscape | Parcial — 3 pasos, sitios típicos; falta mapa preview |
-| **Trip** | YOGO + Travelscape | Parcial — mapa+panel PC, presupuesto; falta tabs y pulido |
-| **Day** | YOGO + Travel Booking | Legacy — pendiente rediseño |
-| **Map popup** | Travel Booking cards | Hecho — galería al clicar pin |
-| **Venues** | Travel Booking | Parcial — cards con thumb |
+| Pantalla | Inspiración | Estado |
+|----------|-------------|--------|
+| **Home** | TripIt cards + Polarsteps foto + landing TripForge | Hero full-bleed móvil + split PC, destinos grid, viajes foto |
+| **Wizard** | Touri / Atlas | 3 pasos, presets, mini mapa destino, boarding pass |
+| **Trip** | Wanderlog + YOGO | Map-first, tabs Mapa·Días·Hotel·Comer, presupuesto strip |
+| **Day** | YOGO + Sygic place cards | Mapa sticky, timeline cards, barra inferior |
+| **Map popup** | Travel Booking | Galería al clicar pin |
+| **Venues** | Travel Booking | Cards thumb OSM + OpenTripMap |
 
 ---
 
-## Qué significa “wizard” en diseño
+## Qué coger de competidores (ideas, no copiar UI)
 
-El **wizard** es la UI de **crear viaje** (no la home ni el trip). Objetivo Behance/Touri:
-
-- Pocos pasos, sensación de app de viajes (no encuesta larga)
-- Destinos visuales con foto
-- Presets grandes (Clásico / Local / Foodie)
-- Paso final tipo boarding pass
-- Sitios típicos como inspiración al elegir ciudad
-
-Problemas reportados por usuario (jul 2026):
-
-- Sensación de “encuesta” / formulario largo
-- Huecos vacíos (corregido parcialmente en `3c2f7d5`)
-- Layout centrado estrecho en PC (mejorado en `37aafd7` con `--layout-max: 72rem`)
-- Estética general aún no convence → **retomar mañana**
+| Fuente | Adoptar | No adoptar |
+|--------|---------|------------|
+| TripIt | Cards escaneables, itinerario por día | Inbox email |
+| Wanderlog | Mapa + lista, rutas, tabs | Paywall chat |
+| Polarsteps | Foto grande, estética revista | GPS diary / photobook |
+| Sygic | Place cards, duración | UI densa, ads |
+| YOGO | Day mapa fijo + barra sticky | — |
 
 ---
 
-## Fases de diseño
+## Referencias Behance / Dribbble
 
-### Fase A — Hecho (base v2)
+1. [YOGO Trip Planner](https://www.behance.net/gallery/78632553/YOGO-Trip-Planner-App)
+2. [Atlas](https://www.behance.net/gallery/252827515/Travel-Planning-App-UIUX-Design-Atlas)
+3. [Travel Booking](https://www.behance.net/gallery/249333877/Travel-Booking-Trip-Planner-App-UIUX-Design)
+4. [TravelPlan stress-free](https://www.behance.net/gallery/248071881/TravelPlan-Mobile-App-for-Stress-Free-Trip-Planning)
+5. [AI Smart Trip Planner](https://www.behance.net/gallery/250037379/AI-Smart-Trip-Planner)
+6. [Dribbble 17978900](https://dribbble.com/shots/17978900-Trip-Planner-Mobile-App) — north star light
+7. [TripForge landing](https://dribbble.com/shots/27530811-TripForge-AI-for-Trip-Planner-Landing-Page-V2)
 
-- [x] `redesign.css` + import en `main.tsx`
-- [x] Home v2: hero, destinos Unsplash, features, viajes numerados
-- [x] Wizard v2: dots, presets SVG, boarding pass, sitios típicos, panel lateral paso 1
-- [x] Trip v2: presupuesto visible, layout mapa+panel PC, días con color
-- [x] Iconos SVG (`Icons.tsx`) en lugar de emojis
-- [x] Popup mapa con fotos Wikipedia (no en pins)
-- [x] Layout ancho desktop (`--layout-max: 72rem`)
-- [x] OpenTripMap + VenueFinder + docs afiliado/OTM
+Inventario ampliado: `docs/REFERENCIAS_IDEAS.md`
 
-### Fase B — Siguiente (prioridad usuario)
+---
 
-- [ ] **Diseño global** — sensación app profesional (home, wizard, trip, day coherentes)
-- [ ] **Day YOGO** — mapa fijo + barra inferior sticky (Maps · Metro · Comer · En ruta)
-- [ ] **Wizard Touri** — mini mapa Leaflet al elegir destino
-- [ ] Trip: acciones rápidas visibles (no solo menú ···)
+## Fase B — Hecho (light UI jul 2026)
 
-### Fase C — Pulido pre-lanzamiento
+- [x] Backup `backup/pre-light-ui`
+- [x] Tokens `--rd-*` + `.rd-layout` en `redesign.css`
+- [x] Home: hero full-bleed móvil + split PC, destinos, trip cards foto
+- [x] Wizard: 3 pasos, presets, mini mapa al elegir ciudad, confirm boarding
+- [x] Trip: mapa siempre visible, tabs Mapa/Días/Hotel/Comer, días numerados
+- [x] Day YOGO: mapa + sheet + barra Maps/Metro/Comer/En ruta + place cards
+- [x] Iconos SVG (`Icons.tsx`)
+- [x] Popup mapa con fotos
+- [x] OpenTripMap opcional (`docs/OPENTRIPMAP.md`)
 
-- [ ] Trip tabs: Mapa · Días · Alojamiento · Comer
-- [ ] SharePage visual
-- [ ] Página privacidad (requerida antes afiliado Booking)
-- [ ] Fotos propias en `/public/` sustituyendo Unsplash
+## Fase C — Pulido
 
-### Fase D — Post-beta
-
-- [ ] `VITE_OPENTRIPMAP_KEY` en Vercel prod
-- [ ] `VITE_BOOKING_AID` tras aprobación afiliado
-- [ ] Packs curados por ciudad
+- [ ] Settings / Share visual alineado
+- [ ] Fotos propias en `/public/`
+- [ ] Página privacidad (Booking afiliado)
+- [ ] Atribución ODbL completa en Ajustes
 
 ---
 
 ## Qué NO copiar
 
-- Catálogo Booking/Google embebido (API de pago)
-- Chat IA como pantalla principal (Telegram ya cubre in situ)
+- Catálogo Booking/Google embebido
+- Chat IA como pantalla principal (Telegram cubre in situ)
 - App centrada solo en grupos
-- Animaciones pesadas en móvil real
-
----
-
-## Tokens CSS v2
-
-```css
---layout-max: 72rem;      /* ancho contenido desktop */
---v2-ink, --v2-card, --v2-muted, --v2-line
---page-pad: clamp(1rem, 3.5vw, 1.75rem);
-```
-
-Clases principales: `.rd-layout`, `.home-v2`, `.wizard-v2`, `.trip-v2`, `.map-stop-popup`
+- Dark glass / neumorphism genérico
 
 ---
 
@@ -104,12 +95,13 @@ Clases principales: `.rd-layout`, `.home-v2`, `.wizard-v2`, `.trip-v2`, `.map-st
 
 | Archivo | Rol |
 |---------|-----|
-| `src/redesign.css` | Estilos v2 |
-| `src/index.css` | Base + legacy |
+| `src/redesign.css` | Tokens `--rd-*`, motion, overrides timeline |
+| `src/skin.css` | Home, Wizard, Trip, Day (`r3-*`) |
+| `src/index.css` | Base + componentes genéricos |
+| `docs/preview-light-ui.html` | Mock estático móvil/PC |
 | `src/pages/HomePage.tsx` | Portada |
 | `src/pages/WizardPage.tsx` | Wizard |
 | `src/pages/TripPage.tsx` | Trip |
-| `src/pages/DayPage.tsx` | Day (siguiente foco) |
+| `src/pages/DayPage.tsx` | Day |
 | `src/components/TripMap.tsx` | Mapa + popups |
-| `src/components/Icons.tsx` | Iconos |
-| `src/lib/quickDestinations.ts` | Fotos destino |
+| `src/components/DayTimeline.tsx` | Timeline día |

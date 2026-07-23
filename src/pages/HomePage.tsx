@@ -20,9 +20,9 @@ function tripCoverPhoto(cityName: string): string {
 }
 
 const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
-  { icon: 'map', title: 'Mapa siempre a la vista', text: 'Plan y ruta juntos, día a día' },
-  { icon: 'transit', title: 'Transporte real', text: 'Metro, bus y links oficiales' },
-  { icon: 'dining', title: 'Si el día cambia', text: 'Cansados, lluvia o tarde → replan' },
+  { icon: 'map', title: 'Mapa del día', text: 'Ruta clara parada a parada' },
+  { icon: 'transit', title: 'Transporte real', text: 'Links oficiales metro y bus' },
+  { icon: 'dining', title: 'Reservar al momento', text: 'Hotel, mesa y entradas' },
 ]
 
 const HERO_FEATURE = FEATURED_DESTINATIONS[0]
@@ -90,7 +90,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="r3-home">
+    <div className="r3-home rd-fade">
       {!online && (
         <p className="offline-banner home-offline">
           Sin conexión.
@@ -101,7 +101,7 @@ export function HomePage() {
       )}
 
       <header className="r3-nav">
-        <div className="r3-wrap r3-nav-inner">
+        <div className="rd-layout r3-nav-inner">
           <span className="r3-logo">
             <span className="r3-logo-dot" aria-hidden />
             RutaDos
@@ -117,16 +117,37 @@ export function HomePage() {
         </div>
       </header>
 
-      <section className="r3-wrap r3-hero">
+      {heroOk && HERO_FEATURE ? (
+        <section className="rd-home-hero-mobile" aria-label="Inicio">
+          <img src={HERO_FEATURE.photo} alt="" decoding="async" fetchPriority="high" />
+          <div className="rd-home-hero-mobile-shade" aria-hidden />
+          <div className="rd-home-hero-mobile-inner">
+            <p className="r3-kicker">RutaDos</p>
+            <h1>
+              Tu viaje,
+              <br />
+              <em>a tu ritmo</em>
+            </h1>
+            <p>Plan por días con mapa y transporte — solo o con quien viajéis.</p>
+            <div className="r3-cta-row">
+              <button type="button" className="btn primary" onClick={startWizard}>
+                Nuevo viaje
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="rd-layout r3-hero rd-home-split-hero">
         <div>
           <p className="r3-kicker">Planificador de viajes</p>
           <h1>
-            Un plan que se adapta
+            Tu viaje,
             <br />
-            <em>cuando el día cambia</em>
+            <em>a tu ritmo</em>
           </h1>
           <p className="r3-lede">
-            Itinerario con mapa, transporte oficial y replan in situ — solo o acompañado.
+            Plan por días con mapa y transporte — solo o con quien viajéis.
           </p>
           <div className="r3-cta-row">
             <button type="button" className="btn primary" onClick={startWizard}>
@@ -145,13 +166,6 @@ export function HomePage() {
               Explorar destinos
             </button>
           </div>
-          <aside className="r3-diff">
-            <strong>Lo que nos diferencia</strong>
-            <p>
-              Cansados, lluvia o vais tarde → el día se reordena. Copiloto Telegram con tu
-              ubicación. Offline del día.
-            </p>
-          </aside>
         </div>
         <div>
           {heroOk && HERO_FEATURE ? (
@@ -182,7 +196,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <main className="r3-wrap r3-main">
+      <main className="rd-layout r3-main">
         <ul className="r3-features">
           {FEATURES.map((f) => (
             <li key={f.title}>

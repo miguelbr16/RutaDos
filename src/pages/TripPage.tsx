@@ -80,7 +80,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [mapStops, setMapStops] = useState<Stop[]>([])
-  const [tripTab, setTripTab] = useState<'overview' | 'hotel' | 'food'>('overview')
+  const [tripTab, setTripTab] = useState<'map' | 'days' | 'hotel' | 'food'>('days')
   const allStops = trip?.days.flatMap((d) => d.stops) ?? []
 
   useEffect(() => {
@@ -230,7 +230,7 @@ export function TripPage({ tripId }: { tripId: string }) {
   }
 
   return (
-    <div className="page r3-trip">
+    <div className="page r3-trip rd-fade">
       <div className="r3-trip-top">
         <button
           type="button"
@@ -465,7 +465,8 @@ export function TripPage({ tripId }: { tripId: string }) {
       <nav className="r3-trip-tabs" aria-label="Secciones del viaje">
         {(
           [
-            { id: 'overview' as const, label: 'Plan' },
+            { id: 'map' as const, label: 'Mapa' },
+            { id: 'days' as const, label: 'Días' },
             { id: 'hotel' as const, label: 'Hotel' },
             { id: 'food' as const, label: 'Comer' },
           ] as const
@@ -500,11 +501,15 @@ export function TripPage({ tripId }: { tripId: string }) {
         </div>
 
         <div className="r3-trip-body">
-          {tripTab === 'overview' ? null : (
+          {tripTab === 'map' ? (
             <p className="muted tiny trip-map-hint">
-              El mapa sigue visible a la izquierda / arriba. Acá: {tripTab === 'hotel' ? 'hoteles' : 'restaurantes'}.
+              Tocá un pin para fotos. Cambiá a Días para el itinerario.
             </p>
-          )}
+          ) : tripTab === 'hotel' || tripTab === 'food' ? (
+            <p className="muted tiny trip-map-hint">
+              El mapa sigue visible. Acá: {tripTab === 'hotel' ? 'hoteles' : 'restaurantes'}.
+            </p>
+          ) : null}
           {offlineForThisTrip ? (
             <div className="offline-banner ok compact">
               <strong>Offline · {offlineForThisTrip.dayLabel}</strong>
@@ -669,7 +674,7 @@ export function TripPage({ tripId }: { tripId: string }) {
             />
           )}
 
-        {tripTab === 'overview' && (
+        {(tripTab === 'days' || tripTab === 'map') && (
         <section className="r3-trip-days">
           <h2>Días del viaje</h2>
           <p className="r3-trip-days-sub">

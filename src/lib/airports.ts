@@ -81,6 +81,8 @@ export async function findAirportsForCity(
 ): Promise<AirportOption[]> {
   const known = knownAirportsForCity(cityName, displayName)
   const seen = new Set(known.map((a) => a.code || a.name.toLowerCase()))
+  const nearKey = (la: number, ln: number) => `${la.toFixed(3)},${ln.toFixed(3)}`
+  const seenNear = new Set(known.map((a) => nearKey(a.lat, a.lng)))
 
   try {
     const q = `airport ${cityName}`
@@ -95,9 +97,16 @@ export async function findAirportsForCity(
         const dlng = Math.abs(h.lng - lng)
         if (dlat > 1.2 || dlng > 1.2) continue
       }
-      const key = h.shortName.toLowerCase()
-      if (seen.has(key)) continue
-      seen.add(key)
+      const nameKey = h.shortName.toLowerCase()
+      const geo = nearKey(h.lat, h.lng)
+      if (seen.has(nameKey) || seenNear.has(geo)) continue
+      // Evitar duplicar un aeropuerto curado (mismo sitio, otro nombre)
+      const overlapsKnown = known.some(
+        (a) => Math.abs(a.lat - h.lat) < 0.08 && Math.abs(a.lng - h.lng) < 0.08,
+      )
+      if (overlapsKnown) continue
+      seen.add(nameKey)
+      seenNear.add(geo)
       known.push({ name: h.shortName, lat: h.lat, lng: h.lng, blurb: h.kind })
     }
   } catch {

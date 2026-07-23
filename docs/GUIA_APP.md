@@ -14,7 +14,7 @@ Documentación de **pantallas**, **flujos** y **conceptos** para desarrolladores
 | **VenueFinder** | Panel de hoteles o restaurantes cerca (OSM + OpenTripMap opcional). |
 | **Discover** | Lógica que busca sitios al generar el plan (`discover.ts`). |
 | **Landmarks** | Sitios icónicos curados Londres/París (`landmarks.ts`); también “sitios típicos” en wizard. |
-| **v2 / redesign.css** | Capa visual nueva (home, wizard, trip) sobre `index.css`. |
+| **light UI / redesign.css** | Tokens `--rd-*` + pantallas `r3-*` en `skin.css` (home, wizard, trip, day). |
 
 ---
 
@@ -157,9 +157,10 @@ TripPage / DayPage
 ## CSS — dos capas
 
 1. **`index.css`** — base, componentes legacy, wizard antiguo, day, botones `.btn`, map legend
-2. **`redesign.css`** — override v2: `.home-v2`, `.wizard-v2`, `.trip-v2`, popups `.map-stop-popup`, layout `.rd-layout`
+2. **`redesign.css`** — tokens `--rd-*`, motion, timeline cards; importa `skin.css` (`r3-*`)
+3. **`skin.css`** — Home, Wizard, Trip, Day light limpio
 
-Import en `main.tsx`: primero `index.css`, luego `redesign.css`.
+Import en `main.tsx`: `index.css`, luego `redesign.css`.
 
 Páginas con fondo gris plano: home, wizard, trip (`App.tsx` → clase `app-v2`).
 
