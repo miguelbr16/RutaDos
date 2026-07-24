@@ -32,6 +32,11 @@
     --cat-park: #22c55e;
     --cat-view: #0ea5e9;
     --cat-market: #d4a017;
+    --cat-hotel: #10b981;
+    --budget-hotel: #10b981;
+    --budget-food: #f59e0b;
+    --budget-transport: #0ea5e9;
+    --budget-tickets: #c2703b;
   }
 
   * { box-sizing: border-box; }
@@ -131,6 +136,14 @@
   .tabbar3 button.on { color: var(--accent); }
   .tabbar3 .ico { width: 22px; height: 22px; border-radius: 8px; display: grid; place-items: center; font-size: 0.9rem; }
   .tabbar3 button.on .ico { background: var(--accent-soft); }
+  /* Tab bar oscura cuando el frame está en tema Hoy */
+  [data-theme="dark"] .tabbar3 {
+    background: rgba(13, 20, 32, 0.92);
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+  [data-theme="dark"] .tabbar3 button { color: #7a8aa3; }
+  [data-theme="dark"] .tabbar3 button.on { color: var(--accent); }
+  [data-theme="dark"] .tabbar3 button.on .ico { background: rgba(255, 90, 60, 0.18); }
 
   .seg3 { display: flex; gap: 0.2rem; padding: 0.22rem; background: rgba(120,130,150,0.12); border-radius: 12px; }
   .seg3 span { flex: 1; text-align: center; padding: 0.42rem 0.35rem; border-radius: 10px; font-size: 0.78rem; font-weight: 700; color: var(--muted); }
@@ -160,7 +173,7 @@
   [data-theme="dark"] .map3 { background: linear-gradient(135deg, #1c2c46 0%, #142238 45%, #0d1729 100%); }
   .map3 .route { position: absolute; inset: 0; background: radial-gradient(circle at 35% 45%, rgba(255,90,60,0.28) 0, transparent 8%), radial-gradient(circle at 55% 55%, rgba(26,43,74,0.22) 0, transparent 7%), radial-gradient(circle at 48% 38%, rgba(26,43,74,0.16) 0, transparent 6%); }
   [data-theme="dark"] .map3 .route { background: radial-gradient(circle at 35% 45%, rgba(255,107,74,0.35) 0, transparent 8%), radial-gradient(circle at 55% 55%, rgba(255,255,255,0.14) 0, transparent 7%), radial-gradient(circle at 48% 38%, rgba(255,255,255,0.1) 0, transparent 6%); }
-  .map3 .pin { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 2px 8px rgba(26,43,74,0.25); }
+  .map3 .pin { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 2px 8px rgba(26,43,74,0.25); color: #fff; font-size: 0.62rem; font-weight: 800; display: grid; place-items: center; }
   .map3 .pin.alt { background: var(--accent-2); }
   [data-theme="dark"] .map3 .pin.alt { background: #fff; }
 
@@ -198,6 +211,23 @@
   .trip-card3 span { display: block; font-size: 0.74rem; color: var(--muted); margin-top: 0.15rem; }
   .chip-row3 { display: flex; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; flex-wrap: wrap; }
 
+  /* widget progreso viaje — TravelPlan */
+  .trip-progress3 {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem; box-shadow: var(--card-shadow); margin-bottom: 0.85rem;
+  }
+  .trip-progress3 .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; }
+  .trip-progress3 .row strong { font-size: 0.88rem; }
+  .trip-progress3 .pct { font-size: 0.78rem; font-weight: 800; color: var(--accent); }
+  .trip-progress3 .bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .trip-progress3 .bar i { display: block; height: 100%; width: 67%; background: linear-gradient(90deg, var(--accent), #ff8066); border-radius: 99px; }
+  .trip-progress3 .meta { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.45rem; font-size: 0.72rem; color: var(--muted); }
+  .offline-tag3 {
+    display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.68rem; font-weight: 700;
+    color: #059669; background: #ecfdf5; padding: 0.18rem 0.5rem; border-radius: 999px;
+  }
+  [data-theme="dark"] .offline-tag3 { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+
   /* budget bar */
   .budget-card3 { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.85rem 0.95rem; box-shadow: var(--card-shadow); margin-bottom: 0.9rem; }
   .budget-card3 .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.55rem; }
@@ -233,6 +263,21 @@
   .transport-pill3 .t-val { color: var(--ink); }
   .transport-pill3.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .transport-pill3.on .t-val { color: #fff; }
+  .transport-pill3 .t-price { display: block; font-size: 0.66rem; font-weight: 700; color: var(--accent); margin-top: 0.08rem; }
+  .transport-pill3.on .t-price { color: rgba(255,255,255,0.92); }
+  [data-theme="dark"] .transport-pill3 { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); }
+  [data-theme="dark"] .transport-pill3 .t-val { color: var(--ink); }
+
+  .weather-strip3 {
+    display: flex; gap: 0.35rem; overflow-x: auto; margin: 0.65rem 0 0.75rem; scrollbar-width: none;
+  }
+  .weather-strip3::-webkit-scrollbar { display: none; }
+  .wday3 {
+    flex: 0 0 auto; min-width: 46px; text-align: center; padding: 0.38rem 0.5rem; border-radius: 11px;
+    background: var(--surface); border: 1px solid var(--line); font-size: 0.66rem; color: var(--muted);
+  }
+  .wday3.on { background: var(--accent-2); color: #fff; border-color: var(--accent-2); }
+  .wday3 strong { display: block; font-size: 0.82rem; color: inherit; }
 
   .replan-row3 { display: flex; gap: 0.35rem; margin: 0.65rem 0 0.85rem; overflow-x: auto; scrollbar-width: none; }
 
@@ -339,10 +384,10 @@
           <button type="button" class="on" data-device="both">Ambos</button>
         </div>
         <div class="seg" id="viewSeg">
-          <button type="button" class="on" data-view="trips">Viajes</button>
+          <button type="button" data-view="trips">Viajes</button>
           <button type="button" data-view="wizard">Wizard</button>
           <button type="button" data-view="plan">Plan</button>
-          <button type="button" data-view="hoy">Hoy</button>
+          <button type="button" class="on" data-view="hoy">Hoy</button>
         </div>
         <div class="seg theme" id="themeSeg">
           <button type="button" class="on" data-theme-mode="auto">Auto</button>
@@ -389,7 +434,12 @@
                 <a class="wordmark3" href="#"><span class="logo-mark3">RD</span><span class="logo-text3">Ruta<em>Dos</em></span></a>
                 <button type="button" class="btn3 ghost icon">⚙</button>
               </div>
-              <h2 class="display" style="margin:0 0 1.25rem;font-size:1.65rem">Tus viajes</h2>
+              <h2 class="display" style="margin:0 0 1rem;font-size:1.65rem">Tus viajes</h2>
+              <div class="trip-progress3">
+                <div class="row"><strong>Londres · día 2 de 3</strong><span class="pct">67%</span></div>
+                <div class="bar"><i></i></div>
+                <div class="meta"><span>6/9 paradas hoy</span><span class="offline-tag3">● Listo offline</span></div>
+              </div>
               <button type="button" class="trip-xl3">
                 <img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80" alt="" />
                 <div class="overlay"><span class="badge">Activo</span><h3>Londres</h3><p>22–24 jul · 3 días · 15 paradas</p><p class="vibe">Ritmo tranquilo · iconos primero</p></div>
@@ -427,12 +477,19 @@
           <div class="view on" data-v="plan">
             <div class="m-plan3">
               <div class="m-plan3-head"><h2 class="display">Londres</h2><p class="dest-snapshot">22–24 jul · 3 días · ritmo tranquilo, iconos primero</p></div>
-              <div class="map3"><div class="route"></div><span class="pin" style="top:38%;left:42%"></span><span class="pin alt" style="top:52%;left:55%"></span></div>
+              <div class="weather-strip3" aria-label="Clima · Tripsy">
+                <div class="wday3"><span>Mi</span><strong>18°</strong></div>
+                <div class="wday3 on"><span>Ju</span><strong>21°</strong></div>
+                <div class="wday3"><span>Vi</span><strong>19°</strong></div>
+                <div class="wday3"><span>Sá</span><strong>17°</strong></div>
+                <div class="wday3"><span>Do</span><strong>16°</strong></div>
+              </div>
+              <div class="map3"><div class="route"></div><span class="pin" style="top:38%;left:42%">1</span><span class="pin alt" style="top:52%;left:55%">2</span></div>
               <div class="seg3" style="margin:0.75rem 0"><span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span></div>
               <div class="budget-card3">
                 <div class="top"><strong>~102 €/día</strong><span class="muted tiny">3 noches · ~306 €</span></div>
-                <div class="budget-bar3"><span style="width:38%;background:var(--cat-museum)"></span><span style="width:30%;background:var(--cat-food)"></span><span style="width:22%;background:var(--cat-view)"></span><span style="width:10%;background:var(--cat-monument)"></span></div>
-                <div class="budget-legend3"><span><i style="background:var(--cat-museum)"></i>Alojamiento</span><span><i style="background:var(--cat-food)"></i>Comida</span><span><i style="background:var(--cat-view)"></i>Transporte</span><span><i style="background:var(--cat-monument)"></i>Entradas</span></div>
+                <div class="budget-bar3"><span style="width:38%;background:var(--budget-hotel)"></span><span style="width:30%;background:var(--budget-food)"></span><span style="width:22%;background:var(--budget-transport)"></span><span style="width:10%;background:var(--budget-tickets)"></span></div>
+                <div class="budget-legend3"><span><i style="background:var(--budget-hotel)"></i>Alojamiento</span><span><i style="background:var(--budget-food)"></i>Comida</span><span><i style="background:var(--budget-transport)"></i>Transporte</span><span><i style="background:var(--budget-tickets)"></i>Entradas</span></div>
               </div>
               <div class="day-pills3"><div class="day-pill3 on">Día 1<small>Llegada</small></div><div class="day-pill3">Día 2<small>9 paradas</small></div><div class="day-pill3">Día 3</div></div>
               <div class="plan-stop3"><span class="cat-ico monument sm">🏛</span><div><strong>Big Ben</strong><span>16:30 · Monumento</span></div></div>
@@ -445,7 +502,7 @@
         <template id="tpl-mobile-hoy">
           <div class="view on" data-v="hoy">
             <div class="m-hoy3">
-              <div class="m-hoy3-map"><span class="weather">☁ 14–21°</span><div class="map3"><div class="route"></div><span class="pin" style="top:40%;left:44%"></span><span class="pin alt" style="top:55%;left:52%"></span></div></div>
+              <div class="m-hoy3-map"><span class="weather">☁ 14–21°</span><div class="map3"><div class="route"></div><span class="pin" style="top:40%;left:44%">1</span><span class="pin alt" style="top:55%;left:52%">2</span></div></div>
               <nav class="daybar3"><button type="button" class="on"><span class="ico">🗺</span>Maps</button><button type="button"><span class="ico">🚇</span>Metro</button><button type="button"><span class="ico">🍽</span>Comer</button><button type="button"><span class="ico">▶</span>En ruta</button></nav>
               <div class="sheet3">
                 <div class="sheet3-handle"></div>
@@ -458,9 +515,9 @@
                     <div class="row-top"><h4 style="margin:0">National Gallery</h4><span class="time-badge">10:00</span></div>
                     <div class="cat-row"><span class="cat-ico museum sm">🖼</span><span>Museo · Trafalgar Sq</span></div>
                     <div class="transport-rail3">
-                      <div class="transport-pill3 on"><span class="t-ico">🚶</span><span class="t-val">12 min</span></div>
-                      <div class="transport-pill3"><span class="t-ico">🚇</span><span class="t-val">8 min</span></div>
-                      <div class="transport-pill3"><span class="t-ico">🚕</span><span class="t-val">6 min · €8</span></div>
+                      <div class="transport-pill3 on"><span class="t-ico">🚶</span><span><span class="t-val">12 min</span><span class="t-price">Gratis</span></span></div>
+                      <div class="transport-pill3"><span class="t-ico">🚇</span><span><span class="t-val">8 min</span><span class="t-price">~£2.80</span></span></div>
+                      <div class="transport-pill3"><span class="t-ico">🚕</span><span><span class="t-val">6 min</span><span class="t-price">~€8</span></span></div>
                     </div>
                   </div>
                 </article>
@@ -495,6 +552,7 @@
           <div class="view on" data-v="trips">
             <div class="d-trips3">
               <div class="d-trips3-top"><div><h2 class="display" style="margin:0;font-size:2rem">Tus viajes</h2><p class="muted" style="margin:0.35rem 0 0">Sin hero de marketing · grid editorial</p></div></div>
+              <div class="trip-progress3" style="max-width:420px;margin-bottom:1rem"><div class="row"><strong>Londres · día 2 de 3</strong><span class="pct">67%</span></div><div class="bar"><i></i></div><div class="meta"><span>6/9 paradas</span><span class="offline-tag3">● Offline</span></div></div>
               <div class="d-trips3-grid">
                 <button type="button" class="trip-xl3"><img src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80" alt="" /><div class="overlay"><span class="badge">Viaje activo</span><h3>Londres</h3><p>22–24 jul · 3 días · 15 paradas</p><p class="vibe">Ritmo tranquilo · iconos primero</p></div></button>
                 <div class="d-trip-stack3">
@@ -522,7 +580,7 @@
                 <div class="m-wiz3-progress" style="margin:0 0 1.25rem;background:var(--line)"><i style="width:50%"></i></div>
                 <span class="sec-label">Paso 1 de 2</span>
                 <h2 class="display">¿A dónde vas?</h2>
-                <p class="muted" style="margin:0 0 1.25rem">Formulario a la izquierda · foto fija a la derecha</p>
+                <p class="muted" style="margin:0 0 1.25rem">Foto a la izquierda · formulario a la derecha</p>
                 <input class="v3-input" value="Londres" /><input class="v3-input" value="22 – 24 jul 2026" />
                 <div style="margin-top:1rem;display:flex;gap:0.5rem"><button type="button" class="btn3 ghost">Atrás</button><button type="button" class="btn3 primary">Continuar</button></div>
               </div>
@@ -533,17 +591,22 @@
         <template id="tpl-desktop-plan">
           <div class="view on" data-v="plan">
             <div class="d-plan3">
-              <div class="d-plan3-map"><div class="map3"><div class="route"></div><span class="pin" style="top:35%;left:40%"></span><span class="pin alt" style="top:50%;left:55%"></span><span class="pin" style="top:42%;left:48%"></span></div></div>
+              <div class="d-plan3-map"><div class="map3"><div class="route"></div><span class="pin" style="top:35%;left:40%">1</span><span class="pin alt" style="top:50%;left:55%">2</span><span class="pin" style="top:42%;left:48%">3</span></div></div>
               <div class="d-plan3-panel">
                 <h2 class="display" style="margin:0">Londres</h2>
                 <p class="dest-snapshot">Mapa sticky 60% · panel scroll 40% · ritmo tranquilo</p>
+                <div class="weather-strip3">
+                  <div class="wday3 on"><strong>21°</strong> Ju</div>
+                  <div class="wday3"><strong>19°</strong> Vi</div>
+                  <div class="wday3"><strong>17°</strong> Sá</div>
+                </div>
                 <div class="seg3" style="margin:0.85rem 0"><span class="on">Mapa</span><span>Días</span><span>Hotel</span><span>Comer</span></div>
                 <div class="budget-card3">
                   <div class="top"><strong>~102 €/día</strong><span class="muted tiny">3 noches · ~306 €</span></div>
-                  <div class="budget-bar3"><span style="width:38%;background:var(--cat-museum)"></span><span style="width:30%;background:var(--cat-food)"></span><span style="width:22%;background:var(--cat-view)"></span><span style="width:10%;background:var(--cat-monument)"></span></div>
-                  <div class="budget-legend3"><span><i style="background:var(--cat-museum)"></i>Alojamiento</span><span><i style="background:var(--cat-food)"></i>Comida</span><span><i style="background:var(--cat-view)"></i>Transporte</span><span><i style="background:var(--cat-monument)"></i>Entradas</span></div>
+                  <div class="budget-bar3"><span style="width:38%;background:var(--budget-hotel)"></span><span style="width:30%;background:var(--budget-food)"></span><span style="width:22%;background:var(--budget-transport)"></span><span style="width:10%;background:var(--budget-tickets)"></span></div>
+                  <div class="budget-legend3"><span><i style="background:var(--budget-hotel)"></i>Alojamiento</span><span><i style="background:var(--budget-food)"></i>Comida</span><span><i style="background:var(--budget-transport)"></i>Transporte</span><span><i style="background:var(--budget-tickets)"></i>Entradas</span></div>
                 </div>
-                <div class="d-plan3-toolbar"><button type="button" class="btn3 ghost sm">Exportar</button><button type="button" class="btn3 ghost sm">Telegram</button><button type="button" class="btn3 ghost sm">Compartir</button></div>
+                <div class="d-plan3-toolbar"><button type="button" class="btn3 ghost sm">↗ Google Maps</button><button type="button" class="btn3 ghost sm">Telegram</button><button type="button" class="btn3 ghost sm">Compartir</button></div>
                 <div class="day-pills3"><div class="day-pill3 on">Día 1</div><div class="day-pill3">Día 2</div><div class="day-pill3">Día 3</div></div>
                 <div class="plan-stop3"><span class="cat-ico monument sm">🏛</span><div><strong>Big Ben</strong><span>16:30 · Westminster</span></div></div>
                 <div class="plan-stop3"><span class="cat-ico view sm">👁</span><div><strong>London Eye</strong><span>18:00 · 12 min</span></div></div>
@@ -565,7 +628,7 @@
                   <button type="button" class="btn3 primary sm">▶ En ruta</button>
                 </div>
               </div>
-              <div class="d-hoy3-map"><div class="map3"><span style="position:absolute;top:1rem;left:1rem;padding:0.35rem 0.65rem;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);color:#fff;border-radius:999px;font-size:0.75rem;font-weight:700">☁ 14–21°</span><div class="route"></div><span class="pin" style="top:40%;left:44%"></span><span class="pin alt" style="top:55%;left:52%"></span></div></div>
+              <div class="d-hoy3-map"><div class="map3"><span style="position:absolute;top:1rem;left:1rem;padding:0.35rem 0.65rem;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);color:#fff;border-radius:999px;font-size:0.75rem;font-weight:700">☁ 14–21°</span><div class="route"></div><span class="pin" style="top:40%;left:44%">1</span><span class="pin alt" style="top:55%;left:52%">2</span></div></div>
               <div class="d-hoy3-panel">
                 <div class="replan-row3"><span class="chip3">😴 Cansados</span><span class="chip3">🌧 Lluvia</span><span class="chip3">⏱ Tarde</span></div>
                 <article class="place-card3">
@@ -574,9 +637,9 @@
                     <div class="row-top"><h4 style="margin:0">National Gallery</h4><span class="time-badge">10:00</span></div>
                     <div class="cat-row"><span class="cat-ico museum sm">🖼</span><span>Museo · Trafalgar Sq</span></div>
                     <div class="transport-rail3">
-                      <div class="transport-pill3 on"><span class="t-ico">🚶</span><span class="t-val">12 min</span></div>
-                      <div class="transport-pill3"><span class="t-ico">🚇</span><span class="t-val">8 min</span></div>
-                      <div class="transport-pill3"><span class="t-ico">🚕</span><span class="t-val">6 min · €8</span></div>
+                      <div class="transport-pill3 on"><span class="t-ico">🚶</span><span><span class="t-val">12 min</span><span class="t-price">Gratis</span></span></div>
+                      <div class="transport-pill3"><span class="t-ico">🚇</span><span><span class="t-val">8 min</span><span class="t-price">~£2.80</span></span></div>
+                      <div class="transport-pill3"><span class="t-ico">🚕</span><span><span class="t-val">6 min</span><span class="t-price">~€8</span></span></div>
                     </div>
                   </div>
                 </article>
@@ -605,7 +668,8 @@
         <span class="tag">Mock v3 — claro / oscuro</span>
         <h2>Ideas cogidas de las referencias</h2>
         <ul>
-          <li><strong>Foto grande por tarjeta</strong> (patrón repetido en 7/8 case studies Behance) en vez de icono/thumb chico</li>
+          <li><strong>Actualizado:</strong> tab bar oscura en Hoy, budget semántico, progreso viaje, precio en metro</li>
+          <li><strong>Foto grande por tarjeta</strong> (7/8 Behance) en vez de thumb chico</li>
           <li><strong>Rail de transporte</strong> con icono+tiempo(+precio) en vez de un &lt;select&gt; — TripPlanner (Behance), Wanderlog</li>
           <li><strong>Presupuesto como barra segmentada</strong> por categoría — AI Smart Trip Planner, Stippl, Tripsy</li>
           <li><strong>Iconos de categoría en círculo de color</strong> — Trippo, Wanderlog</li>
@@ -625,7 +689,7 @@
   </div>
 
   <script>
-    let currentView = 'trips';
+    let currentView = 'hoy';
     let themeMode = 'auto'; // auto | light | dark
 
     function cloneTpl(id) { return document.getElementById(id).content.cloneNode(true); }

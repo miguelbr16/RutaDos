@@ -11,13 +11,13 @@
  */
 
 :root {
-  --ui-ink: #0b1f24;
-  --ui-deep: #12353c;
-  --ui-sea: #1f6f63;
-  --ui-sea-soft: #2a8f7a;
-  --ui-sand: #e08a3c;
-  --ui-mist: #f3f5f4;
-  --ui-foam: #e8efed;
+  --ui-ink: #14181f;
+  --ui-deep: #1a2b4a;
+  --ui-sea: #1a2b4a;
+  --ui-sea-soft: #2a3b5c;
+  --ui-sand: #ff5a3c;
+  --ui-mist: #fafafa;
+  --ui-foam: #f2f1ef;
   --ui-card: #ffffff;
   --ui-muted: #5a6e72;
   --ui-line: rgba(11, 31, 36, 0.1);
@@ -35,8 +35,8 @@
 
 .app-shell.app-ui {
   background:
-    radial-gradient(900px 420px at 8% -8%, rgba(42, 143, 122, 0.11), transparent 55%),
-    radial-gradient(700px 380px at 94% 0%, rgba(224, 138, 60, 0.09), transparent 50%),
+    radial-gradient(900px 420px at 8% -8%, rgba(255, 90, 60, 0.1), transparent 55%),
+    radial-gradient(700px 380px at 94% 0%, rgba(26, 43, 74, 0.08), transparent 50%),
     var(--ui-mist);
   min-height: 100dvh;
 }
@@ -323,6 +323,7 @@
   display: block;
   aspect-ratio: 4 / 3;
   overflow: hidden;
+  background: var(--dest-accent, var(--ui-sea));
 }
 
 .ui-dest-media img {
@@ -330,6 +331,10 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.ui-dest-media img.is-broken {
+  display: none;
 }
 
 .ui-dest-body {
@@ -576,29 +581,74 @@
   background: var(--ui-sea);
 }
 
-.ui-wiz-banner {
-  margin: 0 var(--page-pad) 0.75rem;
-  max-width: calc(var(--ui-max) - var(--page-pad) * 2);
-  margin-inline: auto;
-  border-radius: 16px;
+/* —— Wizard v2 (móvil): foto 100% + sheet flotante, PROHIBIDO bloque blanco —— */
+.v2-wiz-hero {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  height: 48vh;
+  min-height: 320px;
   overflow: hidden;
-  position: relative;
-  min-height: 120px;
-  color: #fff;
+  background: var(--v2-navy);
 }
 
-.ui-wiz-banner img {
+.v2-wiz-hero-img {
   width: 100%;
-  height: 140px;
+  height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.ui-wiz-banner-cap {
+.v2-wiz-hero-gradient {
   position: absolute;
-  inset: auto 0 0;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(transparent, rgba(11, 31, 36, 0.8));
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(13, 20, 32, 0.35) 0%,
+    rgba(13, 20, 32, 0) 32%,
+    rgba(13, 20, 32, 0.55) 72%,
+    var(--v2-bg) 100%
+  );
+}
+
+.v2-wiz .ui-wiz-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  padding-top: calc(0.6rem + env(safe-area-inset-top, 0px));
+}
+
+.v2-wiz .ui-wiz-top .ui-icon-btn {
+  background: rgba(13, 20, 32, 0.4);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  border-radius: 50%;
+}
+
+.v2-wiz .ui-wiz-step {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.v2-wiz .ui-dots span {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.v2-wiz .ui-dots span.on {
+  background: #fff;
+}
+
+.v2-wiz-sheet {
+  position: relative;
+  z-index: 1;
+  margin-top: 38vh;
+  min-height: calc(100vh - 38vh);
+  background: var(--v2-bg);
+  border-radius: 26px 26px 0 0;
+  box-shadow: 0 -18px 40px rgba(13, 20, 32, 0.18);
+  padding-top: 2.75rem;
 }
 
 .ui-wiz-stage {
@@ -651,6 +701,12 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ui-deep);
+}
+
+.ui-wiz-divider {
+  border: none;
+  border-top: 1px solid var(--ui-line);
+  margin: 1.5rem 0 0.25rem;
 }
 
 .ui-wiz-presets {
@@ -950,6 +1006,44 @@
     grid-template-areas: 'main side' 'sticky side';
     min-height: 100dvh;
     padding-bottom: 0;
+  }
+
+  /* Desktop mantiene el split 50/50 (ui-wiz-side) — la foto full-bleed es solo móvil */
+  .v2-wiz-hero {
+    display: none;
+  }
+
+  .v2-wiz .ui-wiz-top {
+    position: static;
+    padding: 0.35rem var(--page-pad) 0;
+  }
+
+  .v2-wiz .ui-wiz-top .ui-icon-btn {
+    background: transparent;
+    color: inherit;
+    backdrop-filter: none;
+  }
+
+  .v2-wiz .ui-wiz-step {
+    color: var(--ui-muted);
+    text-shadow: none;
+  }
+
+  .v2-wiz .ui-dots span {
+    background: var(--ui-line);
+  }
+
+  .v2-wiz .ui-dots span.on {
+    background: var(--ui-sea);
+  }
+
+  .v2-wiz-sheet {
+    margin-top: 0;
+    min-height: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    padding-top: 0;
   }
 
   .ui-wiz-main {
@@ -1592,7 +1686,8 @@
   }
 
   /* En Viajes, TopNav solo mostraba la marca — redundante con la nav de hubs */
-  .ui-nav:has(.ui-brand) {
+  .ui-nav:has(.ui-brand),
+  .ui-nav:has(.v2-wordmark) {
     display: none;
   }
 

@@ -30,6 +30,7 @@ export type IconName =
   | 'share'
   | 'pin'
   | 'sliders'
+  | 'plus'
 
 const PATHS: Record<IconName, string | string[]> = {
   map: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7',
@@ -58,6 +59,7 @@ const PATHS: Record<IconName, string | string[]> = {
   chat: 'M21 11.5a8.4 8.4 0 01-1.2 4.4L21 20l-4.2-1.1a8.4 8.4 0 11-.3-13.2A8.4 8.4 0 0121 11.5z',
   send: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
   share: 'M4 12v6a2 2 0 002 2h12a2 2 0 002-2v-6M16 6l-4-4-4 4M12 2v13',
+  plus: 'M12 5v14M5 12h14',
   pin: 'M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z M12 12a2 2 0 100-4 2 2 0 000 4z',
   sliders: 'M4 6h16M4 12h16M4 18h16M8 4v4M14 10v4M10 16v4',
 }

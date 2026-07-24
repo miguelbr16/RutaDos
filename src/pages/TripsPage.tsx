@@ -1,33 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
-import { Icon, type IconName } from '../components/Icons'
+import { Icon } from '../components/Icons'
 import { useAppStore } from '../store'
 import { loadOfflineDay } from '../lib/offlineDay'
 import {
   FEATURED_DESTINATIONS,
-  HERO_PHOTO,
   buildQuickDestinationPatch,
   type QuickDestination,
 } from '../lib/quickDestinations'
-import { DestGrid, TopNav } from '../ui'
+import { TopNav } from '../ui'
 
-function tripCoverPhoto(cityName: string): string {
+function tripCoverPhoto(cityName: string): string | undefined {
   const hit = FEATURED_DESTINATIONS.find(
     (d) =>
       d.name.toLowerCase() === cityName.toLowerCase() ||
       cityName.toLowerCase().includes(d.name.toLowerCase()),
   )
-  return hit?.photo ?? HERO_PHOTO
+  return hit?.photo
 }
 
-const FEATURES: Array<{ icon: IconName; title: string; text: string }> = [
-  { icon: 'map', title: 'Mapa del día', text: 'Ruta clara parada a parada' },
-  { icon: 'transit', title: 'Transporte real', text: 'Links oficiales metro y bus' },
-  { icon: 'dining', title: 'Comer cerca', text: 'Restaurantes en la ruta' },
-]
-
-const HERO = FEATURED_DESTINATIONS[0]
-
-/** Hub "Viajes" — lista de viajes guardados + crear uno nuevo (VISION_APP_V2.md §3.2/§5.2). */
+/** Hub "Viajes" — lista de viajes guardados + crear uno nuevo (rediseño v2, sin hero de marketing). */
 export function TripsPage() {
   const trips = useAppStore((s) => s.trips)
   const setView = useAppStore((s) => s.setView)
@@ -39,7 +30,6 @@ export function TripsPage() {
   const [online, setOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   )
-  const [heroOk, setHeroOk] = useState(true)
   const offlineSnap = !online ? loadOfflineDay() : null
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -101,7 +91,7 @@ export function TripsPage() {
   }
 
   return (
-    <div className="ui-home ui-enter ui-page-tabbed">
+    <div className="v2-trips ui-enter ui-page-tabbed">
       {!online && (
         <p className="offline-banner home-offline">
           Sin conexión.
@@ -113,133 +103,41 @@ export function TripsPage() {
 
       <TopNav />
 
-      {heroOk && HERO ? (
-        <section className="ui-hero-mobile" aria-label="Inicio">
-          <img src={HERO.photo} alt="" decoding="async" fetchPriority="high" />
-          <div className="ui-hero-mobile-shade" aria-hidden />
-          <div className="ui-hero-mobile-inner">
-            <p className="ui-kicker">RutaDos</p>
-            <h1>
-              Tu viaje,
-              <br />
-              <em>a tu ritmo</em>
-            </h1>
-            <p>Plan por días con mapa y transporte.</p>
-            <button type="button" className="btn primary" onClick={startWizard}>
-              Nuevo viaje
-            </button>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="ui-hero-desktop" aria-label="Inicio">
-        <div>
-          <p className="ui-kicker">Planificador de viajes</p>
-          <h1>
-            Tu viaje,
-            <br />
-            <em>a tu ritmo</em>
-          </h1>
-          <p className="ui-lede">
-            Destino, fechas y un plan por días con mapa — solo o con quien viajéis.
-          </p>
-          <div className="hero-cta">
-            <button type="button" className="btn primary" onClick={startWizard}>
-              Nuevo viaje
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() =>
-                document.getElementById('home-destinos')?.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'start',
-                })
-              }
-            >
-              Explorar destinos
-            </button>
-          </div>
-        </div>
-        {heroOk && HERO ? (
-          <button type="button" className="ui-hero-photo" onClick={() => startWithDestination(HERO)}>
-            <img
-              src={HERO.photo}
-              alt=""
-              decoding="async"
-              fetchPriority="high"
-              onError={() => setHeroOk(false)}
-            />
-            <span className="ui-hero-photo-meta">
-              <strong>{HERO.label}</strong>
-              <br />
-              <span>{HERO.tagline ?? 'Empezar aquí'}</span>
-            </span>
+      <main className="v2-trips-main">
+        <section className="v2-trips-intro">
+          <h1 className="v2-trip-title">¿A dónde vas?</h1>
+          <p>Elegí un destino y armá tu plan por días en pocos pasos.</p>
+          <button type="button" className="v2-btn v2-btn-primary" onClick={startWizard}>
+            <Icon name="plus" size={16} />
+            Nuevo viaje
           </button>
-        ) : null}
-      </section>
+        </section>
 
-      <main className="ui-main">
-        <ul className="ui-features">
-          {FEATURES.map((f) => (
-            <li key={f.title}>
-              <span className="ui-feature-ico" aria-hidden>
-                <Icon name={f.icon} size={20} />
-              </span>
-              <div>
-                <strong>{f.title}</strong>
-                <span>{f.text}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        <div className="ui-cols">
-          <section id="home-destinos">
-            <div className="ui-sec-head">
-              <h2>Explorar destinos</h2>
-              <p>Elegí una ciudad o buscá otra en el wizard</p>
+        {trips.length > 0 && (
+          <section className="v2-trips-section">
+            <div className="v2-trips-section-head">
+              <h2>Tus viajes</h2>
+              <span>{trips.length} guardados</span>
             </div>
-            <DestGrid
-              destinations={FEATURED_DESTINATIONS}
-              onPick={startWithDestination}
-              layout="scroll"
-            />
-          </section>
-
-          <section>
-            <div className="ui-sec-head ui-sec-row">
-              <div>
-                <h2>Mis viajes</h2>
-                {trips.length > 0 ? <p>{trips.length} guardados</p> : null}
-              </div>
-              {trips.length > 0 ? (
-                <button type="button" className="btn ghost sm" onClick={startWizard}>
-                  + Nuevo
-                </button>
-              ) : null}
-            </div>
-
-            {!trips.length ? (
-              <div className="ui-empty">
-                <p>Todavía no hay viajes.</p>
-                <button type="button" className="btn primary sm" onClick={startWizard}>
-                  Planificar el primero
-                </button>
-              </div>
-            ) : (
-              <ul className="ui-trip-list">
-                {trips.map((t) => (
-                  <li key={t.id}>
-                    <button
-                      type="button"
-                      className="ui-trip-card"
-                      onClick={() => openTrip(t.id)}
-                    >
-                      <img src={tripCoverPhoto(t.city.name)} alt="" loading="lazy" />
-                      <span>
-                        <strong>{t.title}</strong>
-                        <span>
+            <ul className="v2-trip-grid">
+              {trips.map((t) => {
+                const cover = tripCoverPhoto(t.city.name)
+                return (
+                  <li key={t.id} className="v2-trip-card">
+                    <button type="button" className="v2-trip-card-btn" onClick={() => openTrip(t.id)}>
+                      <span className="v2-trip-card-media" style={{ '--dest-accent': '#1a2b4a' } as never}>
+                        {cover ? (
+                          <img
+                            src={cover}
+                            alt=""
+                            loading="lazy"
+                            onError={(e) => e.currentTarget.classList.add('is-broken')}
+                          />
+                        ) : null}
+                      </span>
+                      <span className="v2-trip-card-body">
+                        <strong className="v2-trip-title">{t.title}</strong>
+                        <span className="v2-trip-card-meta">
                           {t.startDate.slice(5).replace('-', '/')} –{' '}
                           {t.endDate.slice(5).replace('-', '/')} · {t.days.length} días
                         </span>
@@ -247,22 +145,55 @@ export function TripsPage() {
                     </button>
                     <button
                       type="button"
-                      className="ui-trip-del"
+                      className="v2-trip-del"
                       aria-label={`Borrar ${t.title}`}
                       onClick={() => {
                         if (confirm(`¿Borrar viaje a ${t.title}?`)) deleteTrip(t.id)
                       }}
                     >
-                      <Icon name="trash" size={16} />
+                      <Icon name="trash" size={15} />
                     </button>
                   </li>
-                ))}
-              </ul>
-            )}
+                )
+              })}
+            </ul>
           </section>
-        </div>
+        )}
 
-        <footer className="ui-foot">
+        <section className="v2-trips-section">
+          <div className="v2-trips-section-head">
+            <h2>Destinos populares</h2>
+            <span>Tocá uno para empezar</span>
+          </div>
+          <ul className="v2-dest-chip-row">
+            {FEATURED_DESTINATIONS.map((d) => (
+              <li key={d.name}>
+                <button type="button" className="v2-dest-chip" onClick={() => startWithDestination(d)}>
+                  <span className="v2-dest-chip-media" style={{ '--dest-accent': d.accent } as never}>
+                    <img
+                      src={d.photo}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => e.currentTarget.classList.add('is-broken')}
+                    />
+                  </span>
+                  <span>
+                    <strong>{d.label}</strong>
+                    <em>{d.tagline ?? d.hint ?? 'Explorar'}</em>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {!trips.length && (
+          <p className="v2-trips-empty-hint">
+            Tu primer viaje va a aparecer acá, con mapa, plan por días y modo Hoy sin conexión.
+          </p>
+        )}
+
+        <footer className="v2-trips-foot">
           <button type="button" onClick={exportAll}>
             Exportar
           </button>

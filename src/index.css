@@ -2,13 +2,13 @@
   /* Coastal route — ink + fog + teal path + amber CTA */
   --ink: #0b1f24;
   --deep: #12353c;
-  --sea: #1f6f63;
-  --sea-soft: #2a8f7a;
-  --mist: #f7faf9;
-  --foam: #eef3f1;
-  --bg: #eef3f1;
-  --sand: #e08a3c;
-  --sand-deep: #c96f28;
+  --sea: #1a2b4a;
+  --sea-soft: #2a3b5c;
+  --mist: #fafafa;
+  --foam: #f2f1ef;
+  --bg: #fafafa;
+  --sand: #ff5a3c;
+  --sand-deep: #e0472e;
   --text: #14262b;
   --muted: #5a6e72;
   --danger: #b54a3c;
@@ -18,8 +18,8 @@
   --shadow: 0 8px 28px rgba(11, 31, 36, 0.06);
   --radius: 14px;
   --radius-sm: 12px;
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body: 'Outfit', system-ui, sans-serif;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
   --touch: 48px;
   --page-pad: clamp(1rem, 3.5vw, 1.75rem);
   --page-max: 40rem;
@@ -74,7 +74,7 @@ a {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 80% 50% at 10% -5%, rgba(42, 143, 122, 0.12), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 10% -5%, rgba(255, 90, 60, 0.12), transparent 55%),
     linear-gradient(180deg, #e8f0ed 0%, #f4f7f6 45%, #eef3f1 100%);
 }
 
@@ -113,7 +113,7 @@ a {
 }
 
 .trip-stats li {
-  background: rgba(42, 143, 122, 0.08);
+  background: rgba(255, 90, 60, 0.08);
   border-radius: 12px;
   padding: 0.55rem 0.65rem;
   display: grid;
@@ -148,8 +148,8 @@ a {
 
 .rd-pill-row .btn {
   border-radius: 999px;
-  background: rgba(42, 143, 122, 0.08);
-  border-color: rgba(42, 143, 122, 0.15);
+  background: rgba(255, 90, 60, 0.08);
+  border-color: rgba(255, 90, 60, 0.15);
 }
 
 .rd-segment {
@@ -316,8 +316,8 @@ a {
 .home-empty {
   padding: 1.25rem 1rem;
   border-radius: 16px;
-  border: 1px dashed rgba(42, 143, 122, 0.35);
-  background: rgba(42, 143, 122, 0.06);
+  border: 1px dashed rgba(255, 90, 60, 0.35);
+  background: rgba(255, 90, 60, 0.06);
   display: grid;
   gap: 0.65rem;
   justify-items: start;
@@ -363,7 +363,7 @@ a {
 }
 
 .home-trip-card:hover {
-  border-color: rgba(42, 143, 122, 0.35);
+  border-color: rgba(255, 90, 60, 0.35);
   box-shadow: 0 8px 24px rgba(11, 31, 36, 0.08);
 }
 
@@ -575,7 +575,7 @@ a {
 }
 
 .wiz-track-seg.done {
-  background: rgba(42, 143, 122, 0.45);
+  background: rgba(255, 90, 60, 0.45);
 }
 
 .wiz-track-seg.on {
@@ -601,8 +601,8 @@ a {
   gap: 0.75rem;
   padding: 0.85rem 1rem;
   border-radius: 16px;
-  background: rgba(42, 143, 122, 0.08);
-  border: 1px solid rgba(42, 143, 122, 0.2);
+  background: rgba(255, 90, 60, 0.08);
+  border: 1px solid rgba(255, 90, 60, 0.2);
   margin-bottom: 0.85rem;
 }
 
@@ -658,10 +658,10 @@ a {
 }
 
 .wiz-style-card.on {
-  border-color: rgba(42, 143, 122, 0.45);
+  border-color: rgba(255, 90, 60, 0.45);
   box-shadow:
-    0 0 0 1px rgba(42, 143, 122, 0.12),
-    0 8px 24px rgba(42, 143, 122, 0.1);
+    0 0 0 1px rgba(255, 90, 60, 0.12),
+    0 8px 24px rgba(255, 90, 60, 0.1);
 }
 
 .wiz-choice-row {
@@ -774,8 +774,8 @@ a {
 .wizard-page .field select:focus,
 .wizard-page .field textarea:focus {
   outline: none;
-  border-color: rgba(42, 143, 122, 0.55);
-  box-shadow: 0 0 0 3px rgba(42, 143, 122, 0.12);
+  border-color: rgba(255, 90, 60, 0.55);
+  box-shadow: 0 0 0 3px rgba(255, 90, 60, 0.12);
 }
 
 .wiz-select-list {
@@ -830,9 +830,9 @@ a {
 }
 
 .wiz-select.on {
-  border-color: rgba(42, 143, 122, 0.45);
-  background: rgba(42, 143, 122, 0.08);
-  box-shadow: 0 0 0 1px rgba(42, 143, 122, 0.08);
+  border-color: rgba(255, 90, 60, 0.45);
+  background: rgba(255, 90, 60, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 90, 60, 0.08);
 }
 
 .wiz-select.on .wiz-select-check {
@@ -844,7 +844,7 @@ a {
   margin: 0.65rem 0 0;
   padding: 0.55rem 0.75rem;
   border-radius: 10px;
-  background: rgba(42, 143, 122, 0.08);
+  background: rgba(255, 90, 60, 0.08);
   border-left: 3px solid var(--sea-soft);
 }
 
@@ -896,7 +896,7 @@ a {
 .budget-box {
   padding: 1rem 1.1rem;
   border-radius: var(--radius);
-  background: rgba(31, 111, 99, 0.08);
+  background: rgba(255, 90, 60, 0.08);
   border-left: 3px solid var(--sea-soft);
 }
 
@@ -1003,7 +1003,7 @@ a {
   height: 1.5rem;
   margin-right: 0.55rem;
   border-radius: 50%;
-  background: rgba(31, 111, 99, 0.12);
+  background: rgba(255, 90, 60, 0.12);
   color: var(--sea);
   font-size: 1rem;
   line-height: 1;
@@ -1084,8 +1084,8 @@ a {
 }
 
 .wiz-step.done .wiz-step-num {
-  background: rgba(42, 143, 122, 0.14);
-  border-color: rgba(42, 143, 122, 0.35);
+  background: rgba(255, 90, 60, 0.14);
+  border-color: rgba(255, 90, 60, 0.35);
   color: var(--sea);
 }
 
@@ -1433,8 +1433,8 @@ a {
 
 .btn.primary {
   background: var(--sand);
-  color: #1a1208;
-  box-shadow: 0 8px 24px rgba(224, 138, 60, 0.28);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(255, 90, 60, 0.3);
 }
 
 .btn.primary:hover {
@@ -1708,7 +1708,7 @@ a {
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
-  outline: 2px solid rgba(42, 143, 122, 0.4);
+  outline: 2px solid rgba(255, 90, 60, 0.4);
   outline-offset: 1px;
   border-color: var(--sea-soft);
 }
@@ -1771,7 +1771,7 @@ code {
 }
 
 .step.done {
-  background: rgba(42, 143, 122, 0.18);
+  background: rgba(255, 90, 60, 0.18);
   color: var(--ink);
 }
 
@@ -2041,8 +2041,8 @@ code {
 }
 
 .copilot-bubble.user {
-  background: rgba(31, 111, 99, 0.08);
-  border-color: rgba(31, 111, 99, 0.25);
+  background: rgba(255, 90, 60, 0.08);
+  border-color: rgba(255, 90, 60, 0.25);
   justify-self: end;
   max-width: 92%;
 }
@@ -2304,7 +2304,7 @@ code {
   display: grid;
   place-items: center;
   font-size: 1.25rem;
-  background: rgba(42, 143, 122, 0.12);
+  background: rgba(255, 90, 60, 0.12);
   flex-shrink: 0;
 }
 
@@ -2379,7 +2379,7 @@ code {
   display: grid;
   place-items: center;
   font-size: 1.5rem;
-  background: linear-gradient(145deg, rgba(42, 143, 122, 0.12), rgba(224, 138, 60, 0.1));
+  background: linear-gradient(145deg, rgba(255, 90, 60, 0.12), rgba(26, 43, 74, 0.1));
 }
 
 .venue-card-body {
@@ -2405,7 +2405,7 @@ code {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--sea);
-  background: rgba(42, 143, 122, 0.1);
+  background: rgba(255, 90, 60, 0.1);
   padding: 0.2rem 0.45rem;
   border-radius: 999px;
 }
@@ -2433,12 +2433,12 @@ code {
 }
 
 .venue-badge.otm {
-  background: rgba(42, 143, 122, 0.12);
+  background: rgba(255, 90, 60, 0.12);
   color: var(--sea);
 }
 
 .venue-badge.ok {
-  background: rgba(42, 143, 122, 0.15);
+  background: rgba(255, 90, 60, 0.15);
   color: var(--deep);
 }
 
@@ -2723,7 +2723,7 @@ code {
 }
 
 .hours-line.open {
-  color: #1f6f63;
+  color: #ff5a3c;
   font-weight: 600;
 }
 
@@ -2799,7 +2799,7 @@ code {
   margin: 0;
   padding: 0.8rem 0.95rem;
   border-radius: var(--radius-sm);
-  background: rgba(31, 111, 99, 0.1);
+  background: rgba(255, 90, 60, 0.1);
   color: var(--deep);
   font-size: 0.92rem;
   font-weight: 500;
@@ -3293,7 +3293,7 @@ code {
 
 .airport-chips .chip.active {
   border-color: var(--sea);
-  background: rgba(42, 143, 122, 0.15);
+  background: rgba(255, 90, 60, 0.15);
 }
 
 .guide-list {
@@ -3318,7 +3318,7 @@ code {
 }
 
 .guide-card:hover {
-  border-color: rgba(31, 111, 99, 0.4);
+  border-color: rgba(255, 90, 60, 0.4);
 }
 
 .transit-link {

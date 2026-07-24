@@ -27,7 +27,13 @@ export function DestGrid({ destinations, onPick, selectedName, layout = 'grid' }
               aria-pressed={selected}
             >
               <span className="ui-dest-media" aria-hidden>
-                <img src={d.photo} alt="" loading="lazy" decoding="async" />
+                <img
+                  src={d.photo}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => e.currentTarget.classList.add('is-broken')}
+                />
               </span>
               <span className="ui-dest-body">
                 <strong>{d.label}</strong>

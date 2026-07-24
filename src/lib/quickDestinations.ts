@@ -44,7 +44,7 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     scale: 'city',
     accent: 'linear-gradient(145deg, #4a2020, #c96f28)',
     photo:
-      'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1508086171957-7e2d64a75c6a?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Japón',
@@ -57,7 +57,7 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     mobility: 'transit',
     accent: 'linear-gradient(145deg, #2c1054, #b54a6a)',
     photo:
-      'https://images.unsplash.com/photo-1493976040374-85c8e912df84?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1478436127897-769e1b3f0f36?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Madrid',
@@ -69,7 +69,7 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     scale: 'city',
     accent: 'linear-gradient(145deg, #8b4510, #e08a3c)',
     photo:
-      'https://images.unsplash.com/photo-1539037116277-369510a2c113?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'Roma',
@@ -120,7 +120,7 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     scale: 'city',
     accent: 'linear-gradient(145deg, #1a3050, #5a7a9a)',
     photo:
-      'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1560799260-b737af7dd0fc?auto=format&fit=crop&w=800&q=80',
   },
   {
     label: 'San Diego',
@@ -132,7 +132,7 @@ export const QUICK_DESTINATIONS: QuickDestination[] = [
     scale: 'city',
     accent: 'linear-gradient(145deg, #0a4a5a, #2aafb8)',
     photo:
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1754122978824-4b2fe8ebd5c7?auto=format&fit=crop&w=800&q=80',
   },
 ]
 

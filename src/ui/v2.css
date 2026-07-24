@@ -1,0 +1,440 @@
+/*
+ * RutaDos v2 — sistema visual (Fase 2 rediseño)
+ * Paleta: Coral #FF5A3C + Navy #1A2B4A + blanco #FAFAFA.
+ * Tipografía: Plus Jakarta Sans (UI) + Instrument Serif (solo títulos de viaje).
+ * Convive con app.css durante la migración por hub; se purgan tokens viejos en 2D.
+ */
+
+:root {
+  --v2-bg: #fafafa;
+  --v2-surface: #ffffff;
+  --v2-surface-2: #f2f1ef;
+  --v2-ink: #14181f;
+  --v2-muted: #6b7280;
+  --v2-line: rgba(15, 20, 25, 0.09);
+  --v2-accent: #ff5a3c;
+  --v2-accent-ink: #ffffff;
+  --v2-accent-soft: rgba(255, 90, 60, 0.12);
+  --v2-navy: #1a2b4a;
+  --v2-navy-ink: #ffffff;
+  --v2-shadow-sm: 0 1px 2px rgba(20, 24, 31, 0.06);
+  --v2-shadow-md: 0 8px 24px rgba(20, 24, 31, 0.1);
+  --v2-shadow-lg: 0 18px 44px rgba(20, 24, 31, 0.16);
+  --v2-radius-sm: 12px;
+  --v2-radius-md: 18px;
+  --v2-radius-lg: 26px;
+  --v2-font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --v2-font-serif: 'Instrument Serif', Georgia, serif;
+}
+
+[data-v2-theme='dark'] {
+  --v2-bg: #0d1420;
+  --v2-surface: #16213a;
+  --v2-surface-2: #1c2942;
+  --v2-ink: #f5f7fa;
+  --v2-muted: #93a0b8;
+  --v2-line: rgba(255, 255, 255, 0.1);
+  --v2-accent-soft: rgba(255, 90, 60, 0.2);
+  --v2-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --v2-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --v2-shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.5);
+  background: var(--v2-bg);
+  color: var(--v2-ink);
+}
+
+/* —— Wordmark (RD + RutaDos, "Dos" en coral) —— */
+.v2-wordmark {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--v2-font-ui);
+  cursor: default;
+  color: var(--v2-ink);
+}
+
+button.v2-wordmark {
+  cursor: pointer;
+}
+
+.v2-wordmark-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--v2-accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+.v2-wordmark-text {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  color: var(--v2-ink);
+}
+
+.v2-wordmark-accent {
+  color: var(--v2-accent);
+}
+
+.v2-wordmark-sm .v2-wordmark-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 0.64rem;
+  border-radius: 7px;
+}
+
+.v2-wordmark-sm .v2-wordmark-text {
+  font-size: 0.92rem;
+}
+
+.v2-wordmark-lg .v2-wordmark-icon {
+  width: 38px;
+  height: 38px;
+  font-size: 0.92rem;
+  border-radius: 11px;
+}
+
+.v2-wordmark-lg .v2-wordmark-text {
+  font-size: 1.3rem;
+}
+
+/* —— Botones v2 —— */
+.v2-btn {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  font-family: var(--v2-font-ui);
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 0.8rem 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+}
+
+.v2-btn:active {
+  transform: scale(0.97);
+}
+
+.v2-btn-primary {
+  background: var(--v2-accent);
+  color: var(--v2-accent-ink);
+  box-shadow: var(--v2-shadow-md);
+}
+
+.v2-btn-ghost {
+  background: color-mix(in srgb, var(--v2-ink) 6%, transparent);
+  color: var(--v2-ink);
+}
+
+.v2-btn-outline {
+  background: transparent;
+  color: var(--v2-ink);
+  border: 1.5px solid var(--v2-line);
+}
+
+.v2-btn-sm {
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+}
+
+.v2-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* —— Título de viaje (serif editorial) —— */
+.v2-trip-title {
+  font-family: var(--v2-font-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+/* —— Chips de destino —— */
+.v2-chip {
+  appearance: none;
+  border: 1px solid var(--v2-line);
+  background: var(--v2-surface);
+  color: var(--v2-ink);
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  font-family: var(--v2-font-ui);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.v2-chip.on {
+  background: var(--v2-navy);
+  border-color: var(--v2-navy);
+  color: var(--v2-navy-ink);
+}
+
+/* —— Hub Viajes (sin hero de marketing) —— */
+.v2-trips {
+  background: var(--v2-bg);
+  min-height: 100%;
+}
+
+.v2-trips-main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.1rem 1rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.9rem;
+}
+
+.v2-trips-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.4rem 0 0.2rem;
+}
+
+.v2-trips-intro h1 {
+  font-size: 2.1rem;
+  color: var(--v2-ink);
+  margin: 0;
+}
+
+.v2-trips-intro p {
+  margin: 0;
+  color: var(--v2-muted);
+  font-family: var(--v2-font-ui);
+  font-size: 0.95rem;
+}
+
+.v2-trips-intro .v2-btn {
+  margin-top: 0.3rem;
+  align-self: flex-start;
+}
+
+.v2-trips-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.v2-trips-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-family: var(--v2-font-ui);
+}
+
+.v2-trips-section-head h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--v2-ink);
+  margin: 0;
+}
+
+.v2-trips-section-head span {
+  font-size: 0.8rem;
+  color: var(--v2-muted);
+}
+
+.v2-trip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.9rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.v2-trip-card {
+  position: relative;
+  list-style: none;
+}
+
+.v2-trip-card-btn {
+  appearance: none;
+  border: 1px solid var(--v2-line);
+  background: var(--v2-surface);
+  border-radius: var(--v2-radius-md);
+  overflow: hidden;
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  display: block;
+  box-shadow: var(--v2-shadow-sm);
+}
+
+.v2-trip-card-media {
+  display: block;
+  aspect-ratio: 16 / 10;
+  background: var(--dest-accent, var(--v2-navy));
+  overflow: hidden;
+}
+
+.v2-trip-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.v2-trip-card-media img.is-broken {
+  display: none;
+}
+
+.v2-trip-card-body {
+  display: block;
+  padding: 0.7rem 0.85rem 0.85rem;
+}
+
+.v2-trip-card-body .v2-trip-title {
+  display: block;
+  font-size: 1.25rem;
+  color: var(--v2-ink);
+}
+
+.v2-trip-card-meta {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--v2-font-ui);
+  font-size: 0.78rem;
+  color: var(--v2-muted);
+}
+
+.v2-trip-del {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(20, 24, 31, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.v2-dest-chip-row {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0.1rem 0.1rem 0.5rem;
+  scroll-snap-type: x proximity;
+}
+
+.v2-dest-chip {
+  appearance: none;
+  border: 1px solid var(--v2-line);
+  background: var(--v2-surface);
+  border-radius: var(--v2-radius-md);
+  padding: 0;
+  cursor: pointer;
+  flex: 0 0 148px;
+  overflow: hidden;
+  text-align: left;
+  scroll-snap-align: start;
+  box-shadow: var(--v2-shadow-sm);
+}
+
+.v2-dest-chip-media {
+  display: block;
+  aspect-ratio: 4 / 3;
+  background: var(--dest-accent, var(--v2-navy));
+  overflow: hidden;
+}
+
+.v2-dest-chip-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.v2-dest-chip-media img.is-broken {
+  display: none;
+}
+
+.v2-dest-chip > span {
+  display: block;
+  padding: 0.5rem 0.65rem 0.6rem;
+  font-family: var(--v2-font-ui);
+}
+
+.v2-dest-chip strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--v2-ink);
+}
+
+.v2-dest-chip em {
+  display: block;
+  font-style: normal;
+  font-size: 0.75rem;
+  color: var(--v2-muted);
+  margin-top: 0.1rem;
+}
+
+.v2-trips-empty-hint {
+  font-family: var(--v2-font-ui);
+  color: var(--v2-muted);
+  font-size: 0.88rem;
+  margin: -0.6rem 0 0;
+}
+
+.v2-trips-foot {
+  display: flex;
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--v2-line);
+}
+
+.v2-trips-foot button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  font-family: var(--v2-font-ui);
+  font-size: 0.8rem;
+  color: var(--v2-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.v2-trips-foot button:hover {
+  color: var(--v2-ink);
+}
+
+@media (min-width: 1024px) {
+  .v2-trips-main {
+    padding: 1.6rem 2rem 3rem;
+    gap: 2.4rem;
+  }
+
+  .v2-trips-intro h1 {
+    font-size: 2.7rem;
+  }
+
+  .v2-trip-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}

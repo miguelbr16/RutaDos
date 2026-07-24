@@ -1,5 +1,6 @@
 import { useAppStore } from '../store'
 import { Icon, type IconName } from '../components/Icons'
+import { V2Wordmark } from './v2/V2Wordmark'
 
 type TabId = 'trips' | 'plan' | 'today' | 'settings'
 
@@ -34,9 +35,8 @@ export function TabBar() {
 
   return (
     <nav className="ui-tabbar" aria-label="Navegación principal">
-      <span className="ui-tabbar-brand" aria-hidden>
-        <span className="ui-brand-dot" />
-        RutaDos
+      <span className="ui-tabbar-brand">
+        <V2Wordmark size="sm" onClick={() => setView({ name: 'trips' })} />
       </span>
       {TABS.map((t) => {
         const disabled = (t.id === 'plan' || t.id === 'today') && !resolvedTripId
