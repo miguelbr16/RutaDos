@@ -64,8 +64,7 @@ export function DataLicensesSection() {
   const otmOn = isOpenTripMapEnabled()
 
   return (
-    <section className="section licenses-section" aria-labelledby="licenses-heading">
-      <h2 id="licenses-heading">Datos y licencias</h2>
+    <section className="licenses-section" aria-label="Datos y licencias">
       <p className="muted">
         RutaDos muestra lugares y rutas usando datos abiertos de terceros. Debemos atribuir a quienes
         los mantienen. Resumen orientativo; la licencia legal completa está en cada enlace.

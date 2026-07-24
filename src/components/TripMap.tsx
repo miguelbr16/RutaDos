@@ -4,6 +4,8 @@ import { useEffect, useMemo } from 'react'
 import type { PlaceCategory, Stop, TransitMode } from '../types'
 import { CATEGORY_LABELS, TRANSIT_MODE_LABELS } from '../types'
 import { categoryColor } from '../lib/categoryColors'
+import type { NearbyVenue } from '../lib/nearbyVenues'
+import type { VenueKind } from '../lib/bookingLinks'
 import 'leaflet/dist/leaflet.css'
 
 export type MapPickable = {
@@ -77,6 +79,62 @@ function StopPopup({ stop, visitLabel }: { stop: Stop; visitLabel?: number | str
   )
 }
 
+const VENUE_KIND_STYLE: Record<VenueKind, { bg: string; icon: string; label: string }> = {
+  hotel: { bg: '#c9962c', icon: '🏨', label: 'Hotel recomendado' },
+  restaurant: { bg: '#a6335b', icon: '🍴', label: 'Restaurante cerca' },
+  cafe: { bg: '#6b4a2f', icon: '☕', label: 'Café cerca' },
+}
+
+function venuePinIcon(kind: VenueKind) {
+  const { bg, icon } = VENUE_KIND_STYLE[kind]
+  return L.divIcon({
+    className: 'ruta-pin venue',
+    html: `<div style="
+      background:${bg};
+      width:26px;height:26px;border-radius:50%;
+      border:2px solid #fff;
+      box-shadow:0 2px 6px rgba(0,0,0,.4);
+      display:flex;align-items:center;justify-content:center;
+      font-size:13px;line-height:1;
+    ">${icon}</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -16],
+  })
+}
+
+function VenuePopup({ venue }: { venue: NearbyVenue }) {
+  const meta = VENUE_KIND_STYLE[venue.kind]
+  return (
+    <div className="map-stop-popup">
+      {venue.previewUrl ? (
+        <div className="map-stop-popup-photos">
+          <img src={venue.previewUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
+        </div>
+      ) : (
+        <div className="map-stop-popup-placeholder" style={{ background: meta.bg }} aria-hidden />
+      )}
+      <div className="map-stop-popup-body">
+        <div className="map-stop-popup-head">
+          <strong>{venue.name}</strong>
+        </div>
+        <span className="map-stop-popup-cat">
+          {meta.label}
+          {venue.cuisine ? ` · ${venue.cuisine}` : ''}
+        </span>
+        <a
+          className="map-stop-popup-link"
+          href={venue.links.maps}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Ver en Maps →
+        </a>
+      </div>
+    </div>
+  )
+}
+
 function pickPinIcon(color: string, selected: boolean) {
   const size = selected ? 26 : 18
   const opacity = selected ? 1 : 0.88
@@ -99,10 +157,12 @@ function pickPinIcon(color: string, selected: boolean) {
 function FitBounds({
   stops,
   pickables,
+  venuePins,
   fallback,
 }: {
   stops: Stop[]
   pickables: MapPickable[]
+  venuePins: NearbyVenue[]
   fallback?: { lat: number; lng: number } | null
 }) {
   const map = useMap()
@@ -110,6 +170,7 @@ function FitBounds({
     const pts: [number, number][] = [
       ...stops.map((s) => [s.lat, s.lng] as [number, number]),
       ...pickables.map((p) => [p.lat, p.lng] as [number, number]),
+      ...venuePins.map((v) => [v.lat, v.lng] as [number, number]),
     ]
     const apply = () => {
       map.invalidateSize()
@@ -133,7 +194,7 @@ function FitBounds({
       window.clearTimeout(t2)
       window.removeEventListener('resize', onResize)
     }
-  }, [map, stops, pickables, fallback])
+  }, [map, stops, pickables, venuePins, fallback])
   return null
 }
 
@@ -187,6 +248,8 @@ interface Props {
   /** Pines tocables para armar ruta (wishlist en mapa) */
   pickables?: MapPickable[]
   onPick?: (id: string) => void
+  /** Hoteles/restaurantes sugeridos cerca de la ruta (pines especiales, no numerados) */
+  venuePins?: NearbyVenue[]
 }
 
 export function TripMap({
@@ -199,15 +262,18 @@ export function TripMap({
   defaultCenter = null,
   pickables = [],
   onPick,
+  venuePins = [],
 }: Props) {
   const ordered = [...stops].sort((a, b) => a.order - b.order)
   const center: [number, number] = ordered.length
     ? [ordered[0].lat, ordered[0].lng]
     : pickables.length
       ? [pickables[0].lat, pickables[0].lng]
-      : defaultCenter
-        ? [defaultCenter.lat, defaultCenter.lng]
-        : [40.4, -3.7]
+      : venuePins.length
+        ? [venuePins[0].lat, venuePins[0].lng]
+        : defaultCenter
+          ? [defaultCenter.lat, defaultCenter.lng]
+          : [40.4, -3.7]
 
   const legendCats = useMemo(() => {
     const set = new Set([
@@ -242,7 +308,12 @@ export function TripMap({
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <FitBounds stops={ordered} pickables={pickables} fallback={defaultCenter} />
+          <FitBounds
+            stops={ordered}
+            pickables={pickables}
+            venuePins={venuePins}
+            fallback={defaultCenter}
+          />
           <InvalidateOnLayout height={height} />
           {showLegs &&
             ordered.slice(0, -1).map((s, i) => {
@@ -288,6 +359,13 @@ export function TripMap({
                 </Popup>
               </Marker>
             ))}
+          {venuePins.map((v) => (
+            <Marker key={`venue-${v.id}`} position={[v.lat, v.lng]} icon={venuePinIcon(v.kind)}>
+              <Popup className="map-stop-popup-wrap" minWidth={200} maxWidth={260}>
+                <VenuePopup venue={v} />
+              </Popup>
+            </Marker>
+          ))}
           {ordered.map((s) => {
             const label = s.isHotel ? 'H' : ++visitNum
             return (
@@ -312,12 +390,18 @@ export function TripMap({
           })}
         </MapContainer>
       </div>
-      {showLegend && (legendCats.length > 0 || modesUsed.length > 0) && (
+      {showLegend && (legendCats.length > 0 || modesUsed.length > 0 || venuePins.length > 0) && (
         <ul className="map-legend">
           {legendCats.map((c) => (
             <li key={c}>
               <span className="dot" style={{ background: categoryColor(c) }} />
               {CATEGORY_LABELS[c]}
+            </li>
+          ))}
+          {[...new Set(venuePins.map((v) => v.kind))].map((k) => (
+            <li key={`venue-${k}`}>
+              <span className="dot" style={{ background: VENUE_KIND_STYLE[k].bg }} />
+              {VENUE_KIND_STYLE[k].label}
             </li>
           ))}
           {modesUsed.map((m) => (

@@ -126,7 +126,12 @@ export function SettingsPage() {
       )}
       </section>
 
-      <DataLicensesSection />
+      <section className="section">
+        <details className="wiz-more">
+          <summary>Datos y licencias legales</summary>
+          <DataLicensesSection />
+        </details>
+      </section>
 
       <section className="section">
         <h2>Añadir a inicio (PWA)</h2>

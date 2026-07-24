@@ -18,6 +18,8 @@ type Props = {
   nearLabel?: string
   onClose: () => void
   onAdd?: (v: NearbyVenue) => void
+  /** Recibe la lista tal cual se carga, útil para pintar estos mismos sitios en el mapa. */
+  onResults?: (items: NearbyVenue[]) => void
 }
 
 const KIND_META: Record<VenueKind, { title: string; icon: IconName; empty: string }> = {
@@ -53,6 +55,7 @@ export function VenueFinder({
   nearLabel,
   onClose,
   onAdd,
+  onResults,
 }: Props) {
   const [items, setItems] = useState<NearbyVenue[]>([])
   const [loading, setLoading] = useState(true)
@@ -75,10 +78,12 @@ export function VenueFinder({
       setItems(list)
       setLoading(false)
       if (!list.length) setErr(meta.empty)
+      onResults?.(list)
     })
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind, lat, lng, city, meta.empty])
 
   const bookingCity =

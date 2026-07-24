@@ -31,6 +31,7 @@ import { prefsSummaryLine } from '../lib/prefPlan'
 import { hotelBookingUrl, hotelCitySearchUrl } from '../lib/bookingLinks'
 import { VenueFinder } from '../components/VenueFinder'
 import type { VenueKind } from '../lib/bookingLinks'
+import { fetchNearbyVenues, type NearbyVenue } from '../lib/nearbyVenues'
 import { openTelegramBot } from '../lib/copilot'
 import { loadOfflineDay } from '../lib/offlineDay'
 import { genericGuide, getCityGuide } from '../lib/cityGuides'
@@ -110,11 +111,58 @@ export function PlanPage({ tripId }: { tripId: string }) {
   const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
   const [mapStops, setMapStops] = useState<Stop[]>([])
   const [tripTab, setTripTab] = useState<'days' | 'hotel' | 'food'>('days')
+  const [venueMapItems, setVenueMapItems] = useState<NearbyVenue[]>([])
+  const [routeSuggestions, setRouteSuggestions] = useState<{
+    hotel?: NearbyVenue
+    restaurants: NearbyVenue[]
+  }>({ restaurants: [] })
   const allStops = trip?.days.flatMap((d) => d.stops) ?? []
+  const visitStops = allStops.filter((s) => !s.isHotel)
+  const hasHotel = !!trip?.logistics?.hotel
+  const hotelSearchPoint = (() => {
+    if (!trip) return { lat: 0, lng: 0 }
+    if (!visitStops.length) return { lat: trip.city.lat, lng: trip.city.lng }
+    const lat = visitStops.reduce((a, s) => a + s.lat, 0) / visitStops.length
+    const lng = visitStops.reduce((a, s) => a + s.lng, 0) / visitStops.length
+    return { lat, lng }
+  })()
 
   useEffect(() => {
     setActiveTrip(tripId)
   }, [tripId, setActiveTrip])
+
+  // Sugerencias en el mapa del hub "Días": un hotel recomendado (si aún no hay) + restaurantes cerca de la ruta.
+  useEffect(() => {
+    if (!trip) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const [hotels, restaurants] = await Promise.all([
+          hasHotel
+            ? Promise.resolve<NearbyVenue[]>([])
+            : fetchNearbyVenues({
+                kind: 'hotel',
+                lat: hotelSearchPoint.lat,
+                lng: hotelSearchPoint.lng,
+                limit: 1,
+              }),
+          fetchNearbyVenues({
+            kind: 'restaurant',
+            lat: hotelSearchPoint.lat,
+            lng: hotelSearchPoint.lng,
+            limit: 3,
+            radiusM: 1200,
+          }),
+        ])
+        if (!cancelled) setRouteSuggestions({ hotel: hotels[0], restaurants })
+      } catch {
+        if (!cancelled) setRouteSuggestions({ restaurants: [] })
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [trip?.id, hasHotel, hotelSearchPoint.lat, hotelSearchPoint.lng])
 
   useEffect(() => {
     if (!trip) return
@@ -151,13 +199,6 @@ export function PlanPage({ tripId }: { tripId: string }) {
     )
   }
 
-  const visitStops = allStops.filter((s) => !s.isHotel)
-  const hotelSearchPoint = (() => {
-    if (!visitStops.length) return { lat: trip.city.lat, lng: trip.city.lng }
-    const lat = visitStops.reduce((a, s) => a + s.lat, 0) / visitStops.length
-    const lng = visitStops.reduce((a, s) => a + s.lng, 0) / visitStops.length
-    return { lat, lng }
-  })()
   const budget = estimateFromTrip(trip)
   const offlinePack = loadOfflineDay()
   const offlineForThisTrip = offlinePack?.tripId === trip.id ? offlinePack : null
@@ -170,6 +211,20 @@ export function PlanPage({ tripId }: { tripId: string }) {
     checkin: trip.startDate,
     checkout: trip.endDate,
   })
+
+  // Mapa por pestaña: "Hotel" solo pines de hotel, "Comer" solo de comida.
+  // "Días" muestra la ruta completa + 1 hotel recomendado y restaurantes cerca (si aplica).
+  const baseMapStops = mapStops.length ? mapStops : allStops.slice(0, 40)
+  const tripMapStops =
+    tripTab === 'hotel'
+      ? baseMapStops.filter((s) => s.isHotel)
+      : tripTab === 'food'
+        ? baseMapStops.filter((s) => s.category === 'food' || s.category === 'cafe')
+        : baseMapStops
+  const tripMapVenuePins: NearbyVenue[] =
+    tripTab === 'hotel' || tripTab === 'food'
+      ? venueMapItems
+      : [...(routeSuggestions.hotel ? [routeSuggestions.hotel] : []), ...routeSuggestions.restaurants]
 
   function exportTripJson() {
     const blob = new Blob([JSON.stringify(trip, null, 2)], { type: 'application/json' })
@@ -502,6 +557,7 @@ export function PlanPage({ tripId }: { tripId: string }) {
           if (id === 'hotel') setVenueKind('hotel')
           else if (id === 'food') setVenueKind('restaurant')
           else setVenueKind(null)
+          if (id === 'days') setVenueMapItems([])
         }}
         ariaLabel="Secciones del viaje"
       />
@@ -509,7 +565,9 @@ export function PlanPage({ tripId }: { tripId: string }) {
       <div className="ui-trip-layout">
         <div className="ui-trip-map-wrap">
               <TripMap
-                stops={mapStops.length ? mapStops : allStops.slice(0, 40)}
+                stops={tripMapStops}
+                venuePins={tripMapVenuePins}
+                showLegs={tripTab === 'days'}
                 height="360px"
                 showLegend
               />
@@ -646,6 +704,7 @@ export function PlanPage({ tripId }: { tripId: string }) {
               checkout={trip.endDate}
               nearLabel={venueKind === 'hotel' ? 'Cerca del centro de vuestra ruta' : undefined}
               onClose={() => setVenueKind(null)}
+              onResults={setVenueMapItems}
               onAdd={
                 venueKind === 'hotel'
                   ? (v) => {
