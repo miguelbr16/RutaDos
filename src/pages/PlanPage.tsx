@@ -109,7 +109,7 @@ export function PlanPage({ tripId }: { tripId: string }) {
   const [venueKind, setVenueKind] = useState<VenueKind | null>(null)
   const [hotelBannerDismissed, setHotelBannerDismissed] = useState(false)
   const [mapStops, setMapStops] = useState<Stop[]>([])
-  const [tripTab, setTripTab] = useState<'map' | 'days' | 'hotel' | 'food'>('days')
+  const [tripTab, setTripTab] = useState<'days' | 'hotel' | 'food'>('days')
   const allStops = trip?.days.flatMap((d) => d.stops) ?? []
 
   useEffect(() => {
@@ -491,7 +491,6 @@ export function PlanPage({ tripId }: { tripId: string }) {
       <SegmentedTabs
         tabs={
           [
-            { id: 'map' as const, label: 'Mapa' },
             { id: 'days' as const, label: 'Días' },
             { id: 'hotel' as const, label: 'Hotel' },
             { id: 'food' as const, label: 'Comer' },
@@ -517,15 +516,13 @@ export function PlanPage({ tripId }: { tripId: string }) {
         </div>
 
         <div className="ui-trip-body">
-          {tripTab === 'map' ? (
+          {tripTab === 'hotel' || tripTab === 'food' ? (
             <p className="muted tiny trip-map-hint">
-              Tocá un pin para fotos. Cambiá a Días para el itinerario.
+              El mapa sigue visible arriba. Acá: {tripTab === 'hotel' ? 'hoteles' : 'restaurantes'}.
             </p>
-          ) : tripTab === 'hotel' || tripTab === 'food' ? (
-            <p className="muted tiny trip-map-hint">
-              El mapa sigue visible. Acá: {tripTab === 'hotel' ? 'hoteles' : 'restaurantes'}.
-            </p>
-          ) : null}
+          ) : (
+            <p className="muted tiny trip-map-hint">Tocá un pin del mapa para ver fotos del sitio.</p>
+          )}
           {offlineForThisTrip ? (
             <div className="offline-banner ok compact">
               <strong>Offline · {offlineForThisTrip.dayLabel}</strong>
@@ -661,7 +658,7 @@ export function PlanPage({ tripId }: { tripId: string }) {
             />
           )}
 
-        {(tripTab === 'days' || tripTab === 'map') && (
+        {tripTab === 'days' && (
         <section className="ui-trip-days">
           <h2>Días del viaje</h2>
           <p className="muted tiny">

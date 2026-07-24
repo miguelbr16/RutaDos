@@ -45,8 +45,15 @@ function StopPopup({ stop, visitLabel }: { stop: Stop; visitLabel?: number | str
     <div className="map-stop-popup">
       {photos.length > 0 ? (
         <div className="map-stop-popup-photos">
-          {photos.slice(0, 3).map((src) => (
-            <img key={src} src={src} alt="" loading="lazy" referrerPolicy="no-referrer" />
+          {photos.slice(0, 2).map((src) => (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={(e) => e.currentTarget.classList.add('is-broken')}
+            />
           ))}
         </div>
       ) : (
