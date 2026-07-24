@@ -375,7 +375,7 @@ button.v2-wordmark {
   display: none;
 }
 
-.v2-dest-chip > span {
+.v2-dest-chip-body {
   display: block;
   padding: 0.5rem 0.65rem 0.6rem;
   font-family: var(--v2-font-ui);

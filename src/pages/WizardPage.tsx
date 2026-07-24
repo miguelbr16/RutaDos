@@ -1303,9 +1303,7 @@ export function WizardPage() {
       </div>
 
       <aside className="ui-wiz-side">
-        {wizard.cityPick && photoForDestination(wizard.cityPick.name) ? (
-          <img className="ui-wiz-side-photo" src={photoForDestination(wizard.cityPick.name)} alt="" />
-        ) : null}
+        <img className="ui-wiz-side-photo" src={heroPhoto} alt="" />
         <div className="ui-wiz-side-shade" aria-hidden />
         <div className="ui-wiz-side-inner">
           <p className="ui-wiz-side-kicker">RutaDos</p>

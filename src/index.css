@@ -2736,6 +2736,17 @@ code {
   bottom: max(4.5rem, calc(env(safe-area-inset-bottom) + 3.5rem));
 }
 
+/* En el wizard (móvil) hay una barra de CTA fija abajo: subimos el FAB de Telegram para que no la tape */
+@media (max-width: 1023px) {
+  .app-shell:has(.ui-wizard) .tg-fab {
+    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-shell:has(.ui-wizard) .tg-fab-hint {
+    bottom: calc(9.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .date-selects {
   display: grid;
   grid-template-columns: 4.5rem 1fr 5rem;

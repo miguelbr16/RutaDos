@@ -966,7 +966,7 @@
 .ui-wiz-side-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(11, 31, 36, 0.15) 0%, rgba(11, 31, 36, 0.85) 100%);
+  background: linear-gradient(180deg, rgba(20, 24, 31, 0.25) 0%, rgba(13, 20, 32, 0.88) 100%);
 }
 
 .ui-wiz-side-inner {

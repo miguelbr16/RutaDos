@@ -177,7 +177,7 @@ export function TripsPage() {
                       onError={(e) => e.currentTarget.classList.add('is-broken')}
                     />
                   </span>
-                  <span>
+                  <span className="v2-dest-chip-body">
                     <strong>{d.label}</strong>
                     <em>{d.tagline ?? d.hint ?? 'Explorar'}</em>
                   </span>

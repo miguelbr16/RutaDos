@@ -77,7 +77,7 @@ export default function App() {
   }, [coupleId])
 
   const showTabBar = TABBED_VIEWS.has(view.name)
-  const showTelegramFab = view.name !== 'wizard' && view.name !== 'auth' && view.name !== 'share'
+  const showTelegramFab = view.name !== 'auth' && view.name !== 'share'
 
   return (
     <div className={`app-shell${UI_VIEWS.has(view.name) ? ' app-ui' : ''}`}>
